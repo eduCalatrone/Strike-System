@@ -63,6 +63,8 @@ main {
   padding: 20px max(16px, env(safe-area-inset-right)) calc(var(--nav-h) + 32px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left));
 }
 main.no-nav { padding-bottom: 48px; }
+/* Telas com largura máxima (formulários, veículo, agenda...) ficam no centro no computador. */
+main > * { margin-left: auto; margin-right: auto; }
 .stack { display: grid; gap: 16px; }
 .stack-lg { display: grid; gap: 28px; }
 
@@ -320,20 +322,24 @@ textarea { resize: vertical; min-height: 76px; }
 .ag-dow span { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); }
 .ag-cell { position: relative; aspect-ratio: 1; border: 1px solid transparent; border-radius: 10px; background: var(--surface); display: grid; place-items: center; align-content: center; gap: 3px; padding: 0 0 6px; }
 .ag-cell.out { background: none; visibility: hidden; }
+@media (min-width: 720px) { .ag-cell { aspect-ratio: 16 / 10; } }
 .ag-cell .n { font-size: 14px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
 .ag-cell.fim .n { color: var(--muted); }
-.ag-cell.feriado .n { color: var(--danger); }
-.ag-cell.tem { background: #EAEAE7; }
+/* Dia com agendamento: fundo verde claro e bolinha verde. Feriado: fundo e número em vermelho. */
+.ag-cell.tem { background: #E6F4EC; border-color: #B7DEC6; }
+.ag-cell.feriado { background: var(--danger-bg); border-color: #F2C3BD; }
+.ag-cell.feriado .n { color: var(--danger); font-weight: 700; }
 .ag-cell.rng::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; border-radius: 2px; background: var(--line-2); }
 .ag-cell.today { border: 2px solid var(--ink); }
 .ag-cell.today .n { font-weight: 700; }
 .ag-cell.sel { background: var(--ink); }
 .ag-cell.sel .n { color: #fff; font-weight: 700; }
 .ag-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
-.ag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
-.ag-dot.concluido { background: #9A9A98; }
-.ag-dot.cancelado { background: none; border: 1px solid #B5B5B2; }
-.ag-cell.sel .ag-dot { background: #fff; }
+.ag-dot { width: 7px; height: 7px; border-radius: 50%; background: #1F9D55; box-shadow: 0 0 0 2px rgba(31, 157, 85, .18); }
+.ag-dot.concluido { background: #9A9A98; box-shadow: none; }
+.ag-dot.cancelado { background: none; border: 1px solid #B5B5B2; box-shadow: none; }
+.ag-cell.sel .ag-dot { background: #4ADE80; box-shadow: none; }
+.ag-cell.sel .ag-dot.concluido { background: #CFCFCC; }
 .ag-mais { font-size: 9px; color: var(--muted); line-height: 1; }
 .ag-legenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
 .ag-legenda span { display: inline-flex; align-items: center; gap: 6px; }
@@ -357,9 +363,9 @@ textarea { resize: vertical; min-height: 76px; }
 .ag-mini header i { font-style: normal; color: var(--muted); font: 600 13px var(--body); }
 .ag-mg { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .ag-mg span { aspect-ratio: 1; display: grid; place-items: center; font-size: 10px; color: var(--muted); border-radius: 4px; }
-.ag-mg span.has { background: #E4E4E1; color: var(--ink); font-weight: 700; }
-.ag-mg span.hot { background: var(--ink); color: #fff; font-weight: 700; }
-.ag-mg span.fer { color: var(--danger); }
+.ag-mg span.has { background: #D3EEDD; color: #145C33; font-weight: 700; }
+.ag-mg span.hot { background: #1F9D55; color: #fff; font-weight: 700; }
+.ag-mg span.fer { color: var(--danger); font-weight: 700; background: var(--danger-bg); }
 .ag-mg span.today { outline: 1.5px solid var(--ink); }
 .status-seg { display: flex; gap: 6px; }
 .status-seg button { flex: 1; min-height: 42px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); font-weight: 600; font-size: 13px; color: var(--muted); }
@@ -1003,7 +1009,7 @@ function sessaoTerminou() {
 /* =====================================================================
    Estado de tela e navegação
    ===================================================================== */
-const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, ag: null, rel: null };
+const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, ag: null, rel: null, entradaAg: null };
 function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
 function parts() { return location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent); }
 window.addEventListener('hashchange', route);
@@ -1018,6 +1024,7 @@ function route(opts) {
   if (s && s.token && !DB) return abrirComDados();
   const u = me();
   if (!u) { if (s) setSession(null); return renderLogin(); }
+  if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
   atualizarSeVelho();
   switch (r) {
     case 'placa': return renderReader();
@@ -1204,10 +1211,24 @@ function renderHome() {
    Tela: ler placa (câmera ao vivo, foto do aparelho ou digitando)
    ===================================================================== */
 const canLive = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.isSecureContext);
+// Entrada a partir de um agendamento: o agendamento escolhido fica em S.entradaAg até o serviço ser iniciado.
+const agendaEmEntrada = () => (S.entradaAg && DB ? agendaAtiva().find(a => a.id === S.entradaAg) || null : null);
+function avisoAgendamento(ag, onCancelar) {
+  return el('div', { class: 'card', style: 'border-color:var(--ok);background:#F1F8F4;gap:6px' },
+    el('div', { class: 'card-head' },
+      el('span', { class: 'label', style: 'color:var(--ok)', text: 'Entrada do agendamento' }),
+      el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px', onclick: onCancelar }, 'Não usar')),
+    el('b', { text: ag.cliente }),
+    el('span', { class: 'hint', text: [ag.servico, ag.marca, `agendado para ${brData(ag.data)}`].filter(Boolean).join(' · ') }),
+    ag.obs ? el('span', { class: 'hint', text: `Observações: ${ag.obs}` }) : null);
+}
 function renderReader() {
   S.read = null;
+  const ag = agendaEmEntrada();
   const body = el('div', { class: 'stack', style: 'max-width:560px' },
     el('h1', { text: 'Adicionar veículo' }),
+    ag ? avisoAgendamento(ag, () => { S.entradaAg = null; renderReader(); }) : null,
+    ag ? el('p', { class: 'hint', text: 'Leia ou digite a placa. Os dados do agendamento já vão preenchidos na entrada.' }) : null,
     el('section', { id: 'scan', class: 'stack' },
       el('button', { id: 'btn-cam', class: 'btn btn--primary btn--lg btn--block', type: 'button', disabled: !canLive(), onclick: openCamera }, icon('camera'), 'Ler placa com a câmera'),
       canLive() ? null : el('p', { class: 'hint', text: 'A câmera ao vivo precisa de HTTPS ou localhost. Tire uma foto da placa ou digite.' }),
@@ -1236,7 +1257,10 @@ function manualGo() {
 }
 function continuarComPlaca(p, blob) {
   const at = ativoDaPlaca(p);
-  if (at) return go(`#/veiculo/${esc(at.id)}`);
+  if (at) {
+    if (agendaEmEntrada()) { S.entradaAg = null; toast('Esta placa já está em serviço. O agendamento continua na agenda.', true); }
+    return go(`#/veiculo/${esc(at.id)}`);
+  }
   S.pending = { placa: p, blob };
   go(`#/novo/${esc(p)}`);
 }
@@ -1473,15 +1497,19 @@ function renderNew(placaRaw) {
     fotos.push({ rotulo: 'Placa', blob: S.pending.blob, url: URL.createObjectURL(S.pending.blob) });
   }
   S.pending = null;
+  // Entrada vinda da agenda: cliente, serviço, veículo e valor já vêm do agendamento.
+  const agAberto = agendaEmEntrada(), ag0 = agAberto;
 
-  // Nome do cliente: já vem preenchido com o do último serviço desta placa.
-  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: (anteriores[0] && anteriores[0].clienteNome) || '' });
-  const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Strada branca 2022', value: v.descricao || '' });
+  // Nome do cliente: do agendamento ou do último serviço desta placa.
+  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: ag0 ? ag0.cliente : (anteriores[0] && anteriores[0].clienteNome) || '' });
+  const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Strada branca 2022', value: v.descricao || (ag0 ? ag0.marca : '') });
   const tiposOk = DB.tipos.filter(t => t.etapas.length);
-  const fTipo = el('select', { id: 'f-tipo' }, tiposOk.map(t => el('option', { value: t.id }, t.nome)));
+  const servAg = ag0 ? ag0.servico.toLowerCase() : '';
+  const tipoAg = servAg ? tiposOk.find(t => servAg.includes(t.nome.toLowerCase())) : null;
+  const fTipo = el('select', { id: 'f-tipo' }, tiposOk.map(t => el('option', { value: t.id, selected: tipoAg && t.id === tipoAg.id }, t.nome)));
   const fDanos = el('textarea', { id: 'f-danos', rows: '3', maxlength: '1000', placeholder: 'Riscos, amassados, peças soltas, problemas já existentes' });
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
-  const fValor = el('input', { id: 'f-valor', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off' });
+  const fValor = el('input', { id: 'f-valor', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
   const fotosBox = el('div');
   const drawFotos = () => fotosBox.replaceChildren(photoGrid({
     items: fotos, slots: ROTULOS,
@@ -1498,6 +1526,10 @@ function renderNew(placaRaw) {
     onRemove: f => { URL.revokeObjectURL(f.url); fotos.splice(fotos.indexOf(f), 1); drawFotos(); },
   }));
   drawFotos();
+
+  // "Não usar": tira o aviso e segue a entrada sem ligar ao agendamento (o que já foi digitado fica).
+  let ag = agAberto; // vira null se tocar em "Não usar"
+  const avisoAg = ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; avisoAg.remove(); toast('A entrada segue sem o agendamento.'); }) : null;
 
   const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, 'Iniciar serviço');
   salvar.addEventListener('click', async () => {
@@ -1525,7 +1557,7 @@ function renderNew(placaRaw) {
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome,
       danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
     };
-    registrar(at, 'Entrada do veículo');
+    registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
     const ok = await commitAgora(() => {
       DB.veiculos[placa] = { ...(DB.veiculos[placa] || { criadoEm: Date.now() }), placa, descricao: fDesc.value.trim() };
       DB.atendimentos.push(at);
@@ -1537,12 +1569,20 @@ function renderNew(placaRaw) {
       return;
     }
     for (const f of fotos) URL.revokeObjectURL(f.url);
+    // Agendamento usado: fica como concluído na agenda (operação própria, liberada também para o Funcionário).
+    if (ag) {
+      const item = agendaAtiva().find(x => x.id === ag.id);
+      if (item) item.status = 'concluido';
+      S.entradaAg = null;
+      enviar([{ col: 'agenda', acao: 'entrada', id: ag.id }], { redesenhar: false });
+    }
     toast('Serviço iniciado.');
     go(`#/veiculo/${esc(at.id)}`);
   });
 
   const body = el('div', { class: 'stack', style: 'max-width:640px' },
     backLink('#/placa', 'Ler outra placa'),
+    avisoAg,
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(placa) }),
       el('span', { class: 'veh-sub', text: anteriores.length ? `Veículo já atendido ${anteriores.length} ${anteriores.length === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores[0].criadoEm)}.` : 'Novo veículo. Registre a entrada.' })),
@@ -2158,7 +2198,7 @@ function renderAgenda() {
     el('div', { class: 'ag-dow', 'aria-hidden': 'true' }, ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map(t => el('span', { text: t }))),
     el('div', { class: 'ag-grid' }, cells),
     el('div', { class: 'ag-legenda' },
-      el('span', {}, el('b', { style: 'background:var(--ink)' }), 'agendado'),
+      el('span', {}, el('b', { style: 'background:#1F9D55' }), 'agendado'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
       el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
       el('span', {}, el('b', { style: 'width:16px;height:3px;border-radius:2px;background:var(--line-2)' }), 'até a entrega')),
@@ -2177,12 +2217,16 @@ function renderAgendaItem(idRaw) {
   if (!novo && !a) { toast('Agendamento não encontrado.', true); return go('#/agenda'); }
   if (novo && !ctrl) return go('#/agenda');
   const voltar = backLink('#/agenda', 'Agenda');
+  // Dar entrada: vai para "Adicionar" com os dados do agendamento; falta só a placa, as fotos e o resto da entrada.
+  const entradaBtn = a && a.status === 'agendado' ? el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button',
+    onclick: () => { S.entradaAg = a.id; go('#/placa'); } }, icon('scan'), 'Registrar entrada') : null;
 
   if (!ctrl) {
     const wa = telWa(a.tel);
     const linha = (dt, dd) => dd ? el('div', {}, el('dt', { text: dt }), el('dd', { text: dd })) : null;
     shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
       el('div', { class: 'veh-head' }, el('h1', { text: a.cliente }), el('span', { class: 'veh-sub', text: STATUS_AG[a.status] })),
+      entradaBtn,
       el('div', { class: 'card' }, el('dl', { class: 'kv' },
         linha('Serviço', a.servico), linha('Veículo', a.marca), linha('Entrada', brData(a.data)),
         linha('Entrega prevista', a.prazo ? `${brData(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : 'No mesmo dia'),
@@ -2235,7 +2279,9 @@ function renderAgendaItem(idRaw) {
 
   const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
   shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
-    el('h1', { text: a ? 'Editar agendamento' : 'Novo agendamento' }),
+    el('h1', { text: a ? a.cliente : 'Novo agendamento' }),
+    entradaBtn,
+    entradaBtn ? el('h2', { text: 'Editar agendamento', style: 'margin-top:6px' }) : null,
     el('div', { class: 'card' },
       campo('ag-cli', 'Cliente', fCli), campo('ag-tel', 'WhatsApp', fTel), campo('ag-serv', 'Serviço', fServ),
       campo('ag-marca', 'Marca ou modelo do carro', fMarca), el('datalist', { id: 'ag-marcas' }, MARCAS.map(m => el('option', { value: m }))),

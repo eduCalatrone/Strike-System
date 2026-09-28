@@ -4,7 +4,8 @@
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
 //   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda
-//   Só do Controle: ajustes, senha, agenda (o Funcionário só vê a agenda, com valores)
+//   Só do Controle: ajustes, senha, agenda (o Funcionário só vê a agenda, com valores,
+//   e pode usar 'agenda:entrada', que só marca o agendamento como concluído ao dar entrada no veículo)
 // Nada é apagado: 'remover' só marca o registro (ativo = false, excluido_em, removida_em).
 // Atendimentos têm versão: se outro aparelho mudou antes, responde 409 'conflito' e o site recarrega.
 // Precisa de login (token). O que é só do Controle é conferido aqui também, não só na tela.
@@ -234,6 +235,9 @@ async function aplicar(c, op, eu, versoes) {
         valor: it.valor == null || it.valor === '' ? null : num(it.valor, 'valor'), obs: txt(it.obs, 600), status, atualizado_em: agora(),
       });
     }
+    // Entrada do veículo feita a partir do agendamento: qualquer pessoa da equipe pode marcar como concluído.
+    case 'agenda:entrada':
+      return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { status: 'concluido', atualizado_em: agora() });
     case 'agenda:remover':
       return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
 
