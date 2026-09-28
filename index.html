@@ -55,6 +55,7 @@ img { display: block; max-width: 100%; }
 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .who-name { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .who-name b { color: var(--ink); font-weight: 600; }
+@media (max-width: 440px) { .who-role { display: none; } }
 .link-btn { border: 0; background: none; padding: 8px 2px; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 main {
@@ -1037,7 +1038,7 @@ function abrirComDados() {
   if (abrindo) return abrindo;
   document.body.classList.add('no-nav');
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: 'logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+    el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
     el('p', { class: 'hint', text: 'Carregando os dados…' }))));
   abrindo = buscarDados({ forcar: true })
     .then(() => { abrindo = null; route(); })
@@ -1052,7 +1053,7 @@ function renderFalha(e) {
     no_backend: 'Sem servidor (abra pelo site publicado ou pelo servidor local).',
   }[e && e.code] || 'O banco não respondeu.';
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: 'logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+    el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
     el('h1', { text: 'Não deu para abrir' }),
     el('p', { class: 'hint', text: `${msg} Os dados ficam no banco online, então é preciso internet para usar o sistema.` }),
     el('div', { class: 'actions' },
@@ -1064,9 +1065,9 @@ function renderFalha(e) {
 function shell(body, { nav = true, current = '' } = {}) {
   const u = me();
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
-    el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: 'logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+    el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
     u ? el('div', { class: 'who' },
-      el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? ' · Controle' : ''),
+      el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
       el('button', { class: 'link-btn', type: 'button', onclick: sair }, 'Sair')) : null));
@@ -1149,7 +1150,7 @@ function renderLogin() {
   });
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('div', { class: 'login-brand' },
-      el('span', { class: 'wordmark' }, el('img', { src: 'logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+      el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
       el('p', { text: 'Controle de serviços. Entre com seu usuário e senha.' })),
     form,
     el('p', { class: 'login-note', text: 'Esqueceu a senha? Peça para o Controle criar uma nova.' }))));
