@@ -1541,10 +1541,23 @@ function photoGrid({ items, slots = [], onAdd, onRemove, extraLabel = 'Adicionar
   return wrap;
 }
 // acoes: botões embaixo da foto, [{ texto, perigo, fn }]. O visualizador fecha antes de rodar a ação.
+// A foto grande é trocada por uma <img> nova a cada abertura: a anterior nunca aparece no lugar da escolhida.
+// Mostra na hora a miniatura (já baixada para a lista) e troca pela foto inteira quando ela chegar.
+let viewerVez = 0;
 async function openViewer(f, acoes = []) {
   const url = f.url || fotoSrc(f);
   if (!url) return;
-  $('viewer-img').src = url; $('viewer-img').alt = f.rotulo; $('viewer-cap').textContent = f.rotulo;
+  const mini = f.url ? f.mini : (f.miniatura ? fotoSrc(f, true) : null);
+  const vez = ++viewerVez;
+  const antiga = $('viewer-img');
+  const img = el('img', { id: 'viewer-img', alt: f.rotulo || '', src: mini || url });
+  antiga.replaceWith(img);
+  if (mini && mini !== url) {
+    const cheia = new Image();
+    cheia.onload = () => { if (vez === viewerVez && $('viewer-img') === img) img.src = url; };
+    cheia.src = url;
+  }
+  $('viewer-cap').textContent = f.rotulo;
   $('viewer-acoes').replaceChildren(...acoes.map(a => el('button', { class: 'btn' + (a.perigo ? ' btn--danger' : ''), type: 'button',
     onclick: () => { fecharViewer(); a.fn(); } }, a.texto)));
   const d = $('viewer'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
