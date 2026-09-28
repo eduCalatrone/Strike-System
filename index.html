@@ -296,6 +296,84 @@ textarea { resize: vertical; min-height: 76px; }
 .icon-btn:hover { background: var(--line); }
 .icon-btn svg { width: 16px; height: 16px; }
 
+/* ---------- Topo: engrenagem de Ajustes (Controle) ---------- */
+.top-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--ink-2); }
+.top-ico svg { width: 20px; height: 20px; }
+.top-ico[aria-current="page"] { background: #E4E4E1; color: var(--ink); }
+
+/* ---------- Valor do serviço (Controle) ---------- */
+.valor-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.valor-num { font: 700 28px/1 var(--cond); letter-spacing: .01em; }
+.valor-num.vazio { font: 500 15px var(--body); color: var(--muted); }
+
+/* ---------- Agenda ---------- */
+.ag-nav { display: flex; align-items: center; gap: 6px; }
+.ag-nav .arrow { width: 40px; height: 40px; flex: none; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); display: grid; place-items: center; }
+.ag-nav .arrow svg { width: 18px; height: 18px; }
+.ag-period { flex: 1; border: 0; background: none; font: 700 22px/1 var(--cond); text-align: center; padding: 8px 0; }
+.ag-period em { font-style: normal; color: var(--muted); font-weight: 600; }
+.ag-dow, .ag-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.ag-dow span { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); }
+.ag-cell { position: relative; aspect-ratio: 1; border: 1px solid transparent; border-radius: 10px; background: var(--surface); display: grid; place-items: center; align-content: center; gap: 3px; padding: 0 0 6px; }
+.ag-cell.out { background: none; visibility: hidden; }
+.ag-cell .n { font-size: 14px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.ag-cell.fim .n { color: var(--muted); }
+.ag-cell.feriado .n { color: var(--danger); }
+.ag-cell.tem { background: #EAEAE7; }
+.ag-cell.rng::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; border-radius: 2px; background: var(--line-2); }
+.ag-cell.today { border: 2px solid var(--ink); }
+.ag-cell.today .n { font-weight: 700; }
+.ag-cell.sel { background: var(--ink); }
+.ag-cell.sel .n { color: #fff; font-weight: 700; }
+.ag-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+.ag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+.ag-dot.concluido { background: #9A9A98; }
+.ag-dot.cancelado { background: none; border: 1px solid #B5B5B2; }
+.ag-cell.sel .ag-dot { background: #fff; }
+.ag-mais { font-size: 9px; color: var(--muted); line-height: 1; }
+.ag-legenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+.ag-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ag-legenda b { display: block; width: 8px; height: 8px; border-radius: 50%; }
+.ag-resumo { display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
+.ag-resumo b { color: var(--ink); font-weight: 700; }
+.ag-appt { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; text-align: left; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; color: inherit; text-decoration: none; }
+.ag-appt .marca { grid-row: 1 / 3; width: 50px; height: 40px; border-radius: 9px; background: var(--soft); border: 1px solid var(--line); display: grid; place-items: center; font: 700 12px var(--body); letter-spacing: .02em; color: var(--ink-2); }
+.ag-appt .marca svg { width: 22px; height: 22px; color: var(--muted); }
+.ag-appt .nome { font-weight: 600; }
+.ag-appt .meta { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-appt .lado { grid-row: 1 / 3; grid-column: 3; display: flex; align-items: center; gap: 8px; }
+.ag-appt.cancelado { opacity: .5; }
+.ag-appt.cancelado .nome { text-decoration: line-through; }
+.ag-appt.entrega { border-style: dashed; }
+.wa-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #E8F3EC; color: var(--ok); }
+.wa-btn svg { width: 18px; height: 18px; }
+.ag-year { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.ag-mini { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: left; }
+.ag-mini header { display: flex; justify-content: space-between; margin-bottom: 6px; font: 700 16px var(--cond); }
+.ag-mini header i { font-style: normal; color: var(--muted); font: 600 13px var(--body); }
+.ag-mg { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.ag-mg span { aspect-ratio: 1; display: grid; place-items: center; font-size: 10px; color: var(--muted); border-radius: 4px; }
+.ag-mg span.has { background: #E4E4E1; color: var(--ink); font-weight: 700; }
+.ag-mg span.hot { background: var(--ink); color: #fff; font-weight: 700; }
+.ag-mg span.fer { color: var(--danger); }
+.ag-mg span.today { outline: 1.5px solid var(--ink); }
+.status-seg { display: flex; gap: 6px; }
+.status-seg button { flex: 1; min-height: 42px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); font-weight: 600; font-size: 13px; color: var(--muted); }
+.status-seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+input[type="date"], input[type="tel"], input[type="number"] { width: 100%; border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-size: 16px; min-height: 46px; }
+
+/* ---------- Relatórios ---------- */
+.rel-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.rel-kpi { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 2px; }
+.rel-kpi b { font: 700 24px/1.1 var(--cond); }
+.rel-kpi span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabela th { text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.tabela td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tabela .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tabela tr:last-child td { border-bottom: 0; }
+.tabela-wrap { overflow-x: auto; margin: 0 -4px; }
+
 /* ---------- Cliente ---------- */
 .client { max-width: 640px; margin: 0 auto; }
 .client-hero { display: grid; gap: 8px; }
@@ -388,6 +466,10 @@ const ICON = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
   up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
   down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.3 4.7 4.84-1.27A9.9 9.9 0 1 0 12.04 2m0 1.8a8.1 8.1 0 1 1-4.13 15.06l-.3-.18-2.87.75.77-2.8-.19-.3A8.1 8.1 0 0 1 12.04 3.8m-3.6 4.03c-.17 0-.45.06-.68.31-.24.25-.9.87-.9 2.13s.92 2.47 1.05 2.64c.13.17 1.8 2.86 4.45 3.9 2.2.86 2.65.69 3.13.64.48-.04 1.54-.62 1.76-1.23.22-.6.22-1.12.15-1.23-.06-.1-.24-.17-.5-.3-.26-.13-1.54-.76-1.78-.84-.24-.09-.41-.13-.59.13-.17.25-.67.84-.82 1.01-.15.18-.3.2-.56.07-.26-.13-1.1-.4-2.1-1.29-.78-.69-1.3-1.54-1.45-1.8-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.46.13-.15.17-.26.26-.44.09-.17.04-.33-.02-.46-.07-.13-.58-1.4-.8-1.92-.2-.5-.4-.43-.55-.44z"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M12 11v6M9 14l3 3 3-3"/></svg>',
 };
 const icon = name => el('span', { html: ICON[name], 'aria-hidden': 'true', style: 'display:contents' });
 
@@ -406,10 +488,12 @@ const fmtData = ts => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 
 const fmtQ = n => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 const fmtBRL = n => Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const round2 = n => Math.round(n * 100) / 100;
-// Aceita "2,5", "2.5" e "1.960,00". Com vírgula, o ponto é separador de milhar.
+// Aceita "2,5", "2.5", "1.960,00" e "2.080". Com vírgula, o ponto é separador de milhar.
+// Sem vírgula, ponto seguido de grupos de 3 dígitos também é milhar ("2.080" = 2080, como se escreve no Brasil).
 const parseNum = raw => {
-  let t = String(raw || '').trim();
+  let t = String(raw || '').trim().replace(/^R\$\s*/i, '');
   if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
   return /^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN;
 };
 
@@ -650,7 +734,7 @@ async function buscarDados({ forcar = false } = {}) {
   FOTO_BASE = d.fotoBase || '';
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return a; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 } };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -675,6 +759,7 @@ function diffOps(a, b) {
   lista('veiculos', Object.values(a.veiculos), Object.values(b.veiculos), 'placa', () => false);
   lista('itens', a.estoque.itens, b.estoque.itens);
   lista('movimentos', a.estoque.movimentos, b.estoque.movimentos, 'id', () => false);
+  lista('agenda', a.agenda || [], b.agenda || []);
   lista('atendimentos', semFotos(a.atendimentos), semFotos(b.atendimentos));
   // Foto de atendimento excluído continua marcada como ativa (o atendimento inteiro fica guardado).
   lista('fotos', fotos(a.atendimentos), fotos(b.atendimentos), 'id', f => atsDepois.has(f.atendimentoId));
@@ -731,7 +816,8 @@ async function commitAgora(fn) {
 // Só troca os dados em segundo plano quando dá para redesenhar a tela sem atrapalhar quem está usando.
 function podeRedesenhar() {
   const [r] = parts();
-  if (['placa', 'novo', 'ajustes'].includes(r)) return false;
+  if (['placa', 'novo', 'ajustes', 'relatorios'].includes(r)) return false;
+  if (r === 'agenda' && parts()[1]) return false; // formulário de agendamento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
   const a = document.activeElement;
@@ -913,7 +999,7 @@ function sessaoTerminou() {
 /* =====================================================================
    Estado de tela e navegação
    ===================================================================== */
-const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null };
+const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, ag: null, rel: null };
 function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
 function parts() { return location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent); }
 window.addEventListener('hashchange', route);
@@ -935,6 +1021,8 @@ function route(opts) {
     case 'veiculo': return renderVehicle(a);
     case 'estoque': return renderStock();
     case 'historico': return isCtrl() ? renderHistory() : go('#/inicio');
+    case 'relatorios': return isCtrl() ? renderRelatorios() : go('#/inicio');
+    case 'agenda': return a ? renderAgendaItem(a) : renderAgenda();
     case 'ajustes': return isCtrl() ? renderSettings() : go('#/inicio');
     default: return renderHome();
   }
@@ -976,6 +1064,8 @@ function shell(body, { nav = true, current = '' } = {}) {
     el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none', text: 'Strike Details' }),
     u ? el('div', { class: 'who' },
       el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? ' · Controle' : ''),
+      // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
+      u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
       el('button', { class: 'link-btn', type: 'button', onclick: sair }, 'Sair')) : null));
   const main = el('main', { class: nav ? '' : 'no-nav' }, body);
   const kids = [top, main];
@@ -993,10 +1083,11 @@ function navBar(current) {
   if (alerta && isCtrl()) estoque.setAttribute('aria-label', `Estoque, ${alerta} ${alerta === 1 ? 'aviso' : 'avisos'}`);
   const ler = item('#/placa', 'placa', 'Adicionar', 'scan', 'nav-scan');
   ler.setAttribute('aria-label', 'Adicionar veículo');
-  // "Adicionar" fica sempre no meio.
+  const agenda = item('#/agenda', 'agenda', 'Agenda', 'calendar');
+  // "Adicionar" fica no meio. Ajustes do Controle ficam na engrenagem do topo.
   const items = isCtrl()
-    ? [inicio, estoque, ler, item('#/historico', 'historico', 'Histórico', 'clock'), item('#/ajustes', 'ajustes', 'Ajustes', 'gear')]
-    : [inicio, ler, estoque];
+    ? [inicio, agenda, ler, estoque, item('#/relatorios', 'relatorios', 'Relatórios', 'chart')]
+    : [inicio, agenda, ler, estoque];
   return el('nav', { class: 'nav', 'aria-label': 'Menu' }, el('div', { class: 'nav-in' }, items));
 }
 // Lista longa (histórico, movimentos): mostra as 3 mais recentes; "Mostrar mais" abre de 10 em 10.
@@ -1073,6 +1164,7 @@ function carCard(at) {
     el('div', { class: 'car-photo' }, capa ? photoImg(capa, `Foto do veículo ${at.placa}`) : el('div', { class: 'ph' }, icon('car'))),
     el('div', { class: 'car-body' },
       el('span', { class: 'car-plate', text: fmtPlaca(at.placa) }),
+      at.clienteNome ? el('span', { class: 'car-desc', style: 'color:var(--ink-2);font-weight:500', text: at.clienteNome }) : null,
       el('span', { class: 'car-desc', text: [v.descricao, at.tipoNome].filter(Boolean).join(' · ') }),
       el('span', { class: 'car-stage', text: at.concluido ? 'Concluído' : `Em ${at.etapas[at.etapaIndex].toLowerCase()}` }),
       el('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
@@ -1085,7 +1177,7 @@ function renderHome() {
     const q = S.homeQuery.trim().toLowerCase(), q2 = norm(q);
     const items = !q ? all : all.filter(a => {
       const v = DB.veiculos[a.placa] || {};
-      return (q2 && a.placa.includes(q2)) || [v.descricao, a.tipoNome, etapaAtual(a)].join(' ').toLowerCase().includes(q);
+      return (q2 && a.placa.includes(q2)) || [a.clienteNome, v.descricao, a.tipoNome, etapaAtual(a)].join(' ').toLowerCase().includes(q);
     });
     grid.replaceChildren(...items.map(carCard));
     empty.hidden = items.length > 0;
@@ -1098,7 +1190,7 @@ function renderHome() {
       el('span', {}, el('b', { text: 'Estoque: ' }), alertas.map(it => `${it.nome} (${fmtQ(saldo(it.id))} ${it.unidade})`).join(', ')),
       icon('chev')) : null,
     all.length > 4 ? el('div', { class: 'search' }, icon('search'),
-      el('input', { type: 'search', placeholder: 'Buscar placa, veículo ou etapa', value: S.homeQuery, 'aria-label': 'Buscar veículos', oninput: e => { S.homeQuery = e.target.value; draw(); } })) : null,
+      el('input', { type: 'search', placeholder: 'Buscar placa, cliente ou veículo', value: S.homeQuery, 'aria-label': 'Buscar veículos', oninput: e => { S.homeQuery = e.target.value; draw(); } })) : null,
     grid, empty);
   shell(body, { current: 'inicio' });
   draw();
@@ -1378,6 +1470,8 @@ function renderNew(placaRaw) {
   }
   S.pending = null;
 
+  // Nome do cliente: já vem preenchido com o do último serviço desta placa.
+  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: (anteriores[0] && anteriores[0].clienteNome) || '' });
   const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Strada branca 2022', value: v.descricao || '' });
   const tiposOk = DB.tipos.filter(t => t.etapas.length);
   const fTipo = el('select', { id: 'f-tipo' }, tiposOk.map(t => el('option', { value: t.id }, t.nome)));
@@ -1405,6 +1499,8 @@ function renderNew(placaRaw) {
   salvar.addEventListener('click', async () => {
     const tipo = tipoById(fTipo.value);
     if (!tipo) { toast('Cadastre um tipo de serviço com etapas em Ajustes.', true); return; }
+    const clienteNome = fCliente.value.trim().replace(/\s+/g, ' ');
+    if (!clienteNome) { toast('Digite o nome do cliente.', true); fCliente.focus(); return; }
     let valor = null;
     if (isCtrl() && fValor.value.trim()) { valor = parseNum(fValor.value); if (isNaN(valor)) { toast('Valor inválido.', true); return; } }
     salvar.disabled = true; salvar.textContent = 'Salvando…';
@@ -1422,7 +1518,7 @@ function renderNew(placaRaw) {
     const u = me();
     const at = {
       id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {},
-      concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome,
+      concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome,
       danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
     };
     registrar(at, 'Entrada do veículo');
@@ -1448,6 +1544,7 @@ function renderNew(placaRaw) {
       el('span', { class: 'veh-sub', text: anteriores.length ? `Veículo já atendido ${anteriores.length} ${anteriores.length === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores[0].criadoEm)}.` : 'Novo veículo. Registre a entrada.' })),
     el('div', { class: 'card' },
       el('h2', { text: 'Serviço' }),
+      el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
       el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo' }), fDesc),
@@ -1580,12 +1677,6 @@ function renderVehicle(id) {
       at.etapas.map((n, i) => el('option', { value: i, selected: !at.concluido && i === at.etapaIndex }, n)),
       el('option', { value: at.etapas.length, selected: at.concluido }, 'Concluído'));
     sel.addEventListener('change', () => { if (commit(() => ajustarEtapa(at, Number(sel.value)))) { toast('Etapa ajustada.'); redraw(); } });
-    const fValor = el('input', { type: 'text', inputmode: 'decimal', placeholder: '0,00', value: at.valor != null ? String(at.valor).replace('.', ',') : '', autocomplete: 'off', 'aria-label': 'Valor do serviço' });
-    const salvarValor = el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: () => {
-      const raw = fValor.value.trim(); const n = raw ? parseNum(raw) : null;
-      if (raw && isNaN(n)) { toast('Valor inválido.', true); return; }
-      if (commit(() => { at.valor = n; registrar(at, n == null ? 'Valor removido' : `Valor definido: ${fmtBRL(n)}`); })) toast('Valor salvo.');
-    } }, 'Salvar');
     const excluir = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
       if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele sai das listas, mas continua guardado no banco com as fotos.`)) return;
       if (commit(() => { DB.atendimentos = DB.atendimentos.filter(a => a.id !== at.id); })) { toast('Atendimento excluído.'); go('#/inicio'); }
@@ -1593,7 +1684,14 @@ function renderVehicle(id) {
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ajustar etapa' }), sel),
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Valor do serviço (R$)' }), el('div', { class: 'row' }, fValor, salvarValor)),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome do cliente' }),
+        (() => { const i = el('input', { type: 'text', maxlength: '80', value: at.clienteNome || '', autocapitalize: 'words' });
+          i.addEventListener('change', () => {
+            const n = i.value.trim().replace(/\s+/g, ' ');
+            if (!n) { toast('O nome do cliente não pode ficar vazio.', true); i.value = at.clienteNome || ''; return; }
+            if (n !== at.clienteNome && commit(() => { registrar(at, `Cliente: ${at.clienteNome || 'sem nome'} para ${n}`); at.clienteNome = n; })) { toast('Nome do cliente salvo.'); redraw(); }
+          });
+          return i; })()),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Descrição do veículo' }),
         (() => { const i = el('input', { type: 'text', maxlength: '80', value: v.descricao || '' });
           i.addEventListener('change', () => commit(() => { DB.veiculos[at.placa] = { ...(DB.veiculos[at.placa] || {}), placa: at.placa, descricao: i.value.trim() }; }) && toast('Descrição salva.'));
@@ -1601,17 +1699,50 @@ function renderVehicle(id) {
       el('div', {}, excluir));
   }
 
+  // Valor do serviço (só Controle): cartão próprio, logo abaixo das etapas.
+  let valorCard = null;
+  if (ctrl) {
+    const editando = S.valorAberto === at.id;
+    const abrir = on => { S.valorAberto = on ? at.id : null; redraw(); };
+    if (editando) {
+      const fValor = el('input', { type: 'text', inputmode: 'decimal', placeholder: '0,00', value: at.valor != null ? fmtQ(at.valor) : '', autocomplete: 'off', 'aria-label': 'Valor do serviço em reais' });
+      const salvar = () => {
+        const raw = fValor.value.trim(); const n = raw ? parseNum(raw) : null;
+        if (raw && isNaN(n)) { toast('Valor inválido. Use só números, como 1960 ou 1.960,00.', true); fValor.focus(); return; }
+        S.valorAberto = null;
+        if (n === (at.valor == null ? null : at.valor)) { redraw(); return; }
+        if (commit(() => { at.valor = n; registrar(at, n == null ? 'Valor removido' : `Valor definido: ${fmtBRL(n)}`); })) { toast('Valor salvo.'); redraw(); }
+      };
+      fValor.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvar(); } });
+      valorCard = el('div', { class: 'card' },
+        el('h2', { text: 'Valor do serviço' }),
+        el('div', { class: 'row', style: 'align-items:center' }, el('span', { class: 'label', style: 'flex:none', text: 'R$' }), fValor),
+        el('div', { class: 'actions' },
+          el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvar }, 'Salvar valor'),
+          el('button', { class: 'btn', type: 'button', onclick: () => abrir(false) }, 'Cancelar')));
+      setTimeout(() => { fValor.focus(); fValor.select(); }, 50);
+    } else {
+      valorCard = el('div', { class: 'card' }, el('div', { class: 'valor-box' },
+        el('div', { style: 'display:grid;gap:4px' },
+          el('span', { class: 'label', text: 'Valor do serviço' }),
+          el('span', { class: 'valor-num' + (at.valor == null ? ' vazio' : ''), text: at.valor == null ? 'Ainda sem valor' : fmtBRL(at.valor) })),
+        el('button', { class: 'btn' + (at.valor == null ? ' btn--primary' : ''), type: 'button', style: 'flex:none', onclick: () => abrir(true) }, at.valor == null ? 'Lançar valor' : 'Alterar')));
+    }
+  }
+
   const pct = Math.round(progresso(at) * 100);
   const body = el('div', { class: 'stack', style: 'max-width:720px' },
     backLink(at.concluido ? '#/historico' : '#/inicio', at.concluido ? 'Histórico' : 'Em serviço'),
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(at.placa) }),
+      at.clienteNome ? el('span', { style: 'font-weight:600', text: at.clienteNome }) : null,
       el('span', { class: 'veh-sub', text: [v.descricao, at.tipoNome, `entrada em ${fmtDataHora(at.criadoEm)}`].filter(Boolean).join(' · ') })),
     el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : `Em ${at.etapas[at.etapaIndex].toLowerCase()}` }),
         el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),
       el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
       steps, concluirBtn),
+    valorCard,
     el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeEtapa(f)).length}` })),
       at.fotosApagadas ? el('p', { class: 'hint', text: `${at.fotosApagadas} ${at.fotosApagadas === 1 ? 'foto foi apagada' : 'fotos foram apagadas'} pela limpeza automática (serviço concluído há mais de ${DB.ajustes.limpezaDias} dias).` }) : null,
       fotosBox),
@@ -1619,7 +1750,7 @@ function renderVehicle(id) {
     ctrlCard,
     el('div', { class: 'card' }, el('h2', { text: 'Histórico' }),
       listaRecolhivel(`hist:${at.id}`, at.historico.slice().reverse(), h => el('li', {}, el('span', { text: h.texto }), el('span', { text: [h.porNome, ago(h.em)].filter(Boolean).join(' · ') })))));
-  shell(body, { current: at.concluido ? 'historico' : 'inicio' });
+  shell(body, { current: at.concluido ? 'relatorios' : 'inicio' });
 }
 
 /* =====================================================================
@@ -1722,12 +1853,12 @@ function renderHistory() {
   const empty = el('p', { class: 'empty' });
   const draw = () => {
     const q = S.histQuery.trim().toLowerCase(), q2 = norm(q);
-    const items = !q ? all : all.filter(a => (q2 && a.placa.includes(q2)) || [(DB.veiculos[a.placa] || {}).descricao, a.tipoNome].join(' ').toLowerCase().includes(q));
+    const items = !q ? all : all.filter(a => (q2 && a.placa.includes(q2)) || [a.clienteNome, (DB.veiculos[a.placa] || {}).descricao, a.tipoNome].join(' ').toLowerCase().includes(q));
     list.replaceChildren(...items.map(a => {
       const capa = capaDe(a), v = DB.veiculos[a.placa] || {};
       return el('li', {}, el('a', { class: 'r', href: `#/veiculo/${esc(a.id)}`, style: 'color:inherit;text-decoration:none' },
         el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
-        el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(a.placa) }), el('span', { class: 'r-sub', text: [v.descricao, a.tipoNome].filter(Boolean).join(' · ') })),
+        el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(a.placa) }), el('span', { class: 'r-sub', text: [a.clienteNome, v.descricao, a.tipoNome].filter(Boolean).join(' · ') })),
         el('span', { class: 'r-side' }, el('div', { text: a.concluidoEm ? fmtData(a.concluidoEm) : '' }), a.valor != null ? el('div', { style: 'color:var(--ink);font-weight:600', text: fmtBRL(a.valor) }) : null)));
     }));
     list.hidden = !items.length; empty.hidden = !!items.length;
@@ -1735,9 +1866,9 @@ function renderHistory() {
   };
   const body = el('div', { class: 'stack', style: 'max-width:720px' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Histórico' }), el('span', { class: 'count', text: all.length ? `${all.length} concluídos` : '' })),
-    el('div', { class: 'search' }, icon('search'), el('input', { type: 'search', placeholder: 'Buscar placa ou veículo', value: S.histQuery, 'aria-label': 'Buscar no histórico', oninput: e => { S.histQuery = e.target.value; draw(); } })),
+    el('div', { class: 'search' }, icon('search'), el('input', { type: 'search', placeholder: 'Buscar placa, cliente ou veículo', value: S.histQuery, 'aria-label': 'Buscar no histórico', oninput: e => { S.histQuery = e.target.value; draw(); } })),
     list, empty);
-  shell(body, { current: 'historico' });
+  shell(body, { current: 'relatorios' });
   draw();
 }
 
@@ -1876,6 +2007,392 @@ function renderSettings() {
           document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         } }, 'Baixar backup (JSON)')))));
   shell(body, { current: 'ajustes' });
+}
+
+/* =====================================================================
+   Datas (agenda e relatórios). Dias no formato AAAA-MM-DD, no fuso do aparelho.
+   ===================================================================== */
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const DIAS_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+const pad2 = n => String(n).padStart(2, '0');
+const isoDia = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
+const isoDe = dt => isoDia(dt.getFullYear(), dt.getMonth(), dt.getDate());
+const hojeISO = () => isoDe(new Date());
+const dataDe = k => { const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d); };
+const somaDias = (k, n) => { const d = dataDe(k); d.setDate(d.getDate() + n); return isoDe(d); };
+const brDia = k => (k ? `${k.slice(8, 10)}/${k.slice(5, 7)}` : '');
+const brData = k => (k ? `${k.slice(8, 10)}/${k.slice(5, 7)}/${k.slice(0, 4)}` : '');
+
+// Feriados: nacionais, Rondônia e Jaru (os mesmos da agenda antiga).
+const cacheFeriados = {};
+function feriados(y) {
+  if (cacheFeriados[y]) return cacheFeriados[y];
+  const f = {};
+  const add = (k, nome) => { f[k] = f[k] ? `${f[k]} · ${nome}` : nome; };
+  [[0, 1, 'Confraternização Universal'], [3, 21, 'Tiradentes'], [4, 1, 'Dia do Trabalho'], [8, 7, 'Independência do Brasil'],
+    [9, 12, 'Nossa Senhora Aparecida'], [10, 2, 'Finados'], [10, 15, 'Proclamação da República'], [10, 20, 'Consciência Negra'],
+    [11, 25, 'Natal'], [0, 4, 'Instalação do Estado de Rondônia'], [5, 16, 'Criação do município de Jaru'],
+    [5, 24, 'São João Batista, padroeiro de Jaru'], [11, 24, 'Véspera de Natal'], [11, 31, 'Véspera de Ano-Novo']]
+    .forEach(([m, d, n]) => add(isoDia(y, m, d), n));
+  // Páscoa (algoritmo de Meeus) e as datas móveis
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, g = Math.floor((b - Math.floor((b + 8) / 25) + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, mm = Math.floor((a + 11 * h + 22 * l) / 451);
+  const pascoa = isoDia(y, Math.floor((h + l - 7 * mm + 114) / 31) - 1, ((h + l - 7 * mm + 114) % 31) + 1);
+  add(somaDias(pascoa, -48), 'Carnaval'); add(somaDias(pascoa, -47), 'Carnaval'); add(somaDias(pascoa, -46), 'Quarta-feira de Cinzas');
+  add(somaDias(pascoa, -2), 'Sexta-feira Santa'); add(somaDias(pascoa, 60), 'Corpus Christi');
+  return (cacheFeriados[y] = f);
+}
+
+/* =====================================================================
+   Tela: agenda. Funcionário vê tudo (inclusive valores); só o Controle cria, altera e cancela.
+   ===================================================================== */
+const SIGLAS = { volkswagen: 'VW', vw: 'VW', fiat: 'FIAT', chevrolet: 'CHEV', gm: 'CHEV', ford: 'FORD', toyota: 'TOY', honda: 'HONDA', hyundai: 'HYU',
+  renault: 'REN', jeep: 'JEEP', nissan: 'NIS', peugeot: 'PEU', citroen: 'CIT', 'citroën': 'CIT', mitsubishi: 'MIT', kia: 'KIA', bmw: 'BMW',
+  mercedes: 'MB', 'mercedes-benz': 'MB', audi: 'AUDI', volvo: 'VOLVO', 'land rover': 'LR', ram: 'RAM', chery: 'CHERY', byd: 'BYD', gwm: 'GWM', suzuki: 'SUZ' };
+const MARCAS = ['Fiat', 'Volkswagen', 'Chevrolet', 'Ford', 'Toyota', 'Honda', 'Hyundai', 'Renault', 'Jeep', 'Nissan', 'Peugeot', 'Citroën', 'Mitsubishi', 'Kia', 'BMW', 'Mercedes-Benz', 'Audi', 'Volvo', 'Land Rover', 'RAM', 'Chery', 'BYD', 'GWM', 'Suzuki'];
+const seloMarca = m => { const t = String(m || '').trim(); return t ? (SIGLAS[t.toLowerCase()] || t.toUpperCase().slice(0, 5)) : null; };
+const entregaDe = a => (a.prazo ? somaDias(a.data, a.prazo) : a.data);
+const agendaAtiva = () => DB.agenda || [];
+const STATUS_AG = { agendado: 'Agendado', concluido: 'Concluído', cancelado: 'Cancelado' };
+const telWa = t => { const n = String(t || '').replace(/\D/g, ''); return n.length >= 10 ? `https://wa.me/${n.startsWith('55') ? n : '55' + n}` : null; };
+
+function estadoAgenda() {
+  if (!S.ag) { const t = new Date(); S.ag = { y: t.getFullYear(), m: t.getMonth(), sel: hojeISO(), modo: 'mes' }; }
+  return S.ag;
+}
+function linhaAgendamento(a, { entrega = false } = {}) {
+  const selo = seloMarca(a.marca);
+  const meta = entrega
+    ? [`Entrega · entrou em ${brDia(a.data)}`, a.servico]
+    : [a.servico, a.prazo ? `entrega ${brDia(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : '', a.valor != null ? fmtBRL(a.valor) : '', a.obs];
+  const wa = telWa(a.tel);
+  const abrir = () => go(`#/agenda/${esc(a.id)}`);
+  return el('div', { class: `ag-appt ${a.status}${entrega ? ' entrega' : ''}`, role: 'link', tabindex: '0', style: 'cursor:pointer', onclick: abrir,
+    onkeydown: e => { if (e.key === 'Enter') abrir(); } },
+    el('span', { class: 'marca' }, selo ? selo : icon('car')),
+    el('span', { class: 'nome', text: a.cliente }),
+    el('span', { class: 'meta', text: meta.filter(Boolean).join(' · ') || 'Sem detalhes' }),
+    el('span', { class: 'lado' },
+      a.status !== 'agendado' ? el('span', { class: 'tag' + (a.status === 'concluido' ? ' tag--ok' : ''), text: STATUS_AG[a.status] }) : null,
+      wa ? el('a', { class: 'wa-btn', href: wa, target: '_blank', rel: 'noopener', 'aria-label': `WhatsApp de ${a.cliente}`, onclick: e => e.stopPropagation() }, icon('wa')) : null));
+}
+function renderAgenda() {
+  const A = estadoAgenda(), ctrl = isCtrl(), hoje = hojeISO();
+  const redraw = () => { const y = window.scrollY; renderAgenda(); window.scrollTo(0, y); };
+  const mover = d => { if (A.modo === 'ano') A.y += d; else { A.m += d; if (A.m < 0) { A.m = 11; A.y--; } if (A.m > 11) { A.m = 0; A.y++; } } redraw(); };
+  const lista = agendaAtiva();
+  const nav = el('div', { class: 'ag-nav' },
+    el('button', { class: 'arrow', type: 'button', 'aria-label': A.modo === 'ano' ? 'Ano anterior' : 'Mês anterior', onclick: () => mover(-1) }, icon('back')),
+    el('button', { class: 'ag-period', type: 'button', 'aria-label': 'Trocar entre mês e ano', onclick: () => { A.modo = A.modo === 'mes' ? 'ano' : 'mes'; redraw(); } },
+      A.modo === 'ano' ? String(A.y) : MESES[A.m] + ' ', A.modo === 'ano' ? null : el('em', { text: String(A.y) })),
+    el('button', { class: 'arrow', type: 'button', 'aria-label': A.modo === 'ano' ? 'Próximo ano' : 'Próximo mês', onclick: () => mover(1) }, icon('chev')));
+  const topo = el('div', { class: 'page-head' },
+    el('h1', { text: 'Agenda' }),
+    el('div', { class: 'actions', style: 'gap:8px' },
+      el('div', { class: 'seg', role: 'group', 'aria-label': 'Visualização' },
+        el('button', { type: 'button', 'aria-pressed': String(A.modo === 'mes'), onclick: () => { A.modo = 'mes'; redraw(); } }, 'Mês'),
+        el('button', { type: 'button', 'aria-pressed': String(A.modo === 'ano'), onclick: () => { A.modo = 'ano'; redraw(); } }, 'Ano')),
+      el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { const t = new Date(); Object.assign(A, { y: t.getFullYear(), m: t.getMonth(), sel: hoje, modo: 'mes' }); redraw(); } }, 'Hoje')));
+
+  if (A.modo === 'ano') {
+    const fer = feriados(A.y);
+    const minis = MESES.map((nome, m) => {
+      const pref = `${A.y}-${pad2(m + 1)}-`;
+      const doMes = lista.filter(a => a.data.startsWith(pref) && a.status !== 'cancelado');
+      const porDia = {}; doMes.forEach(a => { porDia[a.data] = (porDia[a.data] || 0) + 1; });
+      const first = new Date(A.y, m, 1).getDay(), total = new Date(A.y, m + 1, 0).getDate();
+      const dias = [];
+      for (let i = 0; i < first; i++) dias.push(el('span'));
+      for (let d = 1; d <= total; d++) {
+        const k = isoDia(A.y, m, d), n = porDia[k] || 0;
+        dias.push(el('span', { class: [n ? (n > 2 ? 'hot' : 'has') : '', !n && fer[k] ? 'fer' : '', k === hoje ? 'today' : ''].filter(Boolean).join(' ') || null, title: fer[k] || null, text: String(d) }));
+      }
+      return el('button', { class: 'ag-mini', type: 'button', onclick: () => { A.m = m; A.modo = 'mes'; redraw(); } },
+        el('header', {}, el('span', { text: nome }), el('i', { text: doMes.length ? String(doMes.length) : '' })),
+        el('div', { class: 'ag-mg' }, dias));
+    });
+    shell(el('div', { class: 'stack', style: 'max-width:720px' }, topo, nav, el('div', { class: 'ag-year' }, minis)), { current: 'agenda' });
+    return;
+  }
+
+  // Mês
+  const fer = feriados(A.y), first = new Date(A.y, A.m, 1).getDay(), total = new Date(A.y, A.m + 1, 0).getDate();
+  const porDia = {}; lista.forEach(a => { (porDia[a.data] = porDia[a.data] || []).push(a); });
+  // dias entre a entrada e a entrega (faixa embaixo do dia)
+  const noPrazo = new Set();
+  lista.filter(a => a.prazo && a.status !== 'cancelado').forEach(a => { for (let i = 1; i <= a.prazo; i++) noPrazo.add(somaDias(a.data, i)); });
+  const cells = [];
+  for (let i = 0; i < first; i++) cells.push(el('span', { class: 'ag-cell out', 'aria-hidden': 'true' }));
+  for (let d = 1; d <= total; d++) {
+    const k = isoDia(A.y, A.m, d), its = porDia[k] || [], dow = new Date(A.y, A.m, d).getDay();
+    const ativos = its.filter(a => a.status !== 'cancelado').length;
+    cells.push(el('button', {
+      type: 'button', title: fer[k] || null, 'aria-label': `${d} de ${MESES[A.m].toLowerCase()}${its.length ? `, ${its.length} ${its.length === 1 ? 'agendamento' : 'agendamentos'}` : ''}${fer[k] ? `, ${fer[k]}` : ''}`,
+      'aria-pressed': String(k === A.sel),
+      class: ['ag-cell', ativos ? 'tem' : '', noPrazo.has(k) ? 'rng' : '', k === hoje ? 'today' : '', k === A.sel ? 'sel' : '', fer[k] ? 'feriado' : '', dow === 0 || dow === 6 ? 'fim' : ''].filter(Boolean).join(' '),
+      onclick: () => { A.sel = k; redraw(); },
+    }, el('span', { class: 'n', text: String(d) }),
+      el('span', { class: 'ag-dots' }, its.slice(0, 3).map(a => el('i', { class: 'ag-dot ' + a.status })), its.length > 3 ? el('span', { class: 'ag-mais', text: `+${its.length - 3}` }) : null)));
+  }
+  const doMes = lista.filter(a => a.data.startsWith(`${A.y}-${pad2(A.m + 1)}-`));
+
+  // Dia escolhido
+  const selDt = dataDe(A.sel), selFer = feriados(selDt.getFullYear())[A.sel];
+  const doDia = (porDia[A.sel] || []).slice().sort((a, b) => a.cliente.localeCompare(b.cliente));
+  const entregas = lista.filter(a => a.prazo && a.status !== 'cancelado' && entregaDe(a) === A.sel);
+  const dia = el('div', { class: 'card' },
+    el('div', { class: 'card-head' }, el('h2', { text: `${DIAS_SEMANA[selDt.getDay()]}, ${selDt.getDate()} de ${MESES[selDt.getMonth()].toLowerCase()}` }),
+      el('span', { class: 'count', text: doDia.length ? `${doDia.length} ${doDia.length === 1 ? 'agendamento' : 'agendamentos'}` : '' })),
+    selFer ? el('span', {}, el('span', { class: 'tag tag--danger', text: selFer })) : null,
+    entregas.length ? el('div', { class: 'stack', style: 'gap:8px' }, entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null,
+    doDia.length ? el('div', { class: 'stack', style: 'gap:8px' }, doDia.map(a => linhaAgendamento(a)))
+      : el('p', { class: 'hint', text: entregas.length ? 'Nenhuma entrada neste dia.' : 'Nenhum cliente neste dia.' }),
+    ctrl ? el('a', { class: 'btn btn--primary btn--block', href: `#/agenda/novo` }, icon('plus'), 'Agendar neste dia') : null);
+
+  shell(el('div', { class: 'stack', style: 'max-width:720px' },
+    topo, nav,
+    el('div', { class: 'ag-dow', 'aria-hidden': 'true' }, ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map(t => el('span', { text: t }))),
+    el('div', { class: 'ag-grid' }, cells),
+    el('div', { class: 'ag-legenda' },
+      el('span', {}, el('b', { style: 'background:var(--ink)' }), 'agendado'),
+      el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
+      el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
+      el('span', {}, el('b', { style: 'width:16px;height:3px;border-radius:2px;background:var(--line-2)' }), 'até a entrega')),
+    el('div', { class: 'ag-resumo' },
+      el('span', {}, el('b', { text: String(doMes.length) }), ' no mês'),
+      el('span', {}, el('b', { text: String(doMes.filter(a => a.status === 'agendado').length) }), ' agendados'),
+      el('span', {}, el('b', { text: String(doMes.filter(a => a.status === 'concluido').length) }), ' concluídos')),
+    dia), { current: 'agenda' });
+}
+
+// Agendamento: Controle edita (ou cria com "novo"); Funcionário só vê.
+function renderAgendaItem(idRaw) {
+  const A = estadoAgenda(), ctrl = isCtrl();
+  const novo = idRaw === 'novo';
+  const a = novo ? null : agendaAtiva().find(x => x.id === idRaw);
+  if (!novo && !a) { toast('Agendamento não encontrado.', true); return go('#/agenda'); }
+  if (novo && !ctrl) return go('#/agenda');
+  const voltar = backLink('#/agenda', 'Agenda');
+
+  if (!ctrl) {
+    const wa = telWa(a.tel);
+    const linha = (dt, dd) => dd ? el('div', {}, el('dt', { text: dt }), el('dd', { text: dd })) : null;
+    shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
+      el('div', { class: 'veh-head' }, el('h1', { text: a.cliente }), el('span', { class: 'veh-sub', text: STATUS_AG[a.status] })),
+      el('div', { class: 'card' }, el('dl', { class: 'kv' },
+        linha('Serviço', a.servico), linha('Veículo', a.marca), linha('Entrada', brData(a.data)),
+        linha('Entrega prevista', a.prazo ? `${brData(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : 'No mesmo dia'),
+        linha('Valor', a.valor != null ? fmtBRL(a.valor) : ''), linha('WhatsApp', a.tel), linha('Observações', a.obs))),
+      wa ? el('a', { class: 'btn btn--block', href: wa, target: '_blank', rel: 'noopener' }, icon('wa'), 'Chamar no WhatsApp') : null), { current: 'agenda' });
+    return;
+  }
+
+  const fCli = el('input', { id: 'ag-cli', type: 'text', maxlength: '80', autocapitalize: 'words', autocomplete: 'off', placeholder: 'Nome do cliente', value: a ? a.cliente : '' });
+  const fTel = el('input', { id: 'ag-tel', type: 'tel', maxlength: '30', inputmode: 'tel', placeholder: '(69) 99999-9999', value: a ? a.tel : '' });
+  const fServ = el('input', { id: 'ag-serv', type: 'text', maxlength: '120', placeholder: 'O que vai ser feito', value: a ? a.servico : '' });
+  const fMarca = el('input', { id: 'ag-marca', type: 'text', maxlength: '40', list: 'ag-marcas', placeholder: 'Fiat, Volkswagen, Toyota...', value: a ? a.marca : '' });
+  const fData = el('input', { id: 'ag-data', type: 'date', value: a ? a.data : A.sel });
+  const fPrazo = el('input', { id: 'ag-prazo', type: 'number', min: '0', max: '90', step: '1', inputmode: 'numeric', placeholder: '0', value: a && a.prazo ? String(a.prazo) : '' });
+  const fValor = el('input', { id: 'ag-valor', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'Opcional', value: a && a.valor != null ? fmtQ(a.valor) : '' });
+  const fObs = el('textarea', { id: 'ag-obs', rows: '3', maxlength: '600', placeholder: 'Veículo, cor, combinados...' });
+  fObs.value = a ? a.obs : '';
+  const entrega = el('p', { class: 'hint' });
+  const calc = () => {
+    const n = Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0));
+    if (!fData.value) { entrega.textContent = 'Escolha a data de entrada.'; return; }
+    const k = n ? somaDias(fData.value, n) : fData.value;
+    entrega.textContent = n ? `Entrega prevista: ${DIAS_SEMANA[dataDe(k).getDay()].toLowerCase()}, ${brData(k)}` : 'Entrega no mesmo dia.';
+  };
+  fData.addEventListener('change', calc); fPrazo.addEventListener('input', calc); calc();
+  let status = a ? a.status : 'agendado';
+  const seg = el('div', { class: 'status-seg', role: 'group', 'aria-label': 'Situação' });
+  const drawSeg = () => seg.replaceChildren(...Object.entries(STATUS_AG).map(([k, t]) =>
+    el('button', { type: 'button', 'aria-pressed': String(status === k), onclick: () => { status = k; drawSeg(); } }, t)));
+  drawSeg();
+
+  const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button', onclick: () => {
+    const cliente = fCli.value.trim().replace(/\s+/g, ' ');
+    if (!cliente) { toast('Digite o nome do cliente.', true); fCli.focus(); return; }
+    if (!fData.value) { toast('Escolha a data de entrada.', true); fData.focus(); return; }
+    const raw = fValor.value.trim(), valor = raw ? parseNum(raw) : null;
+    if (raw && isNaN(valor)) { toast('Valor inválido. Use só números, como 1960 ou 1.960,00.', true); fValor.focus(); return; }
+    const reg = { id: a ? a.id : uid(), cliente, tel: fTel.value.trim(), servico: fServ.value.trim(), data: fData.value, marca: fMarca.value.trim(),
+      prazo: Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0)), valor, obs: fObs.value.trim(), status };
+    if (commit(() => { DB.agenda = a ? agendaAtiva().map(x => x.id === a.id ? reg : x) : [...agendaAtiva(), reg]; })) {
+      const dt = dataDe(reg.data); Object.assign(A, { sel: reg.data, y: dt.getFullYear(), m: dt.getMonth(), modo: 'mes' });
+      toast(a ? 'Agendamento atualizado.' : 'Cliente agendado.');
+      go('#/agenda');
+    }
+  } }, a ? 'Salvar alterações' : 'Agendar');
+  const excluir = a ? el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
+    if (!window.confirm(`Excluir o agendamento de ${a.cliente}? Ele sai da agenda, mas fica guardado no banco. Para só desmarcar, use "Cancelado".`)) return;
+    if (commit(() => { DB.agenda = agendaAtiva().filter(x => x.id !== a.id); })) { toast('Agendamento excluído.'); go('#/agenda'); }
+  } }, 'Excluir agendamento') : null;
+
+  const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
+  shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
+    el('h1', { text: a ? 'Editar agendamento' : 'Novo agendamento' }),
+    el('div', { class: 'card' },
+      campo('ag-cli', 'Cliente', fCli), campo('ag-tel', 'WhatsApp', fTel), campo('ag-serv', 'Serviço', fServ),
+      campo('ag-marca', 'Marca ou modelo do carro', fMarca), el('datalist', { id: 'ag-marcas' }, MARCAS.map(m => el('option', { value: m }))),
+      el('div', { class: 'row' }, campo('ag-data', 'Entrada', fData), campo('ag-prazo', 'Prazo (dias)', fPrazo)), entrega,
+      campo('ag-valor', 'Valor (R$)', fValor), campo('ag-obs', 'Observações', fObs),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Situação' }), seg)),
+    salvar, excluir ? el('div', {}, excluir) : null), { current: 'agenda' });
+  if (!a) fCli.focus();
+}
+
+/* =====================================================================
+   Tela: relatórios (Controle). Faturamento e estoque por período; PDF para baixar.
+   Faturamento = serviços concluídos no período (pela data de conclusão) que têm valor.
+   ===================================================================== */
+function periodoRel() {
+  if (!S.rel) S.rel = { preset: 'mes' };
+  const R = S.rel, t = new Date();
+  if (R.preset === 'mes') { R.de = isoDia(t.getFullYear(), t.getMonth(), 1); R.ate = isoDia(t.getFullYear(), t.getMonth() + 1, 0); }
+  else if (R.preset === 'anterior') { R.de = isoDia(t.getFullYear(), t.getMonth() - 1, 1); R.ate = isoDia(t.getFullYear(), t.getMonth(), 0); }
+  else if (R.preset === 'ano') { R.de = isoDia(t.getFullYear(), 0, 1); R.ate = isoDia(t.getFullYear(), 11, 31); }
+  else { R.de = R.de || isoDia(t.getFullYear(), t.getMonth(), 1); R.ate = R.ate || hojeISO(); }
+  // isoDia com dia 0 volta para o último dia do mês anterior; normaliza pelo Date
+  R.de = isoDe(dataDe(R.de)); R.ate = isoDe(dataDe(R.ate));
+  if (R.ate < R.de) [R.de, R.ate] = [R.ate, R.de];
+  return R;
+}
+function calcularRelatorio(de, ate) {
+  const ini = dataDe(de).getTime(), fim = dataDe(somaDias(ate, 1)).getTime();
+  const dentro = ms => ms != null && ms >= ini && ms < fim;
+  const concluidos = DB.atendimentos.filter(a => a.concluido && dentro(a.concluidoEm)).sort((a, b) => a.concluidoEm - b.concluidoEm);
+  const comValor = concluidos.filter(a => a.valor != null);
+  const faturamento = round2(comValor.reduce((s, a) => s + a.valor, 0));
+  const porTipo = new Map();
+  for (const a of comValor) { const t = porTipo.get(a.tipoNome || 'Sem tipo') || { qtd: 0, total: 0 }; t.qtd++; t.total = round2(t.total + a.valor); porTipo.set(a.tipoNome || 'Sem tipo', t); }
+  const andamento = DB.atendimentos.filter(a => !a.concluido);
+  const previsto = round2(andamento.reduce((s, a) => s + (a.valor || 0), 0));
+  const movs = DB.estoque.movimentos.filter(m => dentro(m.em));
+  const itens = DB.estoque.itens.map(it => {
+    const ms = movs.filter(m => m.itemId === it.id);
+    const soma = tipo => round2(ms.filter(m => m.tipo === tipo).reduce((s, m) => s + m.delta, 0));
+    return { nome: it.nome, unidade: it.unidade, entrou: soma('entrada'), saiu: -soma('saida'), ajuste: soma('ajuste'), saldo: saldo(it.id) };
+  });
+  const porPessoa = new Map();
+  for (const m of movs.filter(m => m.tipo === 'saida')) {
+    const it = DB.estoque.itens.find(x => x.id === m.itemId); if (!it) continue;
+    const k = `${m.porNome || 'Sem nome'}|${it.id}`;
+    const r = porPessoa.get(k) || { pessoa: m.porNome || 'Sem nome', material: it.nome, unidade: it.unidade, qtd: 0 };
+    r.qtd = round2(r.qtd - m.delta); porPessoa.set(k, r);
+  }
+  return {
+    de, ate, concluidos, comValor, faturamento, semValor: concluidos.length - comValor.length,
+    ticket: comValor.length ? round2(faturamento / comValor.length) : 0,
+    porTipo: [...porTipo].map(([tipo, t]) => ({ tipo, ...t })).sort((a, b) => b.total - a.total),
+    andamento: andamento.length, previsto, itens,
+    retiradas: [...porPessoa.values()].sort((a, b) => a.pessoa.localeCompare(b.pessoa) || a.material.localeCompare(b.material)),
+  };
+}
+const fmtDia = ms => (ms ? fmtData(ms) : '');
+const tabela = (cab, linhas, numCols = []) => el('div', { class: 'tabela-wrap' }, el('table', { class: 'tabela' },
+  el('thead', {}, el('tr', {}, cab.map((c, i) => el('th', { class: numCols.includes(i) ? 'num' : null, text: c })))),
+  el('tbody', {}, linhas.map(l => el('tr', {}, l.map((c, i) => el('td', { class: numCols.includes(i) ? 'num' : null, text: c })))))));
+
+function renderRelatorios() {
+  const R = periodoRel(), r = calcularRelatorio(R.de, R.ate);
+  const redraw = () => { const y = window.scrollY; renderRelatorios(); window.scrollTo(0, y); };
+  const preset = (k, t) => el('button', { type: 'button', 'aria-pressed': String(R.preset === k), onclick: () => { R.preset = k; redraw(); } }, t);
+  const fDe = el('input', { type: 'date', value: R.de, 'aria-label': 'De' }), fAte = el('input', { type: 'date', value: R.ate, 'aria-label': 'Até' });
+  const aplicar = () => { if (fDe.value && fAte.value) { R.preset = 'custom'; R.de = fDe.value; R.ate = fAte.value; redraw(); } };
+  fDe.addEventListener('change', aplicar); fAte.addEventListener('change', aplicar);
+  const pdfBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button' }, icon('file'), 'Baixar PDF');
+  pdfBtn.addEventListener('click', async () => {
+    pdfBtn.disabled = true; pdfBtn.textContent = 'Gerando PDF…';
+    try { await baixarRelatorioPDF(r); toast('PDF baixado.'); }
+    catch { toast('Não foi possível gerar o PDF. Confira a internet e tente de novo.', true); }
+    finally { pdfBtn.disabled = false; pdfBtn.replaceChildren(icon('file'), 'Baixar PDF'); }
+  });
+  const verTodos = S.rel.todos;
+  const linhasServ = r.concluidos.map(a => [fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']);
+
+  shell(el('div', { class: 'stack-lg', style: 'max-width:720px' },
+    el('div', { class: 'stack' },
+      el('h1', { text: 'Relatórios' }),
+      el('a', { class: 'alert', href: '#/historico', style: 'background:var(--surface);border-color:var(--line);color:var(--ink)' },
+        el('span', {}, el('b', { text: 'Histórico de serviços' }), ' · todos os concluídos, com busca'), icon('chev'))),
+    el('div', { class: 'card' },
+      el('h2', { text: 'Período' }),
+      el('div', { class: 'seg', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),
+      R.preset === 'custom' ? el('div', { class: 'row' }, el('div', { class: 'field' }, el('span', { class: 'label', text: 'De' }), fDe), el('div', { class: 'field' }, el('span', { class: 'label', text: 'Até' }), fAte))
+        : el('p', { class: 'hint', text: `De ${brData(R.de)} a ${brData(R.ate)}` }),
+      pdfBtn),
+    el('section', { class: 'stack' },
+      el('h2', { text: 'Faturamento' }),
+      el('div', { class: 'rel-kpis' },
+        el('div', { class: 'rel-kpi' }, el('span', { text: 'Faturado no período' }), el('b', { text: fmtBRL(r.faturamento) })),
+        el('div', { class: 'rel-kpi' }, el('span', { text: 'Serviços concluídos' }), el('b', { text: String(r.concluidos.length) })),
+        el('div', { class: 'rel-kpi' }, el('span', { text: 'Ticket médio' }), el('b', { text: fmtBRL(r.ticket) })),
+        el('div', { class: 'rel-kpi' }, el('span', { text: `Em andamento (${r.andamento})` }), el('b', { text: fmtBRL(r.previsto) }))),
+      r.semValor ? el('p', { class: 'hint', style: 'color:var(--warn)', text: `${r.semValor} ${r.semValor === 1 ? 'serviço concluído está' : 'serviços concluídos estão'} sem valor lançado e não ${r.semValor === 1 ? 'entra' : 'entram'} no faturamento.` }) : null,
+      r.porTipo.length ? el('div', { class: 'card' }, el('h3', { text: 'Por tipo de serviço' }),
+        tabela(['Tipo', 'Qtd.', 'Total'], r.porTipo.map(t => [t.tipo, String(t.qtd), fmtBRL(t.total)]), [1, 2])) : null,
+      el('div', { class: 'card' }, el('h3', { text: 'Serviços concluídos' }),
+        linhasServ.length ? tabela(['Conclusão', 'Placa', 'Cliente', 'Valor'], verTodos ? linhasServ : linhasServ.slice(0, 10), [3]) : el('p', { class: 'hint', text: 'Nenhum serviço concluído no período.' }),
+        linhasServ.length > 10 ? el('div', {}, el('button', { class: 'link-btn', type: 'button', onclick: () => { S.rel.todos = !verTodos; redraw(); } },
+          verTodos ? 'Mostrar menos' : `Mostrar todos (${linhasServ.length})`)) : null)),
+    el('section', { class: 'stack' },
+      el('h2', { text: 'Estoque' }),
+      el('div', { class: 'card' }, el('h3', { text: 'Materiais no período' }),
+        r.itens.length ? tabela(['Material', 'Entrou', 'Saiu', 'Saldo hoje'], r.itens.map(i => [i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), [1, 2, 3])
+          : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
+      el('div', { class: 'card' }, el('h3', { text: 'Retiradas por pessoa' }),
+        r.retiradas.length ? tabela(['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), [2])
+          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' })))), { current: 'relatorios' });
+}
+
+// PDF: jsPDF + autoTable (carregados só quando alguém pede o PDF).
+const carregarScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('script')); document.head.append(s); });
+let jspdfP = null;
+function carregarJsPDF() {
+  if (!jspdfP) jspdfP = carregarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+    .then(() => carregarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'))
+    .catch(e => { jspdfP = null; throw e; });
+  return jspdfP;
+}
+async function baixarRelatorioPDF(r) {
+  await carregarJsPDF();
+  const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+  const u = me(), X = 40;
+  const pdfTxt = s => String(s).replace(/[−–—]/g, '-').replace(/ /g, ' ');
+  let y = 48;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('Strike Details Estética Automotiva', X, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
+  doc.text(pdfTxt(`Relatório de ${brData(r.de)} a ${brData(r.ate)}  ·  gerado em ${fmtData(Date.now())}${u ? ` por ${u.nome}` : ''}`), X, y += 16);
+  doc.setTextColor(0);
+  const tab = (titulo, head, body, alinhar = {}) => {
+    y += 26;
+    if (y > 760) { doc.addPage(); y = 50; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(titulo, X, y);
+    doc.autoTable({
+      startY: y + 8, head: [head], body: body.length ? body.map(l => l.map(pdfTxt)) : [[{ content: 'Nada no período.', colSpan: head.length }]],
+      theme: 'grid', margin: { left: X, right: X }, styles: { fontSize: 9, cellPadding: 5, lineColor: [226, 226, 224] },
+      headStyles: { fillColor: [18, 18, 18], textColor: 255 }, columnStyles: alinhar,
+    });
+    y = doc.lastAutoTable.finalY;
+  };
+  const dir = n => Object.fromEntries(n.map(i => [i, { halign: 'right' }]));
+  tab('Faturamento', ['Indicador', 'Valor'], [
+    ['Faturado no período (serviços concluídos com valor)', fmtBRL(r.faturamento)],
+    ['Serviços concluídos', String(r.concluidos.length)],
+    ['Ticket médio', fmtBRL(r.ticket)],
+    ['Concluídos sem valor lançado', String(r.semValor)],
+    [`Em andamento hoje (${r.andamento}), valor previsto`, fmtBRL(r.previsto)],
+  ], dir([1]));
+  tab('Por tipo de serviço', ['Tipo', 'Qtd.', 'Total'], r.porTipo.map(t => [t.tipo, String(t.qtd), fmtBRL(t.total)]), dir([1, 2]));
+  tab('Serviços concluídos', ['Conclusão', 'Placa', 'Cliente', 'Veículo', 'Tipo', 'Valor'], r.concluidos.map(a => [
+    fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', (DB.veiculos[a.placa] || {}).descricao || '', a.tipoNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']), dir([5]));
+  tab('Estoque no período', ['Material', 'Entrou', 'Saiu', 'Contagem (ajuste)', 'Saldo hoje'], r.itens.map(i => [
+    i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${i.ajuste > 0 ? '+' : ''}${fmtQ(i.ajuste)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), dir([1, 2, 3, 4]));
+  tab('Retiradas por pessoa', ['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), dir([2]));
+  const n = doc.getNumberOfPages();
+  for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Strike Details · página ${p} de ${n}`, X, 820); }
+  doc.save(`strike-details-relatorio-${r.de}-a-${r.ate}.pdf`);
 }
 
 /* ---------- Envio dos dados antigos (de antes do banco) ----------

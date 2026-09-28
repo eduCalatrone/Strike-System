@@ -53,24 +53,29 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - `#/` login da equipe (usuário e senha) · página do cliente em `/cliente` (hash `#/PLACA`)
 - `#/inicio` galeria dos veículos em serviço (foto de capa = Frente, placa, etapa atual, barra de progresso)
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar
-- `#/novo/PLACA` entrada do veículo: tipo de serviço, descrição, fotos, danos, objetos pessoais (valor só para Controle)
+- `#/novo/PLACA` entrada do veículo: nome do cliente (obrigatório, vem preenchido com o do último serviço da placa), tipo de serviço, descrição, fotos, danos, objetos pessoais (valor só para Controle)
 - `#/veiculo/ID` etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
-- `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle)
-- Menu inferior: Início, Adicionar (botão preto no meio), Estoque; Controle também tem Histórico e Ajustes. A aba aberta tem fundo cinza atrás do ícone.
+- `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle, pela engrenagem no topo)
+- `#/agenda` calendário (mês/ano, feriados de Jaru/RO, faixa até a entrega, dia escolhido com entradas e entregas) · `#/agenda/ID` agendamento (Controle edita; Funcionário só vê) · `#/agenda/novo`
+- `#/relatorios` (Controle): período (este mês, mês passado, este ano ou escolher), faturamento e estoque na tela e "Baixar PDF"; link para o Histórico de serviços
+- Menu inferior: Início, Agenda, Adicionar (botão preto no meio), Estoque; Controle também tem Relatórios. Ajustes do Controle ficam na engrenagem do topo. A aba aberta tem fundo cinza atrás do ícone.
 
 ## Regras de negócio decididas
 
 - **Status do serviço = a etapa atual** (não existe campo de status separado).
 - Cada tipo de serviço tem sua lista de etapas, editável em Ajustes. Padrão (Cabine Blindada): Inspeção, Desmontagem, Limpeza externa, Limpeza interna, Limpeza de peças desmontadas, Montagem. O atendimento guarda uma cópia das etapas de quando começou.
 - Uma placa só pode ter um atendimento em andamento. Ler a placa de um veículo em serviço abre o veículo direto.
+- **Nome do cliente** fica em cada atendimento (`sd_atendimentos.cliente_nome`), porque o carro pode trocar de dono. Aparece no card do Início, no veículo e no Histórico, e entra na busca. O Controle corrige em "Opções do Controle". Não vai para a página do cliente (`api/cliente` não devolve), para quem só sabe a placa não ver o nome.
 - Fotos de entrada com espaços fixos: Frente, Traseira, Lateral esquerda, Lateral direita, Placa, Acessórios (+ extras: Danos, Interior, Objetos pessoais, Outra). A foto usada na leitura da placa entra como "Placa".
 - Fotos abrem **direto a câmera** do aparelho (`capture="environment"`); "Galeria" é opção secundária.
 - **Concluir etapa exige foto**: o botão "Concluir: etapa" abre a câmera, e sem foto a etapa não é concluída. A foto fica em `sd_fotos` com `etapa` (número da etapa) e aparece ao lado da etapa, para a equipe e para o cliente. O "Ajustar etapa" do Controle não pede foto. Tocar na foto da etapa abre a foto grande com "Trocar foto" (qualquer pessoa da equipe; a antiga fica marcada como removida) e "Remover" (só Controle). Etapa concluída sem foto mostra um espaço com câmera para adicionar depois.
 - Interface enxuta: no veículo, "Fotos da entrada" mostra só as fotos tiradas (os espaços vazios ficam só no cadastro), "Estado na entrada" só aparece se tiver algo escrito, e "Opções do Controle" começa fechado. Em Ajustes, cada tipo de serviço começa fechado. Históricos e movimentos mostram 3 itens com "Mostrar mais".
 - Material recém-cadastrado (sem nenhum movimento) não gera aviso de "Sem estoque".
 - **Estoque**: Controle registra entradas, contagens e mínimo; funcionário registra retiradas (sem ligar a um serviço). O saldo é sempre a soma dos movimentos. Retirada acima do saldo é aceita e aparece como "Saldo negativo" para o Controle. Avisos: Sem estoque, Acabando (chegou no mínimo). Materiais iniciais: Espuma expansiva (lata) e Manta asfáltica (rolo).
-- Financeiro: só valores lançados no próprio sistema.
-- Fora do escopo por enquanto: agenda (já existe um projeto pronto, será anexado depois), cadastro de clientes (já existe no Supabase), site de registro de autorizados (outro projeto).
+- Financeiro: só valores lançados no próprio sistema. **Valor do serviço** é um valor só por atendimento, lançado pelo Controle no cartão "Valor do serviço" logo abaixo das etapas ("Lançar valor" / "Alterar").
+- **Relatórios** (Controle): faturamento = serviços concluídos no período (pela data de conclusão) que têm valor; mostra também concluídos sem valor, ticket médio, por tipo e o previsto dos que estão em andamento. Estoque = entradas, saídas e contagens do período por material, saldo de hoje e retiradas por pessoa. O PDF usa jsPDF + autoTable (cdnjs), carregados só ao gerar.
+- **Agenda** (tabela `sd_agenda`): cliente, WhatsApp, serviço, marca, data de entrada, prazo em dias (entrega = entrada + prazo), valor, observações e situação (agendado, concluído, cancelado). Funcionário vê tudo, inclusive valores; só o Controle cria, altera e exclui (excluir só marca `excluido_em`). Não está ligada à entrada do veículo (decisão do dono, por enquanto). Os 12 agendamentos da agenda antiga (arquivo separado) foram importados.
+- Fora do escopo por enquanto: cadastro de clientes (já existe no Supabase), site de registro de autorizados (outro projeto).
 
 ## Leitor de placa
 
@@ -84,7 +89,7 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - Projeto **"Strike Details DATABASE"** (`afngfcclipuuptskoowh`). As tabelas `leads`, `historico` e `autorizados` são de outro sistema: **não alterar**.
 - **Regra do dono: não apagar registros.** O principal é nunca afetar os dados dos clientes (tabelas do outro sistema). As tabelas do controle não têm permissão de DELETE. "Excluir" no sistema só marca: `excluido_em` (atendimentos), `ativo = false` (funcionários, tipos, materiais), `removida_em` (fotos).
 - **Única exclusão permitida: arquivos de foto antigos**, para não encher o plano grátis. `api/limpeza` roda 1x por dia (09:00 UTC) e apaga do Storage as fotos e miniaturas de serviços concluídos há mais de X dias (30 a 40, em Ajustes, tabela `sd_ajustes` chave `limpeza_fotos_dias`), de atendimentos excluídos e de fotos removidas há mais de X dias. O registro em `sd_fotos` fica, com `apagada_em`. Serviços em andamento nunca são mexidos.
-- Tabelas do controle (prefixo `sd_`, com RLS): `sd_funcionarios`, `sd_tipos_servico`, `sd_veiculos`, `sd_atendimentos`, `sd_fotos`, `sd_estoque_itens`, `sd_estoque_movimentos`, `sd_ajustes`. Etapas, datas das etapas (`feitas`) e histórico do atendimento ficam em `jsonb` no próprio atendimento.
+- Tabelas do controle (prefixo `sd_`, com RLS): `sd_funcionarios`, `sd_tipos_servico`, `sd_veiculos`, `sd_atendimentos`, `sd_fotos`, `sd_estoque_itens`, `sd_estoque_movimentos`, `sd_ajustes`, `sd_agenda`. Etapas, datas das etapas (`feitas`) e histórico do atendimento ficam em `jsonb` no próprio atendimento.
 - Uma placa só tem um atendimento em andamento (índice único `sd_atendimentos_placa_em_andamento`).
 - Acesso: só as funções da Vercel falam com o banco. Elas mandam o cabeçalho `x-sd-chave` (variável `SD_CHAVE_BANCO`), que as políticas conferem com `privado.sd_config` pela função `privado.sd_acesso_ok()`. O navegador nunca vê essa chave.
 - Atendimentos têm `versao`: se outro aparelho mudou antes, a gravação é recusada e o site recarrega e avisa.

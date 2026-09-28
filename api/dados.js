@@ -3,8 +3,8 @@
 //   POST /api/dados  { ops: [...], por: {id, nome} } grava as mudanças, uma por uma, na ordem.
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
-//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos
-//   Só do Controle: ajustes, senha
+//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda
+//   Só do Controle: ajustes, senha, agenda (o Funcionário só vê a agenda, com valores)
 // Nada é apagado: 'remover' só marca o registro (ativo = false, excluido_em, removida_em).
 // Atendimentos têm versão: se outro aparelho mudou antes, responde 409 'conflito' e o site recarrega.
 // Precisa de login (token). O que é só do Controle é conferido aqui também, não só na tela.
@@ -15,7 +15,7 @@ const { config, send, erro, readJsonBody, rest, restAll, fotoBase, ms, iso, hash
 /* ---------- Leitura ---------- */
 async function carregar(c, eu) {
   const ctrl = eu.nivel === 'controle';
-  const [funcionarios, tipos, veiculos, atendimentos, fotos, itens, movimentos, ajustes] = await Promise.all([
+  const [funcionarios, tipos, veiculos, atendimentos, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -24,6 +24,7 @@ async function carregar(c, eu) {
     restAll(c, 'sd_estoque_itens?select=id,nome,unidade,minimo&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_estoque_movimentos?select=*&order=em,id'),
     restAll(c, 'sd_ajustes?select=chave,valor'),
+    restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,obs,status&excluido_em=is.null&order=data,id'),
   ]);
   const fotosPorAt = new Map(), apagadasPorAt = new Map();
   for (const f of fotos) {
@@ -41,7 +42,7 @@ async function carregar(c, eu) {
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
-      criadoPorNome: a.criado_por_nome || '', danos: a.danos || '', objetos: a.objetos || '',
+      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', danos: a.danos || '', objetos: a.objetos || '',
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: a.historico || [], versao: a.versao,
     })),
@@ -51,6 +52,10 @@ async function carregar(c, eu) {
         id: m.id, itemId: m.item_id, tipo: m.tipo, delta: Number(m.delta), obs: m.obs || '', porId: m.por_id, porNome: m.por_nome || '', em: ms(m.em),
       })),
     },
+    agenda: agenda.map(a => ({
+      id: a.id, cliente: a.cliente, tel: a.tel || '', servico: a.servico || '', data: String(a.data).slice(0, 10), marca: a.marca || '',
+      prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), obs: a.obs || '', status: a.status,
+    })),
   };
 }
 
@@ -60,7 +65,8 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'fotos:remover', 'ajustes:salvar', 'senha:salvar']);
+  'atendimentos:remover', 'fotos:remover', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover']);
+const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 function id(v, campo = 'id') { const s = String(v == null ? '' : v); if (!RE_ID.test(s)) throw invalido(campo); return s; }
@@ -178,6 +184,7 @@ async function aplicar(c, op, eu, versoes) {
       const lista = etapas(it.etapas); if (!lista.length) throw invalido('etapas');
       const idx = Number(it.etapaIndex); if (!Number.isInteger(idx) || idx < 0 || idx >= lista.length) throw invalido('etapaIndex');
       const linha = {
+        cliente_nome: txt(it.clienteNome, 80),
         tipo_id: idOuNulo(it.tipoId, 'tipoId'), tipo_nome: txt(it.tipoNome, 60), etapas: lista, etapa_index: idx, feitas: feitas(it.feitas),
         concluido: !!it.concluido, concluido_em: it.concluido ? quando(it.concluidoEm, 'concluidoEm') || agora() : null,
         danos: txt(it.danos, 1000), objetos: txt(it.objetos, 600),
@@ -216,6 +223,19 @@ async function aplicar(c, op, eu, versoes) {
     }
     case 'fotos:remover':
       return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { removida_em: agora(), removida_por: quem });
+
+    case 'agenda:salvar': {
+      const cliente = txt(it.cliente, 80); if (!cliente) throw invalido('cliente');
+      const data = String(it.data || ''); if (!RE_DATA.test(data) || isNaN(Date.parse(data))) throw invalido('data');
+      const prazo = Number(it.prazo || 0); if (!Number.isInteger(prazo) || prazo < 0 || prazo > 90) throw invalido('prazo');
+      const status = ['agendado', 'concluido', 'cancelado'].includes(it.status) ? it.status : null; if (!status) throw invalido('status');
+      return upsert(c, 'sd_agenda', {
+        id: id(it.id), cliente, tel: txt(it.tel, 30), servico: txt(it.servico, 120), data, marca: txt(it.marca, 40), prazo,
+        valor: it.valor == null || it.valor === '' ? null : num(it.valor, 'valor'), obs: txt(it.obs, 600), status, atualizado_em: agora(),
+      });
+    }
+    case 'agenda:remover':
+      return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
 
     default:
       throw invalido('op');
