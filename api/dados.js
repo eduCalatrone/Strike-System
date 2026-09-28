@@ -24,7 +24,7 @@ async function carregar(c, eu) {
     restAll(c, 'sd_atendimentos?select=*&excluido_em=is.null&order=criado_em,id'),
     restAll(c, 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id'),
     restAll(c, 'sd_estoque_itens?select=id,nome,unidade,minimo&ativo=eq.true&order=criado_em,id'),
-    restAll(c, 'sd_estoque_movimentos?select=*&order=em,id'),
+    restAll(c, 'sd_estoque_movimentos?select=*&descartado_em=is.null&order=em,id'),
     restAll(c, 'sd_ajustes?select=chave,valor'),
     restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,obs,status&excluido_em=is.null&order=data,id'),
   ]);
@@ -67,7 +67,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'fotos:remover', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover']);
+  'atendimentos:remover', 'fotos:remover', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -232,6 +232,11 @@ async function aplicar(c, op, eu, versoes) {
     }
     case 'fotos:remover':
       return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { removida_em: agora(), removida_por: quem });
+
+    // Zerar o estoque (Controle): todos os movimentos atuais ficam descartados (não são apagados).
+    // O saldo de cada material volta a 0; depois é só lançar entradas ou fazer contagem.
+    case 'movimentos:zerar':
+      return marcar(c, 'sd_estoque_movimentos', 'descartado_em=is.null', { descartado_em: agora(), descartado_por: quem });
 
     case 'agenda:salvar': {
       const cliente = txt(it.cliente, 80); if (!cliente) throw invalido('cliente');

@@ -2511,7 +2511,31 @@ function renderRelatorios() {
           : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
       el('div', { class: 'card' }, el('h3', { text: 'Retiradas por pessoa' }),
         r.retiradas.length ? tabela(['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), [2])
-          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' })))), { current: 'relatorios' });
+          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' })),
+      cartaoZerarEstoque(redraw))), { current: 'relatorios' });
+}
+
+// Zerar o estoque (Controle): descarta todos os movimentos (entradas, retiradas e contagens), sem apagar do banco.
+// Serve para limpar testes. Pede para digitar ZERAR, para não acontecer sem querer.
+function cartaoZerarEstoque(redraw) {
+  const total = DB.estoque.movimentos.length;
+  const btn = el('button', { class: 'btn btn--danger', type: 'button', disabled: !total }, 'Zerar movimentações de estoque');
+  btn.addEventListener('click', async () => {
+    const digitado = window.prompt(`Isso tira do sistema as ${total} ${total === 1 ? 'movimentação' : 'movimentações'} de estoque (entradas, retiradas e contagens) e o saldo de todos os materiais volta a 0. Os materiais continuam cadastrados.\n\nPara confirmar, digite ZERAR:`);
+    if (digitado == null) return;
+    if (digitado.trim().toUpperCase() !== 'ZERAR') { toast('Não zerado. Precisa digitar ZERAR.', true); return; }
+    btn.disabled = true;
+    DB.estoque.movimentos = []; mudancas++;
+    const ok = await enviar([{ col: 'movimentos', acao: 'zerar' }], { redesenhar: false });
+    if (ok) toast('Movimentações zeradas. Agora é só lançar as entradas ou fazer a contagem.');
+    redraw();
+  });
+  return el('div', { class: 'card', style: 'border-color:#EBC4BF' },
+    el('h3', { text: 'Zerar estoque' }),
+    el('p', { class: 'hint', text: total
+      ? `Tira todas as ${total} movimentações de estoque (de todos os períodos) e o saldo de todos os materiais volta a 0. Use para limpar testes. Elas ficam guardadas no banco, só saem das contas.`
+      : 'Não há movimentações de estoque.' }),
+    el('div', {}, btn));
 }
 
 // PDF: jsPDF + autoTable (carregados só quando alguém pede o PDF).
