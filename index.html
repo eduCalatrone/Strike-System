@@ -337,6 +337,8 @@ textarea { resize: vertical; min-height: 76px; }
 .ag-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 .ag-dot { width: 7px; height: 7px; border-radius: 50%; background: #1F9D55; box-shadow: 0 0 0 2px rgba(31, 157, 85, .18); }
 .ag-dot.concluido { background: #9A9A98; box-shadow: none; }
+.ag-dot.em_servico { background: var(--ink); box-shadow: none; }
+.ag-cell.sel .ag-dot.em_servico { background: #fff; }
 .ag-dot.cancelado { background: none; border: 1px solid #B5B5B2; box-shadow: none; }
 .ag-cell.sel .ag-dot { background: #4ADE80; box-shadow: none; }
 .ag-cell.sel .ag-dot.concluido { background: #CFCFCC; }
@@ -408,6 +410,18 @@ dialog.viewer::backdrop { background: rgba(0, 0, 0, .9); }
 .viewer-bar button { border: 0; background: none; color: #fff; font-weight: 600; font-size: 15px; padding: 8px; }
 .viewer-img { display: grid; place-items: center; overflow: hidden; }
 .viewer-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* Câmera própria das fotos (sempre a traseira) */
+dialog.cam { border: 0; padding: 0; background: #000; max-width: 100vw; max-height: 100dvh; width: 100vw; height: 100dvh; }
+dialog.cam::backdrop { background: #000; }
+.cam-in { width: 100%; height: 100%; display: grid; grid-template-rows: 1fr auto; }
+.cam-in video { width: 100%; height: 100%; object-fit: contain; background: #000; min-height: 0; }
+.cam-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 14px 20px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.cam-bar button:not(.cam-shot) { border: 0; background: none; color: #fff; font-weight: 600; font-size: 15px; padding: 10px; }
+.cam-bar #camera-cancel { justify-self: start; }
+.cam-bar #camera-galeria { justify-self: end; }
+.cam-shot { width: 72px; height: 72px; border-radius: 50%; border: 4px solid #fff; background: #fff; box-shadow: inset 0 0 0 4px #000; }
+.cam-shot:active { transform: scale(.94); }
+.cam-shot:disabled { opacity: .5; }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom, 0px)); z-index: 40;
   max-width: calc(100vw - 32px); padding: 12px 16px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 14px; font-weight: 500;
@@ -427,6 +441,16 @@ body.no-nav .toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
     <div class="viewer-bar"><span id="viewer-cap"></span><button id="viewer-close" type="button">Fechar</button></div>
     <div class="viewer-img"><img id="viewer-img" alt=""></div>
     <div id="viewer-acoes" class="viewer-acoes"></div>
+  </div>
+</dialog>
+<dialog id="camera" class="cam" aria-label="Câmera">
+  <div class="cam-in">
+    <video id="camera-video" playsinline muted autoplay></video>
+    <div class="cam-bar">
+      <button id="camera-cancel" type="button">Cancelar</button>
+      <button id="camera-shot" type="button" class="cam-shot" aria-label="Tirar foto"></button>
+      <button id="camera-galeria" type="button">Galeria</button>
+    </div>
   </div>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -917,12 +941,59 @@ const canvasBlob = (cv, q = 0.82) => new Promise((res, rej) => cv.toBlob(b => b 
 // Abre a câmera do aparelho (padrão) ou a galeria, conforme a escolha acima da grade de fotos.
 const PHOTO_SRC_KEY = 'sd:foto-origem';
 const photoSource = () => (lsGet(PHOTO_SRC_KEY) === 'galeria' ? 'galeria' : 'camera');
-function pickPhoto() {
+function escolherArquivo(id) {
   return new Promise(resolve => {
-    const inp = $(photoSource() === 'galeria' ? 'file-photo' : 'file-cam');
+    const inp = $(id);
     inp.value = '';
     inp.onchange = () => resolve(inp.files && inp.files[0] ? inp.files[0] : null);
     inp.click();
+  });
+}
+// "Tirar foto" usa a câmera própria do sistema (pede a traseira direto). No Android o app de câmera
+// às vezes abria na frontal. Se o navegador não liberar a câmera, cai no app de câmera do aparelho.
+async function pickPhoto() {
+  if (photoSource() !== 'galeria' && canLive()) {
+    const r = await fotoPelaCamera();
+    if (r !== undefined) return r; // Blob da foto, arquivo da galeria ou null (cancelou)
+  }
+  return escolherArquivo(photoSource() === 'galeria' ? 'file-photo' : 'file-cam');
+}
+// Devolve: Blob (foto), File (escolheu na galeria), null (cancelou) ou undefined (câmera indisponível).
+function fotoPelaCamera() {
+  return new Promise(async resolve => {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false });
+    } catch (e) {
+      if (e && e.name === 'NotAllowedError') toast('Permita a câmera nas configurações do navegador para tirar fotos direto aqui.', true);
+      resolve(undefined); return;
+    }
+    const d = $('camera'), v = $('camera-video'), shot = $('camera-shot');
+    let fechado = false;
+    const fechar = r => {
+      if (fechado) return; fechado = true;
+      stream.getTracks().forEach(t => t.stop()); v.srcObject = null;
+      document.removeEventListener('visibilitychange', aoSair);
+      if (d.open) { if (d.close) d.close(); else d.removeAttribute('open'); }
+      resolve(r);
+    };
+    const aoSair = () => { if (document.hidden) fechar(null); };
+    document.addEventListener('visibilitychange', aoSair);
+    v.srcObject = stream;
+    shot.disabled = false;
+    shot.onclick = async () => {
+      if (!v.videoWidth) return;
+      shot.disabled = true;
+      const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight;
+      cv.getContext('2d').drawImage(v, 0, 0);
+      try { fechar(await canvasBlob(cv, 0.9)); } catch { fechar(null); }
+    };
+    $('camera-cancel').onclick = () => fechar(null);
+    // Galeria: o seletor de arquivo precisa abrir no mesmo toque, antes de fechar a câmera.
+    $('camera-galeria').onclick = () => { const p = escolherArquivo('file-photo'); fechar(p); };
+    d.oncancel = e => { e.preventDefault(); fechar(null); }; // botão voltar do Android
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    try { await v.play(); } catch {}
   });
 }
 
@@ -1554,7 +1625,7 @@ function renderNew(placaRaw) {
     const u = me();
     const at = {
       id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {},
-      concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome,
+      concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
       danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
     };
     registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
@@ -1569,10 +1640,11 @@ function renderNew(placaRaw) {
       return;
     }
     for (const f of fotos) URL.revokeObjectURL(f.url);
-    // Agendamento usado: fica como concluído na agenda (operação própria, liberada também para o Funcionário).
+    // Agendamento usado: fica "em serviço" na agenda (operação própria, liberada também para o Funcionário).
+    // Quando o serviço for concluído, o servidor muda o agendamento para "concluído".
     if (ag) {
       const item = agendaAtiva().find(x => x.id === ag.id);
-      if (item) item.status = 'concluido';
+      if (item) item.status = 'em_servico';
       S.entradaAg = null;
       enviar([{ col: 'agenda', acao: 'entrada', id: ag.id }], { redesenhar: false });
     }
@@ -1728,6 +1800,26 @@ function renderVehicle(id) {
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ajustar etapa' }), sel),
+      // Placa digitada ou lida errada: corrige no atendimento (o veículo com a placa errada continua no banco).
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Placa' }),
+        (() => {
+          const i = el('input', { class: 'plate-input', type: 'text', maxlength: '8', value: at.placa, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', 'aria-label': 'Placa correta' });
+          const salvarPlaca = () => {
+            const nova = norm(i.value);
+            if (nova === at.placa) return;
+            if (!isValid(nova)) { toast('Placa inválida. São 7 caracteres, como ABC1D23 ou ABC1234.', true); i.focus(); return; }
+            const outro = ativoDaPlaca(nova);
+            if (outro && outro.id !== at.id && !at.concluido) { toast(`A placa ${fmtPlaca(nova)} já tem um serviço em andamento.`, true); return; }
+            if (!window.confirm(`Trocar a placa de ${fmtPlaca(at.placa)} para ${fmtPlaca(nova)}?`)) { i.value = at.placa; return; }
+            const antiga = at.placa;
+            if (commit(() => {
+              if (!DB.veiculos[nova]) DB.veiculos[nova] = { placa: nova, descricao: (DB.veiculos[antiga] || {}).descricao || '', criadoEm: Date.now() };
+              at.placa = nova;
+              registrar(at, `Placa corrigida: ${fmtPlaca(antiga)} para ${fmtPlaca(nova)}`);
+            })) { toast('Placa corrigida.'); redraw(); }
+          };
+          return el('div', { class: 'row' }, i, el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: salvarPlaca }, 'Corrigir'));
+        })()),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome do cliente' }),
         (() => { const i = el('input', { type: 'text', maxlength: '80', value: at.clienteNome || '', autocapitalize: 'words' });
           i.addEventListener('change', () => {
@@ -2097,7 +2189,7 @@ const MARCAS = ['Fiat', 'Volkswagen', 'Chevrolet', 'Ford', 'Toyota', 'Honda', 'H
 const seloMarca = m => { const t = String(m || '').trim(); return t ? (SIGLAS[t.toLowerCase()] || t.toUpperCase().slice(0, 5)) : null; };
 const entregaDe = a => (a.prazo ? somaDias(a.data, a.prazo) : a.data);
 const agendaAtiva = () => DB.agenda || [];
-const STATUS_AG = { agendado: 'Agendado', concluido: 'Concluído', cancelado: 'Cancelado' };
+const STATUS_AG = { agendado: 'Agendado', em_servico: 'Em serviço', concluido: 'Concluído', cancelado: 'Cancelado' };
 const telWa = t => { const n = String(t || '').replace(/\D/g, ''); return n.length >= 10 ? `https://wa.me/${n.startsWith('55') ? n : '55' + n}` : null; };
 
 function estadoAgenda() {
@@ -2117,7 +2209,7 @@ function linhaAgendamento(a, { entrega = false } = {}) {
     el('span', { class: 'nome', text: a.cliente }),
     el('span', { class: 'meta', text: meta.filter(Boolean).join(' · ') || 'Sem detalhes' }),
     el('span', { class: 'lado' },
-      a.status !== 'agendado' ? el('span', { class: 'tag' + (a.status === 'concluido' ? ' tag--ok' : ''), text: STATUS_AG[a.status] }) : null,
+      a.status !== 'agendado' ? el('span', { class: 'tag' + (a.status === 'concluido' ? ' tag--ok' : a.status === 'em_servico' ? ' tag--dark' : ''), text: STATUS_AG[a.status] }) : null,
       wa ? el('a', { class: 'wa-btn', href: wa, target: '_blank', rel: 'noopener', 'aria-label': `WhatsApp de ${a.cliente}`, onclick: e => e.stopPropagation() }, icon('wa')) : null));
 }
 function renderAgenda() {
@@ -2199,6 +2291,7 @@ function renderAgenda() {
     el('div', { class: 'ag-grid' }, cells),
     el('div', { class: 'ag-legenda' },
       el('span', {}, el('b', { style: 'background:#1F9D55' }), 'agendado'),
+      el('span', {}, el('b', { style: 'background:var(--ink)' }), 'em serviço'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
       el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
       el('span', {}, el('b', { style: 'width:16px;height:3px;border-radius:2px;background:var(--line-2)' }), 'até a entrega')),

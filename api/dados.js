@@ -5,7 +5,8 @@
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
 //   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda
 //   Só do Controle: ajustes, senha, agenda (o Funcionário só vê a agenda, com valores,
-//   e pode usar 'agenda:entrada', que só marca o agendamento como concluído ao dar entrada no veículo)
+//   e pode usar 'agenda:entrada', que só marca o agendamento como "em serviço" ao dar entrada no veículo;
+//   quando esse serviço é concluído, o agendamento vira "concluído" aqui mesmo)
 // Nada é apagado: 'remover' só marca o registro (ativo = false, excluido_em, removida_em).
 // Atendimentos têm versão: se outro aparelho mudou antes, responde 409 'conflito' e o site recarrega.
 // Precisa de login (token). O que é só do Controle é conferido aqui também, não só na tela.
@@ -43,7 +44,7 @@ async function carregar(c, eu) {
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
-      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', danos: a.danos || '', objetos: a.objetos || '',
+      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, danos: a.danos || '', objetos: a.objetos || '',
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: a.historico || [], versao: a.versao,
     })),
@@ -197,17 +198,24 @@ async function aplicar(c, op, eu, versoes) {
       if (op.versao == null) {
         await rest(c, 'sd_atendimentos', {
           method: 'POST', prefer: 'return=minimal',
-          body: { id: atId, placa, criado_em: quando(it.criadoEm, 'criadoEm') || agora(), criado_por_nome: txt(it.criadoPorNome, 80), versao: 1, ...linha },
+          body: { id: atId, placa, criado_em: quando(it.criadoEm, 'criadoEm') || agora(), criado_por_nome: txt(it.criadoPorNome, 80), versao: 1,
+          agenda_id: idOuNulo(it.agendaId, 'agendaId'), ...linha },
         }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
         versoes[atId] = 1;
         return;
       }
       const v = Number(op.versao); if (!Number.isInteger(v)) throw invalido('versao');
-      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&versao=eq.${v}&excluido_em=is.null&select=versao`, {
+      // Correção de placa: só o Controle (o veículo novo é gravado antes, na mesma lista de operações).
+      if (ctrl) linha.placa = placa;
+      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&versao=eq.${v}&excluido_em=is.null&select=versao,agenda_id,concluido`, {
         method: 'PATCH', body: { ...linha, versao: v + 1 }, prefer: 'return=representation',
       }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
       if (!r || !r.length) throw erro(409, 'conflito', atId);
       versoes[atId] = r[0].versao;
+      // Serviço que veio da agenda terminou: o agendamento "em serviço" vira "concluído".
+      if (r[0].concluido && r[0].agenda_id) {
+        await marcar(c, 'sd_agenda', `id=eq.${q(r[0].agenda_id)}&status=eq.em_servico`, { status: 'concluido', atualizado_em: agora() });
+      }
       return;
     }
     case 'atendimentos:remover':
@@ -229,7 +237,7 @@ async function aplicar(c, op, eu, versoes) {
       const cliente = txt(it.cliente, 80); if (!cliente) throw invalido('cliente');
       const data = String(it.data || ''); if (!RE_DATA.test(data) || isNaN(Date.parse(data))) throw invalido('data');
       const prazo = Number(it.prazo || 0); if (!Number.isInteger(prazo) || prazo < 0 || prazo > 90) throw invalido('prazo');
-      const status = ['agendado', 'concluido', 'cancelado'].includes(it.status) ? it.status : null; if (!status) throw invalido('status');
+      const status = ['agendado', 'em_servico', 'concluido', 'cancelado'].includes(it.status) ? it.status : null; if (!status) throw invalido('status');
       return upsert(c, 'sd_agenda', {
         id: id(it.id), cliente, tel: txt(it.tel, 30), servico: txt(it.servico, 120), data, marca: txt(it.marca, 40), prazo,
         valor: it.valor == null || it.valor === '' ? null : num(it.valor, 'valor'), obs: txt(it.obs, 600), status, atualizado_em: agora(),
@@ -237,7 +245,7 @@ async function aplicar(c, op, eu, versoes) {
     }
     // Entrada do veículo feita a partir do agendamento: qualquer pessoa da equipe pode marcar como concluído.
     case 'agenda:entrada':
-      return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { status: 'concluido', atualizado_em: agora() });
+      return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { status: 'em_servico', atualizado_em: agora() });
     case 'agenda:remover':
       return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
 
