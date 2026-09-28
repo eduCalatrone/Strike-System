@@ -1800,6 +1800,18 @@ function renderVehicle(id) {
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ajustar etapa' }), sel),
+      // Link de acompanhamento para mandar ao cliente (página /cliente já com a placa deste veículo).
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Link para o cliente acompanhar' }),
+        (() => {
+          const link = `${location.origin}/cliente#/${at.placa}`;
+          const copiar = async () => {
+            try { await navigator.clipboard.writeText(link); toast('Link copiado. É só colar no WhatsApp do cliente.'); }
+            catch { window.prompt('Copie o link do cliente:', link); }
+          };
+          return el('div', { class: 'stack', style: 'gap:6px' },
+            el('button', { class: 'btn btn--block', type: 'button', onclick: copiar }, 'Copiar link do cliente'),
+            el('span', { class: 'hint', style: 'word-break:break-all', text: link }));
+        })()),
       // Placa digitada ou lida errada: corrige no atendimento (o veículo com a placa errada continua no banco).
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Placa' }),
         (() => {
