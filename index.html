@@ -52,7 +52,7 @@ img { display: block; max-width: 100%; }
 .topbar-in { max-width: 1040px; margin: 0 auto; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .wordmark { display: flex; align-items: center; gap: 8px; font: 400 17px/1 var(--brand); letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
 .wordmark-ico { height: 16px; width: auto; display: block; flex: none; }
-.wordmark-txt { height: 13px; width: auto; display: block; flex: none; }
+.wordmark-txt { height: 15px; width: auto; display: block; flex: none; }
 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .who-name { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .who-name b { color: var(--ink); font-weight: 600; }
@@ -160,7 +160,7 @@ textarea { resize: vertical; min-height: 76px; }
 .login-brand { display: grid; gap: 6px; }
 .login-brand .wordmark { font-size: 30px; line-height: 1.05; white-space: normal; gap: 12px; }
 .login-brand .wordmark-ico { height: 28px; }
-.login-brand .wordmark-txt { height: 24px; max-width: calc(100% - 40px); object-fit: contain; object-position: left; }
+.login-brand .wordmark-txt { height: 24px; max-width: 100%; object-fit: contain; object-position: left; }
 .login-brand p { margin: 0; color: var(--muted); }
 .choice {
   width: 100%; display: flex; align-items: center; gap: 14px; text-align: left; color: var(--ink); text-decoration: none;
@@ -1168,7 +1168,7 @@ function abrirComDados() {
   if (abrindo) return abrindo;
   document.body.classList.add('no-nav');
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
+    el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     el('p', { class: 'hint', text: 'Carregando os dados…' }))));
   abrindo = buscarDados({ forcar: true })
     .then(() => { abrindo = null; route(); })
@@ -1183,7 +1183,7 @@ function renderFalha(e) {
     no_backend: 'Sem servidor (abra pelo site publicado ou pelo servidor local).',
   }[e && e.code] || 'O banco não respondeu.';
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
+    el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     el('h1', { text: 'Não deu para abrir' }),
     el('p', { class: 'hint', text: `${msg} Os dados ficam no banco online, então é preciso internet para usar o sistema.` }),
     el('div', { class: 'actions' },
@@ -1195,7 +1195,7 @@ function renderFalha(e) {
 function shell(body, { nav = true, current = '' } = {}) {
   const u = me();
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
-    el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
+    el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     u ? el('div', { class: 'who' },
       el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
@@ -1280,7 +1280,7 @@ function renderLogin() {
   });
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('div', { class: 'login-brand' },
-      el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
+      el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
       el('p', { text: 'Controle de serviços. Entre com seu usuário e senha.' })),
     form,
     el('p', { class: 'login-note', text: 'Esqueceu a senha? Peça para o Controle criar uma nova.' }))));
