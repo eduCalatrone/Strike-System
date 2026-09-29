@@ -52,6 +52,7 @@ img { display: block; max-width: 100%; }
 .topbar-in { max-width: 1040px; margin: 0 auto; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .wordmark { display: flex; align-items: center; gap: 8px; font: 400 17px/1 var(--brand); letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
 .wordmark-ico { height: 16px; width: auto; display: block; flex: none; }
+.wordmark-txt { height: 15px; width: auto; display: block; flex: none; }
 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .who-name { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .who-name b { color: var(--ink); font-weight: 600; }
@@ -159,6 +160,7 @@ textarea { resize: vertical; min-height: 76px; }
 .login-brand { display: grid; gap: 6px; }
 .login-brand .wordmark { font-size: 30px; line-height: 1.05; white-space: normal; gap: 12px; }
 .login-brand .wordmark-ico { height: 28px; }
+.login-brand .wordmark-txt { height: 24px; max-width: 100%; object-fit: contain; object-position: left; }
 .login-brand p { margin: 0; color: var(--muted); }
 .choice {
   width: 100%; display: flex; align-items: center; gap: 14px; text-align: left; color: var(--ink); text-decoration: none;
@@ -429,6 +431,55 @@ dialog.cam::backdrop { background: #000; }
 }
 .toast.is-err { background: var(--danger); }
 body.no-nav .toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+
+/* ---------- Liquid glass (topo e menu inferior) ----------
+   Vidro só na navegação: o conteúdo (fotos, placas, etapas) continua sólido.
+   Base: github.com/stormaref/LiquidGlassSkill (CSS) + refração de liquid-glass-js (MIT), adaptadas às cores da marca. */
+:root {
+  --glass-tint-top: rgba(255, 255, 255, .62);
+  --glass-tint-bottom: rgba(236, 236, 234, .52);
+  --glass-rim-top: rgba(255, 255, 255, .85);
+  --glass-rim-hairline: rgba(255, 255, 255, .35);
+  --glass-rim-bottom: rgba(255, 255, 255, .25);
+  --glass-border: rgba(18, 18, 18, .09);
+  --glass-shadow: 0 10px 30px rgba(18, 18, 18, .14);
+}
+/* Fundo com leve variação de tom: o vidro precisa de algo atrás para aparecer. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(34rem 28rem at 10% 0%, rgba(255, 255, 255, .9), transparent 60%),
+    radial-gradient(30rem 26rem at 100% 60%, rgba(18, 18, 18, .06), transparent 62%),
+    radial-gradient(28rem 24rem at 20% 100%, rgba(160, 160, 155, .12), transparent 62%);
+}
+.topbar {
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom));
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: inset 0 -1px 0 var(--glass-rim-hairline);
+  backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+.nav {
+  left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  max-width: 560px; margin: 0 auto; padding: 0 6px; border-radius: 30px;
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-rim-top), inset 0 0 0 1px var(--glass-rim-hairline), inset 0 -1px 0 var(--glass-rim-bottom);
+  backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
+}
+/* Botões do topo (engrenagem e Sair): redondos, brancos, com sombra leve. */
+.topbar .top-ico { padding: 0; width: 38px; height: 38px; border-radius: 50%; background: rgba(255, 255, 255, .92); border: 1px solid rgba(18, 18, 18, .08);
+  box-shadow: 0 2px 8px rgba(18, 18, 18, .08), inset 0 1px 0 #fff; }
+.topbar .top-ico[aria-current="page"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.nav { --glass-tint-top: rgba(255, 255, 255, .74); --glass-tint-bottom: rgba(240, 240, 238, .66); }
+.nav a, .nav a.nav-scan span.lbl { color: var(--ink-2); }
+.nav a[aria-current="page"] .ico { background: rgba(18, 18, 18, .08); }
+.nav a.nav-scan span.pill { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.25); }
+.nav a.nav-scan[aria-current="page"] span.pill { box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 4px var(--ink); }
+.nav a.has-alert .ico::after { box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
+main { padding-bottom: calc(var(--nav-h) + 44px + env(safe-area-inset-bottom, 0px)); }
+main.no-nav { padding-bottom: 48px; }
+.toast { bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom, 0px)); }
 </style>
 </head>
 <body>
@@ -486,6 +537,7 @@ const ICON = {
   scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>',
   box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v4a1 1 0 0 1-1 1h-1M4 18H3v-5"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
   camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>',
@@ -1116,7 +1168,7 @@ function abrirComDados() {
   if (abrindo) return abrindo;
   document.body.classList.add('no-nav');
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+    el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     el('p', { class: 'hint', text: 'Carregando os dados…' }))));
   abrindo = buscarDados({ forcar: true })
     .then(() => { abrindo = null; route(); })
@@ -1131,7 +1183,7 @@ function renderFalha(e) {
     no_backend: 'Sem servidor (abra pelo site publicado ou pelo servidor local).',
   }[e && e.code] || 'O banco não respondeu.';
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+    el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     el('h1', { text: 'Não deu para abrir' }),
     el('p', { class: 'hint', text: `${msg} Os dados ficam no banco online, então é preciso internet para usar o sistema.` }),
     el('div', { class: 'actions' },
@@ -1143,12 +1195,12 @@ function renderFalha(e) {
 function shell(body, { nav = true, current = '' } = {}) {
   const u = me();
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
-    el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+    el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     u ? el('div', { class: 'who' },
       el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
-      el('button', { class: 'link-btn', type: 'button', onclick: sair }, 'Sair')) : null));
+      el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Sair', title: 'Sair', onclick: sair }, icon('logout'))) : null));
   const main = el('main', { class: nav ? '' : 'no-nav' }, body);
   const kids = [top, main];
   if (nav && u) kids.push(navBar(current));
@@ -1228,7 +1280,7 @@ function renderLogin() {
   });
   $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('div', { class: 'login-brand' },
-      el('span', { class: 'wordmark' }, el('img', { src: '/logo-icone.png', alt: '', class: 'wordmark-ico' }), 'Strike Details'),
+      el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
       el('p', { text: 'Controle de serviços. Entre com seu usuário e senha.' })),
     form,
     el('p', { class: 'login-note', text: 'Esqueceu a senha? Peça para o Controle criar uma nova.' }))));
@@ -2735,6 +2787,74 @@ route();
 
 // Só para testes automatizados; não afeta o uso normal.
 window.__sd = { norm, isValid, fixByPosition, extractPlates, saldo, get DB() { return DB; } };
+})();
+</script>
+<script>
+/* Liquid glass: refração nas bordas do menu inferior.
+   Porte em JS puro do liquid-glass.directive.ts (github.com/stormaref/LiquidGlassSkill), que por sua vez
+   porta o shader do liquid-glass-js (github.com/dashersw/liquid-glass-js), Copyright (c) 2025 Armagan Amcalar, MIT.
+   Só roda no Chrome/Android (Chromium). No iPhone fica o desfoque do CSS. */
+(function () {
+  var brands = navigator.userAgentData && navigator.userAgentData.brands;
+  var ok = brands ? brands.some(function (b) { return /Chromium|Google Chrome|Microsoft Edge/i.test(b.brand); }) : /Chrome\//.test(navigator.userAgent);
+  if (!ok) return;
+  var CFG = { edgeIntensity: .015, rimIntensity: .028, edgeDistance: .5, rimDistance: 1.7, cornerBoost: .06, rippleEffect: .26, blurRadius: 34 };
+  var NS = 'http://www.w3.org/2000/svg', cache = {}, n = 0, defs = null;
+  function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+  function mapa(w, h, r, pw, ph) {
+    var ss = Math.max(.25, Math.min(2, 1400 / Math.max(w, h)));
+    var bw = Math.max(1, Math.round(w * ss)), bh = Math.max(1, Math.round(h * ss)), rr = r * ss, minD = Math.min(w, h);
+    var dx = new Float32Array(bw * bh), dy = new Float32Array(bw * bh), maxAbs = 0;
+    for (var py = 0; py < bh; py++) for (var px = 0; px < bw; px++) {
+      var cx = (px + .5) / bw, cy = (py + .5) / bh;
+      var tx = Math.abs(px + .5 - bw / 2) - (bw / 2 - rr), ty = Math.abs(py + .5 - bh / 2) - (bh / 2 - rr);
+      var dist = Math.max(-(Math.hypot(Math.max(tx, 0), Math.max(ty, 0)) + Math.min(Math.max(tx, ty), 0) - rr), 0) / ss;
+      var rimF = Math.exp(-dist * CFG.rimDistance);
+      var total = Math.exp(-dist * CFG.edgeDistance) * CFG.edgeIntensity + rimF * CFG.rimIntensity;
+      var nx = cx - .5, ny = cy - .5, len = Math.hypot(nx, ny); if (len > 0) { nx /= len; ny /= len; }
+      var corner = Math.exp(-Math.max(Math.min(cx, 1 - cx), Math.min(cy, 1 - cy)) * minD * .3) * CFG.cornerBoost;
+      var rip = Math.sin(dist / minD * 25) * CFG.rippleEffect * rimF;
+      var i = py * bw + px;
+      dx[i] = (nx * (total + corner) - ny * rip) * pw; dy[i] = (ny * (total + corner) + nx * rip) * ph;
+      maxAbs = Math.max(maxAbs, Math.abs(dx[i]), Math.abs(dy[i]));
+    }
+    var scale = Math.max(maxAbs * 2, 1e-4), bias = scale * (128 / 255 - .5);
+    var c = document.createElement('canvas'); c.width = bw; c.height = bh;
+    var ctx = c.getContext('2d'), img = ctx.createImageData(bw, bh), d = img.data;
+    for (var k = 0; k < bw * bh; k++) { d[k * 4] = clamp(255 * (.5 + (dx[k] - bias) / scale)); d[k * 4 + 1] = clamp(255 * (.5 + (dy[k] - bias) / scale)); d[k * 4 + 2] = 128; d[k * 4 + 3] = 255; }
+    ctx.putImageData(img, 0, 0);
+    return { url: c.toDataURL('image/png'), scale: scale };
+  }
+  function filtro(w, h, r) {
+    var key = [w, h, r, innerWidth, innerHeight].join('|');
+    if (cache[key] && cache[key].isConnected) return cache[key].id;
+    if (!defs || !defs.isConnected) {
+      defs = document.createElementNS(NS, 'svg'); defs.setAttribute('width', '0'); defs.setAttribute('height', '0');
+      defs.setAttribute('aria-hidden', 'true'); defs.style.position = 'fixed'; document.body.appendChild(defs);
+    }
+    var m = mapa(w, h, r, innerWidth, innerHeight), std = CFG.blurRadius * .35, marg = m.scale / 2 + 3 * std;
+    var f = document.createElementNS(NS, 'filter'), id = 'sd-glass-' + (n++);
+    f.id = id; f.setAttribute('x', -(marg / w * 100) + '%'); f.setAttribute('y', -(marg / h * 100) + '%');
+    f.setAttribute('width', (100 + 2 * marg / w * 100) + '%'); f.setAttribute('height', (100 + 2 * marg / h * 100) + '%');
+    f.setAttribute('color-interpolation-filters', 'sRGB');
+    f.innerHTML = '<feImage href="' + m.url + '" x="0" y="0" width="' + w + '" height="' + h + '" preserveAspectRatio="none" result="map"/>' +
+      '<feGaussianBlur in="SourceGraphic" stdDeviation="' + std + '" edgeMode="duplicate" result="b"/>' +
+      '<feDisplacementMap in="b" in2="map" scale="' + m.scale + '" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
+      '<feColorMatrix in="d" type="saturate" values="1.5"/>';
+    defs.appendChild(f); cache[key] = f;
+    return id;
+  }
+  function aplicar() {
+    var el = document.querySelector('.nav'); if (!el) return;
+    var w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight); if (w < 2 || h < 2) return;
+    var r = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0, Math.min(w, h) / 2);
+    var v = 'url(#' + filtro(w, h, r) + ')';
+    if (el.style.backdropFilter !== v) el.style.backdropFilter = v;
+  }
+  var raf = 0, agendar = function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(aplicar); };
+  new MutationObserver(agendar).observe(document.getElementById('app'), { childList: true });
+  var t; addEventListener('resize', function () { clearTimeout(t); t = setTimeout(agendar, 180); }, { passive: true });
+  agendar();
 })();
 </script>
 </body>
