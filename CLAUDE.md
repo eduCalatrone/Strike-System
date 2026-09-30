@@ -16,7 +16,7 @@ Sistema interno da **Strike Details Estética Automotiva** (matriz em Jaru/RO) p
 - O nome é sempre **"Strike Details"** (ou "Strike Details Estética Automotiva"). Nunca "Strike" sozinho: é outra empresa.
 - Nunca usar travessão longo (em dash) em textos da interface ou documentos.
 - Visual: branco, cinza e preto. Fontes: Archivo Black (marca), Barlow Condensed (títulos e placas), Inter (texto).
-- Interface pensada para celular primeiro (os funcionários usam Android e iPhone). Por isso é site, não app.
+- Interface pensada para celular primeiro (os funcionários usam Android e iPhone). Por isso é site, não app de loja, mas o acesso interno pode ser instalado na tela inicial (PWA): cartão "Usar como app" no login e no Início (este com "Agora não", salvo em `localStorage` `sd:instalar:fechado`). Android usa o pedido de instalação do navegador; iPhone mostra o passo a passo do Safari. O manifest só é ligado fora de `/cliente`, então a página do cliente continua como site comum.
 
 ## Arquivos
 
@@ -33,6 +33,7 @@ Sistema interno da **Strike Details Estética Automotiva** (matriz em Jaru/RO) p
 | `api/_supabase.js` | Peças comuns das funções acima (não vira endereço). |
 | `dev-server.js` | Servidor local sem dependências (`node dev-server.js`, porta 3000). Serve o site e roteia `/api/<nome>` para `api/<nome>.js`. A Vercel ignora. |
 | `.env.exemplo` | Modelo de variáveis para rodar local. O `.env` real nunca vai para o Git. |
+| `manifest.webmanifest`, `sw.js`, `icons/` | App na tela inicial (PWA) do acesso interno. Ícones gerados da logo de setas. O `sw.js` só guarda a página e as imagens; `/api` nunca passa pelo cache. |
 
 Variáveis na Vercel: `PLATE_RECOGNIZER_TOKEN` (secreta), `SUPABASE_URL`, `SUPABASE_KEY` (chave publicável), `SD_CHAVE_BANCO` (secreta), `CRON_SECRET` (secreta, usada pela limpeza) e `ACCESS_CODE` (opcional, só do leitor de placa).
 
