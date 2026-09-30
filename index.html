@@ -7,7 +7,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Strike Details">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Strike Details | Controle</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script>
+  // App instalável só no acesso interno (a página do cliente, /cliente, fica como site comum).
+  if (!/^\/cliente\/?$/.test(location.pathname)) {
+    var mf = document.createElement('link'); mf.rel = 'manifest'; mf.href = '/manifest.webmanifest';
+    document.head.appendChild(mf);
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js" defer></script>
@@ -1130,6 +1140,52 @@ function sessaoTerminou() {
 }
 
 /* =====================================================================
+   App na tela inicial (PWA). Só no acesso interno; o cliente continua como site.
+   Android: usa o pedido de instalação do navegador. iPhone: mostra o passo a passo do Safari.
+   ===================================================================== */
+const appInstalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const eIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IKEY = 'sd:instalar:fechado';
+let pedidoInstalar = null;
+if (!MODO_CLIENTE) {
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedidoInstalar = e; });
+  addEventListener('appinstalled', () => {
+    pedidoInstalar = null;
+    document.querySelectorAll('.js-instalar').forEach(n => n.remove());
+    toast('App instalado. Agora é só abrir pela tela inicial.');
+  });
+  if ('serviceWorker' in navigator && window.isSecureContext) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+function cartaoInstalar({ fechavel = false } = {}) {
+  if (MODO_CLIENTE || appInstalado()) return null;
+  if (fechavel) { try { if (localStorage.getItem(IKEY)) return null; } catch {} }
+  const passos = el('p', { class: 'hint', hidden: true });
+  const card = el('div', { class: 'card js-instalar', style: 'gap:12px' },
+    el('div', { class: 'row', style: 'align-items:center;gap:12px' },
+      el('img', { src: '/icons/icon-192.png', alt: '', style: 'width:44px;height:44px;flex:none;border-radius:10px;border:1px solid var(--line)' }),
+      el('div', { style: 'display:grid;gap:2px' },
+        el('b', { text: 'Usar como app' }),
+        el('span', { class: 'hint', text: 'Coloque o sistema na tela inicial do celular e abra direto, em tela cheia.' }))),
+    passos,
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async () => {
+        if (pedidoInstalar) {
+          const p = pedidoInstalar; pedidoInstalar = null;
+          p.prompt();
+          const r = await p.userChoice.catch(() => null);
+          if (r && r.outcome === 'accepted') card.remove();
+          return;
+        }
+        passos.textContent = eIOS()
+          ? 'No iPhone: abra este endereço no Safari, toque em Compartilhar (o quadrado com a seta para cima) e depois em "Adicionar à Tela de Início".'
+          : 'No Android: toque no menu do navegador (os três pontinhos) e depois em "Instalar app" ou "Adicionar à tela inicial".';
+        passos.hidden = false;
+      } }, 'Instalar app'),
+      fechavel ? el('button', { class: 'btn', type: 'button', onclick: () => { try { localStorage.setItem(IKEY, '1'); } catch {} card.remove(); } }, 'Agora não') : null));
+  return card;
+}
+
+/* =====================================================================
    Estado de tela e navegação
    ===================================================================== */
 const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, ag: null, rel: null, entradaAg: null };
@@ -1283,7 +1339,8 @@ function renderLogin() {
       el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
       el('p', { text: 'Controle de serviços. Entre com seu usuário e senha.' })),
     form,
-    el('p', { class: 'login-note', text: 'Esqueceu a senha? Peça para o Controle criar uma nova.' }))));
+    el('p', { class: 'login-note', text: 'Esqueceu a senha? Peça para o Controle criar uma nova.' }),
+    cartaoInstalar())));
   usuario.focus();
 }
 
@@ -1320,6 +1377,7 @@ function renderHome() {
   const alertas = isCtrl() ? itensEmAlerta() : [];
   const body = el('div', { class: 'stack' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Em serviço' }), el('span', { class: 'count', text: all.length ? `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}` : '' })),
+    cartaoInstalar({ fechavel: true }),
     alertas.length ? el('a', { class: 'alert', href: '#/estoque' },
       el('span', {}, el('b', { text: 'Estoque: ' }), alertas.map(it => `${it.nome} (${fmtQ(saldo(it.id))} ${it.unidade})`).join(', ')),
       icon('chev')) : null,
