@@ -46,7 +46,7 @@ async function carregar(c, eu) {
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, danos: a.danos || '', objetos: a.objetos || '',
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
-      fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: a.historico || [], versao: a.versao,
+      fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
     estoque: {
       itens: itens.map(i => ({ id: i.id, nome: i.nome, unidade: i.unidade, minimo: Number(i.minimo) || 0 })),
@@ -85,6 +85,9 @@ function historico(v) {
     texto: txt(h && h.texto, 300), em: Number(h && h.em) || null, porId: h && h.porId ? String(h.porId).slice(0, 64) : null, porNome: txt(h && h.porNome, 80),
   }));
 }
+// O histórico guarda textos com valores ("Valor definido: R$ ..."). O Funcionário não recebe essas linhas.
+const RE_HIST_VALOR = /^Valor (definido|removido)/;
+function semValores(h) { return (Array.isArray(h) ? h : []).filter(x => !RE_HIST_VALOR.test(String(x && x.texto || ''))); }
 function feitas(v) {
   const out = {};
   if (v && typeof v === 'object') for (const [k, t] of Object.entries(v)) if (/^\d{1,3}$/.test(k) && Number.isFinite(Number(t))) out[k] = Number(t);
@@ -205,6 +208,14 @@ async function aplicar(c, op, eu, versoes) {
         return;
       }
       const v = Number(op.versao); if (!Number.isInteger(v)) throw invalido('versao');
+      // O Funcionário recebeu o histórico sem as linhas de valor: mantém o que está no banco e só acrescenta as linhas novas.
+      if (!ctrl) {
+        const [atual] = await rest(c, `sd_atendimentos?select=historico&id=eq.${q(atId)}&versao=eq.${v}`) || [];
+        if (!atual) throw erro(409, 'conflito', atId);
+        const salvo = Array.isArray(atual.historico) ? atual.historico : [];
+        const novas = linha.historico.slice(semValores(salvo).length).filter(h => !RE_HIST_VALOR.test(h.texto));
+        linha.historico = historico([...salvo, ...novas]);
+      }
       // Correção de placa: só o Controle (o veículo novo é gravado antes, na mesma lista de operações).
       if (ctrl) linha.placa = placa;
       const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&versao=eq.${v}&excluido_em=is.null&select=versao,agenda_id,concluido`, {

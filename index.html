@@ -2019,8 +2019,9 @@ function renderVehicle(id) {
       fotosBox),
     entrada,
     ctrlCard,
-    el('div', { class: 'card' }, el('h2', { text: 'Histórico' }),
-      listaRecolhivel(`hist:${at.id}`, at.historico.slice().reverse(), h => el('li', {}, el('span', { text: h.texto }), el('span', { text: [h.porNome, ago(h.em)].filter(Boolean).join(' · ') })))));
+    // Histórico só para o Controle (tem os valores lançados).
+    isCtrl() ? el('div', { class: 'card' }, el('h2', { text: 'Histórico' }),
+      listaRecolhivel(`hist:${at.id}`, at.historico.slice().reverse(), h => el('li', {}, el('span', { text: h.texto }), el('span', { text: [h.porNome, ago(h.em)].filter(Boolean).join(' · ') })))) : null);
   shell(body, { current: at.concluido ? 'relatorios' : 'inicio' });
 }
 
