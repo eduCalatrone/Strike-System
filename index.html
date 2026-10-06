@@ -318,11 +318,38 @@ textarea { resize: vertical; min-height: 76px; }
 .top-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--ink-2); }
 .top-ico svg { width: 20px; height: 20px; }
 .top-ico[aria-current="page"] { background: #E4E4E1; color: var(--ink); }
-.presenca { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.presenca li { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.presenca-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
-.presenca-main { display: grid; gap: 1px; min-width: 0; font-size: 14px; }
-.presenca-main span { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pres { display: grid; gap: 12px; }
+.pres-aovivo { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font: 600 12px/1 var(--body); color: var(--ink-2); letter-spacing: .02em; }
+.pres-aovivo i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pres-pulso 1.6s ease-out infinite; }
+.pres-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pres-tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 11px; display: grid; gap: 2px; }
+.pres-tile.is-online { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pres-num { font: 700 34px/1 var(--cond); letter-spacing: .01em; }
+.pres-rot { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.pres-tile.is-online .pres-rot { color: rgba(255, 255, 255, .72); }
+.pres-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #BDBDB9; flex: none; }
+.pres-dot.is-online { background: #2FBF6B; }
+.pres-dot.is-parado { background: #E39A1B; }
+.pres-lista { list-style: none; margin: 0; padding: 4px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.pres-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; min-width: 0; }
+.pres-item + .pres-item { border-top: 1px solid var(--line); }
+.pres-av { position: relative; flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); border: 1px solid var(--line); font: 700 16px/1 var(--cond); letter-spacing: .04em; color: var(--ink-2); }
+.pres-item.is-online .pres-av { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pres-av .pres-dot { position: absolute; right: -1px; bottom: -1px; width: 13px; height: 13px; box-shadow: 0 0 0 2.5px var(--surface); }
+.pres-item.is-online .pres-av .pres-dot { animation: pres-pulso 1.6s ease-out infinite; }
+.pres-item.is-fora, .pres-item.is-nunca { opacity: .62; }
+.pres-main { flex: 1; display: grid; gap: 2px; min-width: 0; font-size: 15px; }
+.pres-main b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pres-st { font-size: 13px; color: var(--muted); }
+.pres-item.is-online .pres-st { color: var(--ok); font-weight: 600; }
+.pres-item.is-parado .pres-st { color: var(--warn); font-weight: 600; }
+.pres-tela { flex: none; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 10px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.pres-quando { flex: none; font-size: 12px; color: var(--muted); }
+.pres-vazio { display: flex; align-items: center; gap: 10px; padding: 18px 2px; color: var(--muted); font-size: 14px; }
+.pres-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--ink); animation: girar .7s linear infinite; }
+@keyframes pres-pulso { 0% { box-shadow: 0 0 0 0 rgba(47, 191, 107, .55), 0 0 0 2.5px var(--surface); } 100% { box-shadow: 0 0 0 9px rgba(47, 191, 107, 0), 0 0 0 2.5px var(--surface); } }
+.pres-aovivo i { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .pres-aovivo i, .pres-item.is-online .pres-av .pres-dot { animation: none; } }
 .top-ico.girando svg { animation: girar .8s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
 
@@ -1234,7 +1261,7 @@ function cartaoInstalar({ fechavel = false } = {}) {
    O Controle recebe a presença da equipe na resposta e vê no cartão "Equipe agora" do Início.
    Só mostra o que acontece dentro do sistema; outros apps do celular não aparecem.
    ===================================================================== */
-const PRES_ONLINE_MS = 150e3;  // sem aviso há mais que isso: fora do sistema
+const PRES_ONLINE_MS = 50e3;   // sem aviso há mais que isso: fora do sistema
 const PRES_PARADO_MS = 5 * 60e3; // sem tocar no sistema há mais que isso: parado
 let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset = 0;
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
@@ -1249,7 +1276,7 @@ function avisarPresenca({ saiu = false, forcar = false } = {}) {
   const s = getSession();
   if (MODO_CLIENTE || !s || !s.token || !DB) return;
   const tela = telaDePresenca();
-  if (!saiu && !forcar && tela === presTela && Date.now() - presEnviadoEm < 10e3) return;
+  if (!saiu && !forcar && tela === presTela && Date.now() - presEnviadoEm < 3e3) return;
   presTela = saiu ? '' : tela; presEnviadoEm = Date.now();
   const body = JSON.stringify({ tela, mexeuEm: presUltimoToque, saiu });
   const req = fetch('/api/presenca', { method: 'POST', keepalive: saiu, cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` }, body });
@@ -1262,50 +1289,62 @@ function avisarPresenca({ saiu = false, forcar = false } = {}) {
     if (card) desenharEquipe(card);
   }).catch(() => {});
 }
-// Tela "Status da equipe" aberta: pede a cada 10 s e redesenha os tempos sozinha. Demais telas: aviso a cada 45 s.
+// Tempos: quem está no sistema avisa a cada 20 s; a tela "Status da equipe" pergunta a cada 3 s.
+// Sair da tela (trocar de app, bloquear, fechar) avisa na hora. Se esse aviso se perder (sem sinal,
+// bateria), a pessoa aparece como fora depois de 50 s sem aviso.
+const PRES_AVISO_MS = 20e3, PRES_TELA_MS = 3e3;
 setInterval(() => {
   if (document.hidden) return;
   const naTela = isCtrl() && parts()[0] === 'equipe';
-  if (Date.now() - presEnviadoEm >= (naTela ? 10e3 : 45e3)) avisarPresenca({ forcar: true });
+  if (Date.now() - presEnviadoEm >= (naTela ? PRES_TELA_MS : PRES_AVISO_MS)) avisarPresenca({ forcar: true });
   else if (naTela) { const card = document.getElementById('equipe-agora'); if (card) desenharEquipe(card); }
-}, 2000);
+}, 1000);
 document.addEventListener('visibilitychange', () => avisarPresenca(document.hidden ? { saiu: true } : { forcar: true }));
 addEventListener('pagehide', () => avisarPresenca({ saiu: true }));
 
 const duracao = ms => { const m = Math.max(1, Math.round(ms / 60e3)); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`; };
 function estadoPresenca(f) {
   const agora = Date.now() + presOffset;
-  if (!f.vistoEm) return { k: 'fora', ordem: 3, txt: 'Ainda não entrou no sistema' };
-  if (!f.tela || agora - f.vistoEm > PRES_ONLINE_MS) return { k: 'fora', ordem: 2, txt: `Fora do sistema · visto há ${duracao(agora - f.vistoEm)}` };
+  if (!f.vistoEm) return { k: 'nunca', ordem: 3, txt: 'Ainda não entrou' };
+  if (!f.tela || agora - f.vistoEm > PRES_ONLINE_MS) return { k: 'fora', ordem: 2, txt: 'Fora do sistema', quando: `há ${duracao(agora - f.vistoEm)}` };
   const parado = agora - (f.mexeuEm || f.vistoEm);
-  if (parado > PRES_PARADO_MS) return { k: 'parado', ordem: 1, txt: `Parado há ${duracao(parado)} · ${f.tela}` };
-  return { k: 'online', ordem: 0, txt: `Online · ${f.tela}` };
+  if (parado > PRES_PARADO_MS) return { k: 'parado', ordem: 1, txt: `Parado há ${duracao(parado)}`, tela: f.tela };
+  return { k: 'online', ordem: 0, txt: 'Online', tela: f.tela };
 }
+const iniciais = n => String(n || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
+let equipeChave = '';
 function desenharEquipe(card) {
   const u = me();
   const lista = (S.equipe || []).filter(f => !u || f.id !== u.id).map(f => ({ f, e: estadoPresenca(f) }))
     .sort((a, b) => a.e.ordem - b.e.ordem || a.f.nome.localeCompare(b.f.nome));
-  const online = lista.filter(x => x.e.k === 'online').length;
-  const cor = { online: 'var(--ok)', parado: 'var(--warn)', fora: '#C4C4C0' };
-  preencher(card, 
-    el('div', { class: 'card-head' }, el('h2', { text: 'Agora' }), el('span', { class: 'count', text: S.equipe ? `${online} online` : '' })),
-    !S.equipe ? el('p', { class: 'hint', text: 'Carregando…' })
-    : !lista.length ? el('p', { class: 'hint', text: 'Ninguém mais na equipe.' })
-    : el('ul', { class: 'presenca' }, lista.map(({ f, e }) => el('li', {},
-        el('span', { class: 'presenca-dot', style: `background:${cor[e.k]}`, 'aria-hidden': 'true' }),
-        el('span', { class: 'presenca-main' }, el('b', { text: f.nome }), el('span', { text: e.txt }))))));
+  // Só redesenha quando algo muda (o pulso do "online" não reinicia a cada segundo).
+  const chave = S.equipe ? JSON.stringify(lista.map(x => [x.f.id, x.f.nome, x.e])) : '';
+  if (chave === equipeChave && card.childElementCount) return;
+  equipeChave = chave;
+  const n = k => lista.filter(x => x.e.k === k).length;
+  const resumo = (k, num, rotulo) => el('div', { class: `pres-tile is-${k}` }, el('span', { class: 'pres-num', text: String(num) }), el('span', { class: 'pres-rot' }, el('i', { class: `pres-dot is-${k}`, 'aria-hidden': 'true' }), rotulo));
+  preencher(card,
+    !S.equipe ? el('div', { class: 'pres-vazio' }, el('span', { class: 'pres-spin', 'aria-hidden': 'true' }), 'Buscando a equipe…')
+    : el('div', { class: 'pres-resumo' }, resumo('online', n('online'), 'Online'), resumo('parado', n('parado'), 'Parados'), resumo('fora', n('fora') + n('nunca'), 'Fora')),
+    S.equipe && !lista.length ? el('p', { class: 'pres-vazio', text: 'Ninguém mais na equipe.' }) : null,
+    S.equipe && lista.length ? el('ul', { class: 'pres-lista' }, lista.map(({ f, e }) => el('li', { class: `pres-item is-${e.k}` },
+      el('span', { class: 'pres-av', 'aria-hidden': 'true' }, iniciais(f.nome), el('i', { class: `pres-dot is-${e.k}` })),
+      el('span', { class: 'pres-main' },
+        el('b', { text: f.nome }),
+        el('span', { class: 'pres-st', text: e.txt })),
+      e.tela ? el('span', { class: 'pres-tela', text: e.tela }) : e.quando ? el('span', { class: 'pres-quando', text: e.quando }) : null))) : null);
 }
-// Relatórios > Status da equipe. Atualiza sozinha (intervalo acima), sem precisar recarregar.
+// Relatórios > Status da equipe. Mostra na hora o último dado já buscado e atualiza sozinha.
 function renderEquipe() {
-  const card = el('div', { class: 'card', id: 'equipe-agora' });
+  const card = el('div', { id: 'equipe-agora', class: 'pres' });
+  equipeChave = '';
   desenharEquipe(card);
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     backLink('#/relatorios', 'Relatórios'),
-    el('h1', { text: 'Status da equipe' }),
-    card,
-    el('p', { class: 'hint', text: 'Atualiza sozinho a cada 10 segundos. Online: com o sistema aberto na tela. Parado: sistema aberto, mas sem tocar há mais de 5 minutos. Fora: saiu do sistema, trocou de app ou bloqueou o celular. Outros apps do celular não aparecem.' })),
+    el('div', { class: 'page-head' }, el('h1', { text: 'Status da equipe' }), el('span', { class: 'pres-aovivo' }, el('i', { 'aria-hidden': 'true' }), 'Ao vivo')),
+    card),
     { current: 'relatorios' });
-  setTimeout(() => avisarPresenca({ forcar: true }), 0);
+  avisarPresenca({ forcar: true });
 }
 
 /* =====================================================================
@@ -1335,7 +1374,7 @@ function route(opts) {
     case 'veiculo': return renderVehicle(a);
     case 'estoque': return renderStock();
     case 'historico': return isCtrl() ? renderHistory() : go('#/inicio');
-    case 'relatorios': return isCtrl() ? renderRelatorios() : go('#/inicio');
+    case 'relatorios': if (isCtrl()) avisarPresenca({ forcar: true }); return isCtrl() ? renderRelatorios() : go('#/inicio');
     case 'equipe': return isCtrl() ? renderEquipe() : go('#/inicio');
     case 'agenda': return a ? renderAgendaItem(a) : renderAgenda();
     case 'ajustes': return isCtrl() ? renderSettings() : go('#/inicio');
