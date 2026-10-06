@@ -48,18 +48,19 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 
 - **Funcionário**: lê a placa, registra a entrada do veículo com fotos, conclui etapas, registra retiradas do estoque.
 - **Controle** (nível máximo): tudo do funcionário + ajustar etapa, valor do serviço, entradas/contagem/mínimo do estoque, histórico, tipos de serviço e equipe.
-- **Cliente**: só digita a placa e vê etapa atual, andamento (datas) e fotos, em duas abas: **Andamento** (etapas e fotos da entrada, sem as de "Danos") e **Avarias** (texto de "Danos ou problemas", "Objetos pessoais" e fotos de "Danos", como o veículo chegou). Nunca mostrar valores, nome do cliente nem nomes da equipe.
+- **Cliente**: só digita a placa e vê etapa atual, andamento (datas) e fotos, em duas abas: **Andamento** (etapas e fotos da entrada, sem as de "Danos") e **Observações** (texto de "Danos ou problemas", "Objetos pessoais" e, no bloco "Fotos", as fotos de "Danos"). Nunca mostrar valores, nome do cliente nem nomes da equipe.
 
 ## Telas (roteamento por hash)
 
 - `#/` login da equipe (usuário e senha) · página do cliente em `/cliente` (hash `#/PLACA`)
-- `#/inicio` galeria dos veículos em serviço (foto de capa = Frente, placa, etapa atual, barra de progresso). Para o Controle, acima da galeria, o cartão **Equipe agora** (presença, ver abaixo).
+- `#/inicio` galeria dos veículos em serviço (foto de capa = Frente, placa, etapa atual, barra de progresso).
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar
 - `#/novo/PLACA` entrada do veículo: nome do cliente (opcional, vem preenchido com o do último serviço da placa; vazio aparece "(NOME PENDENTE)"), tipo de serviço (obrigatório, começa sem escolha; só vem pronto se o agendamento bater), descrição, fotos, danos, objetos pessoais (valor só para Controle)
 - `#/veiculo/ID` etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
 - `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle, pela engrenagem no topo; tem a Lixeira)
 - Botão de recarregar (seta circular) no topo só aparece no app instalado (no iPhone não há botão do navegador). Espera os envios pendentes antes de recarregar.
 - `#/agenda` calendário (mês/ano, feriados de Jaru/RO, faixa até a entrega, dia escolhido com entradas e entregas) · `#/agenda/ID` agendamento (Controle edita; Funcionário só vê) · `#/agenda/novo`
+- `#/equipe` (Controle): **Status da equipe**, aberto pelo botão em Relatórios (presença, ver abaixo). Atualiza sozinho a cada 10 s.
 - `#/relatorios` (Controle): período (este mês, mês passado, este ano ou escolher), faturamento e estoque na tela e "Baixar PDF"; link para o Histórico de serviços
 - Menu inferior: Início, Agenda, Adicionar (botão preto no meio), Estoque; Controle também tem Relatórios. Ajustes do Controle ficam na engrenagem do topo. A aba aberta tem fundo cinza atrás do ícone.
 
@@ -82,7 +83,7 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - Financeiro: só valores lançados no próprio sistema. **Valor do serviço** é um valor só por atendimento, lançado pelo Controle no cartão "Valor do serviço" logo abaixo das etapas ("Lançar valor" / "Alterar").
 - **Relatórios** (Controle): faturamento = serviços concluídos no período (pela data de conclusão) que têm valor; mostra também concluídos sem valor, ticket médio, por tipo e o previsto dos que estão em andamento. Estoque = entradas, saídas e contagens do período por material, saldo de hoje e retiradas por pessoa. O PDF usa jsPDF + autoTable (cdnjs), carregados só ao gerar.
 - **Agenda** (tabela `sd_agenda`): cliente, WhatsApp, serviço, marca, data de entrada, prazo em dias (entrega = entrada + prazo), valor, observações e situação (agendado, em serviço, concluído, cancelado). Funcionário vê tudo, inclusive valores; só o Controle cria, altera e exclui (excluir só marca `excluido_em`). No agendamento, "Registrar entrada" (Funcionário e Controle) leva ao "Adicionar" com o agendamento escolhido (`S.entradaAg`): depois da placa, a entrada já vem com cliente, tipo de serviço (se o nome bater), veículo (marca) e valor; falta só placa, fotos e estado na entrada. Ao iniciar o serviço, o agendamento vira "em serviço" (op `agenda:entrada`, liberada para o Funcionário) e o atendimento guarda `agenda_id`; quando esse serviço é concluído, o servidor muda o agendamento para "concluído". "Não usar" no aviso segue sem o agendamento. Na agenda, dia com agendamento tem fundo verde claro e bolinha verde; feriado tem fundo e número em vermelho. Os 12 agendamentos da agenda antiga (arquivo separado) foram importados.
-- **Presença da equipe** (colunas `visto_em`, `mexeu_em`, `tela` em `sd_funcionarios`): o site chama `api/presenca` a cada 45 s enquanto está aberto e visível (20 s para o Controle no Início), ao trocar de tela (no máximo a cada 10 s) e manda "saiu" ao sumir da tela (trocou de app, bloqueou, fechou ou saiu). Estados no cartão "Equipe agora": **Online** (aviso há menos de 2,5 min) com a tela aberta, **Parado** (sem tocar no sistema há mais de 5 min), **Fora do sistema** (visto há X) e "Ainda não entrou". Não dá para ver outros apps do celular. A equipe deve ser avisada desse acompanhamento.
+- **Presença da equipe** (colunas `visto_em`, `mexeu_em`, `tela` em `sd_funcionarios`): o site chama `api/presenca` a cada 45 s enquanto está aberto e visível (10 s com a tela Status da equipe aberta), ao trocar de tela (no máximo a cada 10 s) e manda "saiu" ao sumir da tela (trocou de app, bloqueou, fechou ou saiu). Estados na tela "Status da equipe": **Online** (aviso há menos de 2,5 min) com a tela aberta, **Parado** (sem tocar no sistema há mais de 5 min), **Fora do sistema** (visto há X) e "Ainda não entrou". Não dá para ver outros apps do celular. A equipe deve ser avisada desse acompanhamento.
 - Fora do escopo por enquanto: cadastro de clientes (já existe no Supabase), site de registro de autorizados (outro projeto).
 
 ## Leitor de placa
