@@ -312,7 +312,10 @@ textarea { resize: vertical; min-height: 76px; }
 .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .etapas li { display: flex; align-items: center; gap: 6px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 10px; }
 .etapas li .n { font: 700 14px var(--cond); color: var(--muted); width: 1.4em; }
-.etapas li .t { flex: 1; font-size: 14px; }
+.etapas li .t { flex: 1; font-size: 14px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.etapas li.is-livre { border-left: 3px solid var(--ink); }
+.tag-livre { flex: none; padding: 2px 7px; border-radius: 999px; background: var(--ink); color: #fff; font: 600 11px/1.3 var(--body); letter-spacing: .02em; }
+.etapas li.is-editando { display: grid; gap: 12px; padding: 12px; background: var(--surface); border-color: var(--ink-2); }
 .icon-btn { width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); display: grid; place-items: center; font-size: 18px; line-height: 1; }
 .icon-btn:hover { background: var(--line); }
 .icon-btn svg { width: 16px; height: 16px; }
@@ -593,6 +596,7 @@ const ICON = {
   scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>',
   box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
   reload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
   logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
@@ -1131,11 +1135,22 @@ const etapaAtual = at => at.concluido ? 'Concluído' : at.etapas[at.etapaIndex];
 // Etapa feita: antes da atual ou com data. Etapa nova colocada no meio da lista (Ajustes) fica pendente
 // mesmo com as seguintes já feitas.
 const etapaFeita = (at, i) => at.concluido || i < at.etapaIndex || at.feitas[i] != null;
-// Texto do andamento no card e no veículo. Ordem livre com várias pendentes: quantas faltam.
+// Ordem livre por etapa (livres[i]). Etapas livres vizinhas formam um bloco: dentro dele, qualquer ordem;
+// a etapa seguinte (não livre) só libera quando o bloco inteiro estiver feito.
+const livresDe = x => x.etapas.map((_, i) => !!(x.livres || [])[i]);
+function etapaLiberada(at, i) {
+  if (at.concluido || etapaFeita(at, i)) return false;
+  const k = at.etapaIndex; if (i === k) return true;
+  if (i < k) return false;
+  for (let j = k; j <= i; j++) if (!(at.livres || [])[j]) return false;
+  return true;
+}
+const liberadas = at => at.etapas.map((_, i) => i).filter(i => etapaLiberada(at, i));
+// Texto do andamento no card e no veículo. Bloco livre: mostra as etapas que podem ser feitas agora.
 function textoEtapa(at) {
   if (at.concluido) return 'Concluído';
-  const faltam = at.etapas.filter((_, i) => !etapaFeita(at, i)).length;
-  return at.ordemLivre && faltam > 1 ? `Faltam ${faltam} etapas` : `Em ${at.etapas[at.etapaIndex].toLowerCase()}`;
+  const l = liberadas(at);
+  return `Em ${(l.length ? l : [at.etapaIndex]).map(i => at.etapas[i].toLowerCase()).join(' / ')}`;
 }
 const progresso = at => at.concluido ? 1 : at.etapas.filter((_, i) => etapaFeita(at, i)).length / at.etapas.length;
 function capaDe(at) {
@@ -1174,7 +1189,16 @@ function ajustarEtapa(at, idx) {
 // O que já foi feito continua feito (ligado pelo nome da etapa), com a data e a foto de cada etapa.
 // Foto de etapa que saiu da lista vira foto comum (continua no veículo). Concluídos não mudam.
 const nomeEtapa = s => String(s).trim().toLowerCase();
-const foraDoTipo = t => DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido && t.etapas.length && (JSON.stringify(a.etapas) !== JSON.stringify(t.etapas) || !!a.ordemLivre !== !!t.ordemLivre));
+const foraDoTipo = t => DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido && t.etapas.length && (JSON.stringify(a.etapas) !== JSON.stringify(t.etapas) || JSON.stringify(livresDe(a)) !== JSON.stringify(livresDe(t))));
+function renomearEtapaNosVeiculos(t, antigo, novo) {
+  for (const at of DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido)) {
+    const k = at.etapas.findIndex(n => nomeEtapa(n) === nomeEtapa(antigo));
+    if (k < 0) continue;
+    at.etapas[k] = novo;
+    for (const f of at.fotos) if (f.etapa === k && f.rotulo === antigo) f.rotulo = novo;
+    registrar(at, `Etapa renomeada: ${antigo} para ${novo}`);
+  }
+}
 function sincronizarEtapas(t) {
   for (const at of foraDoTipo(t)) {
     const novas = [...t.etapas], usadas = new Set(), feitas = {}, mapa = new Map();
@@ -1188,10 +1212,9 @@ function sincronizarEtapas(t) {
     if (idx < 0) { idx = novas.length - 1; delete feitas[idx]; } // tudo feito: a última fica como atual (o Controle conclui)
     for (const f of at.fotos) if (eFotoDeEtapa(f)) f.etapa = mapa.has(f.etapa) ? mapa.get(f.etapa) : null;
     at.fotos.forEach(f => { if (f.etapa === null) delete f.etapa; });
-    const mudouOrdem = !!at.ordemLivre !== !!t.ordemLivre, mudouLista = JSON.stringify(at.etapas) !== JSON.stringify(novas);
-    at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx; at.ordemLivre = !!t.ordemLivre;
+    const mudouLista = JSON.stringify(at.etapas) !== JSON.stringify(novas);
+    at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx; at.livres = livresDe(t);
     if (mudouLista) registrar(at, `Etapas atualizadas pelo tipo de serviço (${t.nome})`);
-    if (mudouOrdem) registrar(at, t.ordemLivre ? 'Ordem das etapas: livre (pelo tipo de serviço)' : 'Ordem das etapas: seguir a ordem (pelo tipo de serviço)');
   }
 }
 
@@ -1610,7 +1633,6 @@ function renderReader() {
   const body = el('div', { class: 'stack', style: 'max-width:560px' },
     el('h1', { text: 'Adicionar veículo' }),
     ag ? avisoAgendamento(ag, () => { S.entradaAg = null; renderReader(); }) : null,
-    ag ? el('p', { class: 'hint', text: 'Leia ou digite a placa. Os dados do agendamento já vão preenchidos na entrada.' }) : null,
     el('section', { id: 'scan', class: 'stack' },
       el('button', { id: 'btn-cam', class: 'btn btn--primary btn--lg btn--block', type: 'button', disabled: !canLive(), onclick: openCamera }, icon('camera'), 'Ler placa com a câmera'),
       canLive() ? null : el('p', { class: 'hint', text: 'A câmera ao vivo precisa de HTTPS ou localhost. Tire uma foto da placa ou digite.' }),
@@ -1627,8 +1649,7 @@ function renderReader() {
       el('div', { class: 'actions' },
         el('button', { class: 'btn btn--primary grow', type: 'button', onclick: onShot }, 'Capturar placa'),
         el('button', { class: 'btn', type: 'button', onclick: () => { stopCamera(); $('scan').hidden = false; } }, 'Cancelar')),
-      el('div', { id: 'cam-tools', class: 'stack', style: 'gap:12px' }),
-      el('p', { class: 'hint', text: 'Encaixe a placa dentro da moldura, de frente. Use o zoom para ler de mais longe.' })),
+      el('div', { id: 'cam-tools', class: 'stack', style: 'gap:12px' })),
     el('section', { id: 'result', class: 'card', hidden: true }));
   shell(body, { current: 'placa' });
 }
@@ -1963,7 +1984,7 @@ function renderNew(placaRaw) {
     salvar.textContent = 'Salvando…';
     const u = me();
     const at = {
-      id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, ordemLivre: !!tipo.ordemLivre, // ordem livre vem do tipo (Ajustes)
+      id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, livres: livresDe(tipo), // etapas livres vêm do tipo (Ajustes)
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
       danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
     };
@@ -2022,7 +2043,7 @@ function renderNew(placaRaw) {
 // acoes(foto, i): botões ao abrir a foto da etapa. semFoto(i): toque no espaço vazio de etapa concluída sem foto.
 function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir }) {
   return el('ol', { class: 'steps' }, at.etapas.map((nome, i) => {
-    const cur = !at.concluido && i === at.etapaIndex && !at.ordemLivre, done = !cur && etapaFeita(at, i);
+    const cur = etapaLiberada(at, i), done = !cur && etapaFeita(at, i);
     const foto = at.fotos.filter(f => f.etapa === i).slice(-1)[0];
     const quando = at.feitas[i] ? fmt(at.feitas[i]) : cur ? atual : '';
     return el('li', { class: 'step ' + (done ? 'is-done' : cur ? 'is-current' : 'is-todo') },
@@ -2031,7 +2052,7 @@ function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir }
       foto ? el('button', { class: 'step-foto', type: 'button', 'aria-label': `Ver foto: ${nome}`, onclick: () => openViewer(foto, acoes ? acoes(foto, i) : []) },
         el('img', { src: src(foto), alt: '', loading: 'lazy' }))
       : done && semFoto ? el('button', { class: 'step-foto is-vazia', type: 'button', 'aria-label': `Adicionar foto: ${nome}`, onclick: () => semFoto(i) }, icon('camera'))
-      : !done && concluir ? (() => { const b = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); b.addEventListener('click', () => concluir(i, b)); return b; })()
+      : cur && concluir ? (() => { const b = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); b.addEventListener('click', () => concluir(i, b)); return b; })()
       : el('span'));
   }));
 }
@@ -2063,6 +2084,7 @@ function renderVehicle(id) {
     toast('Foto salva.');
     if (parts()[1] === id) redraw();
   };
+  const bloco = liberadas(at).length > 1; // mais de uma etapa liberada: botão "Concluir" em cada uma
   const steps = listaEtapas(at, {
     fmt: fmtDataHora, src: f => fotoSrc(f, true),
     acoes: (foto, i) => [
@@ -2073,11 +2095,11 @@ function renderVehicle(id) {
       } } : null,
     ].filter(Boolean),
     semFoto: i => fotoEtapa(i, null),
-    concluir: at.ordemLivre && !at.concluido ? (i, b) => concluirComFoto(i, b) : null,
+    concluir: bloco ? (i, b) => concluirComFoto(i, b) : null,
   });
 
   // Concluir etapa: abre a câmera; a foto é obrigatória e aparece para o cliente no andamento.
-  // Seguindo a ordem: um botão grande para a etapa atual. Ordem livre: botão "Concluir" em cada etapa pendente.
+  // Uma etapa liberada: botão grande. Bloco de etapas livres: botão "Concluir" em cada uma delas.
   const concluirComFoto = async (idx, concluirBtn) => {
     const nome = at.etapas[idx];
     const file = await pickPhoto();
@@ -2094,12 +2116,12 @@ function renderVehicle(id) {
     }
     S.ocupado = false;
     const atual = DB.atendimentos.find(a => a.id === at.id);
-    if (!atual || atual.concluido || etapaFeita(atual, idx) || atual.etapas[idx] !== nome) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
+    if (!atual || !etapaLiberada(atual, idx) || atual.etapas[idx] !== nome) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
     commit(() => { atual.fotos.push({ ...m, rotulo: nome, etapa: idx, em: Date.now() }); concluirEtapa(atual, idx); });
     toast(atual.concluido ? 'Serviço concluído.' : `${nome} concluída.`);
     if (parts()[1] === id) redraw();
   };
-  const concluirBtn = at.concluido || at.ordemLivre ? null : el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, icon('camera'), `Concluir: ${at.etapas[at.etapaIndex]}`);
+  const concluirBtn = at.concluido || bloco ? null : el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, icon('camera'), `Concluir: ${at.etapas[at.etapaIndex]}`);
   if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(at.etapaIndex, concluirBtn));
 
   const fotosBox = el('div');
@@ -2339,7 +2361,6 @@ function renderStock() {
   const body = el('div', { class: 'stack-lg' },
     el('div', { class: 'stack' },
       el('div', { class: 'page-head' }, el('h1', { text: 'Estoque' }), alertas.length ? el('span', { class: 'tag tag--warn', text: `${alertas.length} ${alertas.length === 1 ? 'aviso' : 'avisos'}` }) : null),
-      ctrl ? null : el('p', { class: 'hint', text: 'Registre aqui cada material que você pegar.' }),
       itens.length ? el('ul', { class: 'stock' }, cards) : el('p', { class: 'empty', text: 'Nenhum material cadastrado.' })),
     el('div', { class: 'card' }, el('h2', { text: ctrl ? 'Movimentos' : 'Suas retiradas' }), movList),
     novo);
@@ -2382,36 +2403,70 @@ function renderSettings() {
   const tipos = DB.tipos.map(t => {
     const emUso = DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido).length;
     const fora = foraDoTipo(t).length;
-    // Toda mudança nas etapas vale também para os veículos em andamento deste tipo.
+    // Toda mudança nas etapas vale também para os veículos em andamento deste tipo (o que já foi feito continua).
     const mudarEtapas = fn => {
-      commit(() => { fn(); sincronizarEtapas(t); });
-      if (emUso && t.etapas.length) toast(`Etapas atualizadas também ${emUso === 1 ? 'no veículo' : `nos ${emUso} veículos`} em andamento.`);
+      commit(() => { t.livres = livresDe(t); fn(); sincronizarEtapas(t); });
+      if (emUso && t.etapas.length) toast(emUso === 1 ? 'Salvo, também no veículo em serviço.' : `Salvo, também nos ${emUso} veículos em serviço.`);
       redraw();
     };
     const add = el('input', { type: 'text', maxlength: '60', placeholder: 'Nova etapa' });
-    const addEtapa = () => { const v = add.value.trim(); if (!v) return; mudarEtapas(() => t.etapas.push(v)); };
+    const addEtapa = () => {
+      const v = add.value.trim(); if (!v) return;
+      if (t.etapas.some(n => nomeEtapa(n) === nomeEtapa(v))) { toast('Já existe uma etapa com esse nome.', true); return; }
+      mudarEtapas(() => { t.etapas.push(v); t.livres.push(false); });
+    };
     add.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addEtapa(); } });
-    const move = (i, d) => mudarEtapas(() => { const [x] = t.etapas.splice(i, 1); t.etapas.splice(i + d, 0, x); });
-    return el('details', { class: 'card fold', open: S.tipoAberto === t.id || null, ontoggle: e => { if (e.target.open) S.tipoAberto = t.id; else if (S.tipoAberto === t.id) S.tipoAberto = null; } },
-      el('summary', {},
-        el('span', { style: 'display:grid;gap:2px' }, el('h3', { text: t.nome }), el('span', { class: 'hint', text: t.etapas.length ? `${t.etapas.length} ${t.etapas.length === 1 ? 'etapa' : 'etapas'}` : 'Sem etapas: adicione para usar' })),
-        el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
-      emUso ? el('p', { class: 'hint', text: 'Mudanças nas etapas valem também para os veículos em andamento deste tipo. O que já foi feito continua marcado.' }) : null,
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem das etapas' }),
-        el('div', { class: 'seg', role: 'group', 'aria-label': `Ordem das etapas de ${t.nome}` }, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, txt]) =>
-          el('button', { type: 'button', 'aria-pressed': String(!!t.ordemLivre === v), onclick: () => { if (!!t.ordemLivre !== v) mudarEtapas(() => { t.ordemLivre = v; }); } }, txt))),
-        el('span', { class: 'hint', text: t.ordemLivre ? 'A equipe conclui as etapas em qualquer ordem (cada uma com foto).' : 'Cada etapa só pode ser concluída depois da anterior.' })),
-      fora ? el('div', { class: 'alert', style: 'display:grid;gap:8px' },
-        el('span', { text: `${fora === 1 ? '1 veículo em andamento está' : `${fora} veículos em andamento estão`} com as etapas antigas deste tipo.` }),
-        el('div', {}, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => mudarEtapas(() => {}) }, 'Atualizar etapas'))) : null,
-      el('ol', { class: 'etapas' }, t.etapas.map((nome, i) => el('li', {},
-        el('span', { class: 'n', text: String(i + 1) }), el('span', { class: 't', text: nome }),
+    const move = (i, d) => mudarEtapas(() => { for (const l of [t.etapas, t.livres]) { const [x] = l.splice(i, 1); l.splice(i + d, 0, x); } });
+    const lv = livresDe(t);
+    // Editar uma etapa: nome e ordem livre. Renomear mantém o que já foi feito nos veículos em serviço.
+    const linhaEtapa = (nome, i) => {
+      if (S.etapaEdit !== `${t.id}:${i}`) return el('li', { class: lv[i] ? 'is-livre' : null },
+        el('span', { class: 'n', text: String(i + 1) }),
+        el('span', { class: 't' }, nome, lv[i] ? el('span', { class: 'tag-livre', text: 'Livre' }) : null),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Subir ${nome}`, disabled: i === 0, onclick: () => move(i, -1) }, icon('up')),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Descer ${nome}`, disabled: i === t.etapas.length - 1, onclick: () => move(i, 1) }, icon('down')),
-        el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remover ${nome}`, onclick: () => {
-          if (t.etapas.length === 1 && emUso) { toast('O tipo precisa de pelo menos uma etapa enquanto tiver veículo em andamento.', true); return; }
-          mudarEtapas(() => t.etapas.splice(i, 1));
-        } }, '×')))),
+        el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Editar ${nome}`, onclick: () => { S.etapaEdit = `${t.id}:${i}`; redraw(); } }, icon('edit')));
+      let livre = lv[i];
+      const fNome = el('input', { type: 'text', maxlength: '60', value: nome, 'aria-label': 'Nome da etapa' });
+      const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Ordem' });
+      const desenharSeg = () => preencher(seg, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, txt]) =>
+        el('button', { type: 'button', 'aria-pressed': String(livre === v), onclick: () => { livre = v; desenharSeg(); } }, txt)));
+      desenharSeg();
+      const fechar = () => { S.etapaEdit = null; redraw(); };
+      const salvarEtapa = () => {
+        const novo = fNome.value.trim().replace(/\s+/g, ' ');
+        if (!novo) { toast('Digite o nome da etapa.', true); fNome.focus(); return; }
+        if (t.etapas.some((n, j) => j !== i && nomeEtapa(n) === nomeEtapa(novo))) { toast('Já existe uma etapa com esse nome.', true); return; }
+        S.etapaEdit = null;
+        if (novo === nome && livre === lv[i]) { redraw(); return; }
+        mudarEtapas(() => {
+          if (novo !== nome) { renomearEtapaNosVeiculos(t, nome, novo); t.etapas[i] = novo; }
+          t.livres[i] = livre;
+        });
+      };
+      fNome.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvarEtapa(); } });
+      setTimeout(() => fNome.focus(), 30);
+      return el('li', { class: 'is-editando' },
+        el('div', { class: 'field' }, el('span', { class: 'label', text: `Etapa ${i + 1}` }), fNome),
+        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem' }), seg),
+        el('div', { class: 'actions' },
+          el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvarEtapa }, 'Salvar'),
+          el('button', { class: 'btn', type: 'button', onclick: fechar }, 'Cancelar')),
+        el('button', { class: 'link-btn', type: 'button', style: 'color:var(--danger);justify-self:start', onclick: () => {
+          if (t.etapas.length === 1 && emUso) { toast('O tipo precisa de pelo menos uma etapa enquanto tiver veículo em serviço.', true); return; }
+          if (!window.confirm(`Remover a etapa "${nome}"?`)) return;
+          S.etapaEdit = null;
+          mudarEtapas(() => { t.etapas.splice(i, 1); t.livres.splice(i, 1); });
+        } }, 'Remover etapa'));
+    };
+    return el('details', { class: 'card fold', open: S.tipoAberto === t.id || null, ontoggle: e => { if (e.target.open) S.tipoAberto = t.id; else if (S.tipoAberto === t.id) S.tipoAberto = null; } },
+      el('summary', {},
+        el('span', { style: 'display:grid;gap:2px' }, el('h3', { text: t.nome }), el('span', { class: 'hint', text: t.etapas.length ? `${t.etapas.length} ${t.etapas.length === 1 ? 'etapa' : 'etapas'}${emUso ? ` · ${emUso} em serviço` : ''}` : 'Sem etapas' })),
+        el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
+      fora ? el('div', { class: 'alert' },
+        el('span', { text: `${fora} ${fora === 1 ? 'veículo desatualizado' : 'veículos desatualizados'}` }),
+        el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none', onclick: () => mudarEtapas(() => {}) }, 'Atualizar')) : null,
+      el('ol', { class: 'etapas' }, t.etapas.map(linhaEtapa)),
       el('div', { class: 'row' }, add, el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: addEtapa }, 'Adicionar')),
       el('div', {}, el('button', { class: 'btn btn--sm btn--danger', type: 'button', onclick: () => {
         if (!window.confirm(`Excluir o tipo de serviço "${t.nome}"? Atendimentos já feitos não são afetados.`)) return;
@@ -2461,7 +2516,7 @@ function renderSettings() {
         el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome' }), fn),
         el('div', { class: 'field' }, el('span', { class: 'label', text: 'Usuário' }), fu),
         el('div', { class: 'field' }, el('span', { class: 'label', text: f.temSenha ? 'Senha nova' : 'Senha' }), fs),
-        f.temSenha && f.id !== u.id ? el('p', { class: 'hint', text: 'Ao trocar a senha, os aparelhos em que essa pessoa estava logada saem do sistema.' }) : null,
+        f.temSenha && f.id !== u.id ? el('p', { class: 'hint', text: 'Trocar a senha desconecta a pessoa dos aparelhos.' }) : null,
         el('div', { class: 'actions' }, ok, el('button', { class: 'btn', type: 'button', onclick: () => { S.loginAberto = null; redraw(); } }, 'Cancelar')));
     }
     return el('li', {}, el('div', { class: 'r' },
@@ -2510,7 +2565,7 @@ function renderSettings() {
         el('div', { class: 'row' }, novoTipo, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: () => {
           const nome = novoTipo.value.trim(); if (!nome) { toast('Digite o nome.', true); return; }
           const tid = uid();
-          if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [], ordemLivre: false }))) { S.tipoAberto = tid; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
+          if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [], livres: [] }))) { S.tipoAberto = tid; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
         } }, 'Criar')))),
     el('section', { class: 'stack' },
       el('h2', { text: 'Equipe' }),
@@ -2523,12 +2578,10 @@ function renderSettings() {
     el('section', { class: 'stack' },
       el('h2', { text: 'Dados' }),
       el('div', { class: 'card' }, el('h3', { text: 'Limpeza automática das fotos' }),
-        el('p', { class: 'hint', text: 'Para não encher o banco, as fotos de serviços concluídos são apagadas depois do prazo. Serviço, etapas e histórico continuam guardados. Serviços em andamento não são mexidos.' }),
-        el('div', { class: 'row', style: 'align-items:center' }, el('span', { class: 'label', style: 'flex:none', text: 'Apagar fotos depois de' }), el('div', {}, dias))),
+                el('div', { class: 'row', style: 'align-items:center' }, el('span', { class: 'label', style: 'flex:none', text: 'Apagar fotos de concluídos após' }), el('div', {}, dias))),
       cartaoDadosAntigos(redraw),
       el('div', { class: 'card' },
-        el('p', { class: 'hint', text: 'Os dados ficam salvos online, no banco da Strike Details, e aparecem em todos os aparelhos. O que for excluído só sai das listas: os registros continuam no banco. O backup baixa uma cópia em JSON (sem as fotos).' }),
-        el('div', {}, el('button', { class: 'btn', type: 'button', onclick: () => {
+                el('div', {}, el('button', { class: 'btn', type: 'button', onclick: () => {
           const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
           const a = el('a', { href: URL.createObjectURL(blob), download: `strike-details-backup-${new Date().toISOString().slice(0, 10)}.json` });
           document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -2551,10 +2604,9 @@ function cartaoLixeira(redraw) {
     redraw();
   };
   return el('section', { class: 'stack' },
-    el('h2', { text: 'Lixeira' }),
+    el('h2', { text: `Lixeira (${LIXEIRA_H} h)` }),
     el('div', { class: 'card' },
-      el('p', { class: 'hint', text: `Veículos excluídos ficam aqui por ${LIXEIRA_H} horas e podem ser restaurados com fotos, etapas e histórico.` }),
-      itens.length ? el('ul', { class: 'rows' }, itens.map(x => {
+            itens.length ? el('ul', { class: 'rows' }, itens.map(x => {
         const capa = x.fotos.find(f => f.rotulo === 'Frente') || x.fotos[0];
         const btn = el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none' }, 'Restaurar');
         btn.addEventListener('click', () => restaurar(x, btn));

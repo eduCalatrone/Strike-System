@@ -23,7 +23,7 @@ async function carregar(c, eu) {
   const [ver] = await rest(c, 'sd_versao?select=em&id=eq.1') || [];
   const [funcionarios, tipos, veiculos, todosAts, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
-    restAll(c, 'sd_tipos_servico?select=id,nome,etapas,ordem_livre&ativo=eq.true&order=criado_em,id'),
+    restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
     restAll(c, `sd_atendimentos?select=*&${ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})` : 'excluido_em=is.null'}&order=criado_em,id`),
     restAll(c, 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id'),
@@ -51,12 +51,12 @@ async function carregar(c, eu) {
     ajustes: { limpezaDias: Number((ajustes.find(a => a.chave === 'limpeza_fotos_dias') || {}).valor) || 30 },
     // Controle vê o usuário de cada pessoa e se já tem senha; a senha nunca sai daqui.
     funcionarios: funcionarios.map(f => ctrl ? { id: f.id, nome: f.nome, nivel: f.nivel, usuario: f.usuario || '', temSenha: !!f.senha_hash } : { id: f.id, nome: f.nome, nivel: f.nivel }),
-    tipos: tipos.map(t => ({ id: t.id, nome: t.nome, etapas: Array.isArray(t.etapas) ? t.etapas : [], ordemLivre: !!t.ordem_livre })),
+    tipos: tipos.map(t => { const e = Array.isArray(t.etapas) ? t.etapas : []; return { id: t.id, nome: t.nome, etapas: e, livres: livresDe(e, t.etapas_livres) }; }),
     veiculos: Object.fromEntries(veiculos.map(v => [v.placa, { placa: v.placa, descricao: v.descricao || '', criadoEm: ms(v.criado_em) }])),
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
-      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, ordemLivre: !!a.ordem_livre, danos: a.danos || '', objetos: a.objetos || '',
+      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
@@ -92,6 +92,12 @@ function quando(v, campo) { if (v == null) return null; const s = iso(v); if (!s
 function etapas(v) {
   if (!Array.isArray(v) || v.length > 60) throw invalido('etapas');
   return v.map(e => txt(e, 80)).filter(Boolean);
+}
+// Ordem livre por etapa: lista de verdadeiro/falso alinhada às etapas (etapa vazia some junto com a sua marca).
+const livresDe = (lista, v) => (Array.isArray(lista) ? lista : []).map((_, i) => !!(Array.isArray(v) && v[i] === true));
+function livresAlinhadas(nomes, v) {
+  if (!Array.isArray(nomes) || !Array.isArray(v)) return null;
+  return nomes.map((n, i) => [txt(n, 80), v[i] === true]).filter(([n]) => n).map(([, l]) => l);
 }
 function historico(v) {
   if (!Array.isArray(v)) throw invalido('historico');
@@ -173,7 +179,8 @@ async function aplicar(c, op, eu, versoes) {
     case 'tipos:salvar': {
       const nome = txt(it.nome, 60); if (!nome) throw invalido('nome');
       const linhaTipo = { id: id(it.id), nome, etapas: etapas(it.etapas), ativo: true, atualizado_em: agora() };
-      if (it.ordemLivre !== undefined) linhaTipo.ordem_livre = !!it.ordemLivre; // Ajustes: etapas em qualquer ordem
+      const livresTipo = livresAlinhadas(it.etapas, it.livres); // Ajustes: etapas com ordem livre
+      if (livresTipo) linhaTipo.etapas_livres = livresTipo;
       return upsert(c, 'sd_tipos_servico', linhaTipo);
     }
     case 'tipos:remover':
@@ -211,8 +218,9 @@ async function aplicar(c, op, eu, versoes) {
         danos: txt(it.danos, 1000), objetos: txt(it.objetos, 600),
         historico: historico(it.historico || []), atualizado_em: agora(),
       };
-      // Ordem livre das etapas: só grava quando veio (aparelho com versão antiga do site não manda e não apaga a escolha).
-      if (it.ordemLivre !== undefined) linha.ordem_livre = !!it.ordemLivre;
+      // Etapas com ordem livre: só grava quando veio (aparelho com versão antiga do site não manda e não apaga a marca).
+      const livresAt = livresAlinhadas(it.etapas, it.livres);
+      if (livresAt) linha.etapas_livres = livresAt;
       // Valor só o Controle define. O Funcionário não recebe o valor, então não mexe nele.
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
       const atId = id(it.id);
@@ -272,10 +280,11 @@ async function aplicar(c, op, eu, versoes) {
     }
     case 'fotos:remover':
       return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { removida_em: agora(), removida_por: quem });
-    // Controle corrige o tipo de uma foto da entrada (ex.: objeto pessoal marcado como Danos). Foto de etapa não muda.
+    // Controle corrige o tipo de uma foto da entrada (ex.: objeto pessoal marcado como Danos) ou, ao renomear uma etapa
+    // em Ajustes, o rótulo das fotos dessa etapa nos veículos em andamento.
     case 'fotos:rotulo': {
       const rotulo = txt(op.rotulo, 40); if (!rotulo) throw invalido('rotulo');
-      return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&etapa=is.null&removida_em=is.null`, { rotulo });
+      return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { rotulo });
     }
     // Etapas do tipo atualizadas em Ajustes: a foto acompanha a etapa na lista nova (null = virou foto comum).
     case 'fotos:etapa': {
