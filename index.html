@@ -546,6 +546,9 @@ const el = (tag, props = {}, ...kids) => {
   for (const c of kids.flat()) if (c != null && c !== false) n.append(c);
   return n;
 };
+// Troca o conteúdo de um elemento ignorando itens vazios (null/false), como o el() faz.
+// O replaceChildren do navegador escreveria "null" na tela.
+const preencher = (n, ...kids) => n.replaceChildren(...kids.flat().filter(c => c != null && c !== false));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const esc = s => encodeURIComponent(s);
 
@@ -1284,7 +1287,7 @@ function desenharEquipe(card) {
     .sort((a, b) => a.e.ordem - b.e.ordem || a.f.nome.localeCompare(b.f.nome));
   const online = lista.filter(x => x.e.k === 'online').length;
   const cor = { online: 'var(--ok)', parado: 'var(--warn)', fora: '#C4C4C0' };
-  card.replaceChildren(
+  preencher(card, 
     el('div', { class: 'card-head' }, el('h2', { text: 'Agora' }), el('span', { class: 'count', text: S.equipe ? `${online} online` : '' })),
     !S.equipe ? el('p', { class: 'hint', text: 'Carregando…' })
     : !lista.length ? el('p', { class: 'hint', text: 'Ninguém mais na equipe.' })
@@ -1345,7 +1348,7 @@ let abrindo = null;
 function abrirComDados() {
   if (abrindo) return abrindo;
   document.body.classList.add('no-nav');
-  $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
+  preencher($('app'), el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     el('p', { class: 'hint', text: 'Carregando os dados…' }))));
   abrindo = buscarDados({ forcar: true })
@@ -1360,7 +1363,7 @@ function renderFalha(e) {
     not_configured: 'O servidor ainda não tem as chaves do banco.',
     no_backend: 'Sem servidor (abra pelo site publicado ou pelo servidor local).',
   }[e && e.code] || 'O banco não respondeu.';
-  $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
+  preencher($('app'), el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     el('h1', { text: 'Não deu para abrir' }),
     el('p', { class: 'hint', text: `${msg} Os dados ficam no banco online, então é preciso internet para usar o sistema.` }),
@@ -1392,7 +1395,7 @@ function shell(body, { nav = true, current = '' } = {}) {
   const kids = [top, main];
   if (nav && u) kids.push(navBar(current));
   document.body.classList.toggle('no-nav', !(nav && u));
-  $('app').replaceChildren(...kids);
+  preencher($('app'), ...kids);
 }
 function navBar(current) {
   const item = (href, key, label, ico, cls = '') => el('a', { href, class: cls, 'aria-current': current === key ? 'page' : null },
@@ -1419,9 +1422,9 @@ function listaRecolhivel(chave, itens, desenhar) {
   const barra = el('div', { class: 'actions', style: 'gap:14px' });
   const draw = () => {
     const n = Math.min(itens.length, S.abertos[chave] || RECOLHIDO);
-    ul.replaceChildren(...itens.slice(0, n).map(desenhar));
+    preencher(ul, ...itens.slice(0, n).map(desenhar));
     const falta = itens.length - n;
-    barra.replaceChildren(...[
+    preencher(barra, ...[
       falta > 0 ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.abertos[chave] = n + PASSO; draw(); } },
         `Mostrar mais (${falta})`) : null,
       n > RECOLHIDO ? el('button', { class: 'link-btn', type: 'button', onclick: () => { delete S.abertos[chave]; draw(); } }, 'Mostrar menos') : null,
@@ -1465,7 +1468,7 @@ function renderLogin() {
       senha.select();
     }
   });
-  $('app').replaceChildren(el('div', { class: 'login' }, el('div', { class: 'login-box' },
+  preencher($('app'), el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('div', { class: 'login-brand' },
       el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
       el('p', { text: 'Controle de serviços. Entre com seu usuário e senha.' })),
@@ -1502,7 +1505,7 @@ function renderHome() {
       const v = DB.veiculos[a.placa] || {};
       return (q2 && a.placa.includes(q2)) || [a.clienteNome || NOME_PENDENTE, v.descricao, a.tipoNome, etapaAtual(a)].join(' ').toLowerCase().includes(q);
     });
-    grid.replaceChildren(...items.map(carCard));
+    preencher(grid, ...items.map(carCard));
     empty.hidden = items.length > 0;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum veículo em serviço. Toque em Adicionar para registrar a entrada de um veículo.';
   };
@@ -1619,14 +1622,14 @@ function renderZoom() {
   const box = $('cam-tools'); if (!box) return;
   const t = camTrack();
   let caps = {}; try { caps = (t && t.getCapabilities && t.getCapabilities()) || {}; } catch {}
-  if (!(caps.zoom && caps.zoom.max > caps.zoom.min)) { box.replaceChildren(); box.hidden = true; return; }
+  if (!(caps.zoom && caps.zoom.max > caps.zoom.min)) { preencher(box); box.hidden = true; return; }
   let z = caps.zoom.min;
   const saved = parseFloat(lsGet(ZOOM_KEY));
   if (saved > 0) z = saved; else { try { z = t.getSettings().zoom || z; } catch {} }
   const out = el('span', { class: 'count', text: `${fmtQ(z)}x` });
   const range = el('input', { type: 'range', min: caps.zoom.min, max: Math.min(caps.zoom.max, 10), step: caps.zoom.step || 0.1, value: z, 'aria-label': 'Zoom', style: 'width:100%;accent-color:#121212' });
   range.addEventListener('input', () => { const n = Number(range.value); out.textContent = `${fmtQ(n)}x`; applyZoom(n); lsSet(ZOOM_KEY, String(n)); });
-  box.replaceChildren(el('div', { class: 'field' }, el('div', { class: 'card-head' }, el('span', { class: 'label', text: 'Zoom' }), out), range));
+  preencher(box, el('div', { class: 'field' }, el('div', { class: 'card-head' }, el('span', { class: 'label', text: 'Zoom' }), out), range));
   box.hidden = false;
 }
 // Parte do vídeo que aparece no quadro 3:4 (em pixels do vídeo).
@@ -1701,7 +1704,7 @@ function renderResult() {
   const input = el('input', { class: 'plate-input', type: 'text', maxlength: '8', value: p, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', 'aria-label': 'Placa lida',
     oninput: e => { r.plate = norm(e.target.value); const c = e.target.selectionStart; renderResult(); const n = $('result').querySelector('input'); n.focus(); try { n.setSelectionRange(c, c); } catch {} } });
   const alts = (r.alts || []).filter(a => a !== p);
-  box.replaceChildren(
+  preencher(box, 
     el('p', { class: 'status', text: r.status }),
     el('div', { class: 'plate-center' }, plateEl(p, { reading: r.reading })),
     r.reading ? null : el('div', { class: 'field' }, el('label', { text: 'Confira a placa' }), input),
@@ -1764,7 +1767,7 @@ function photoGrid({ items, slots = [], onAdd, onRemove, extraLabel = 'Adicionar
       el('button', { type: 'button', style: 'border:0;background:none;display:grid;gap:4px;justify-items:center;font-weight:600;font-size:12px;padding:0', onclick: () => onAdd(sel.value) }, icon('plus'), extraLabel),
       sel)));
   }
-  ul.replaceChildren(...tiles);
+  preencher(ul, ...tiles);
   if (!onAdd) return ul;
   // Origem das fotos: câmera (padrão) ou galeria. A escolha fica salva no aparelho.
   const wrap = el('div', { class: 'stack', style: 'gap:10px' });
@@ -1775,7 +1778,7 @@ function photoGrid({ items, slots = [], onAdd, onRemove, extraLabel = 'Adicionar
       ul.querySelectorAll('.slot:not(.is-extra) svg').forEach(s => s.outerHTML = ICON[v === 'galeria' ? 'image' : 'camera']);
       draw();
     } }, el('span', { html: ICON[ico], 'aria-hidden': 'true', style: 'display:inline-grid;width:16px;height:16px' }), label);
-    wrap.replaceChildren(
+    preencher(wrap, 
       el('div', { class: 'seg', role: 'group', 'aria-label': 'Origem das fotos' }, btn('camera', 'Tirar foto', 'camera'), btn('galeria', 'Galeria', 'image')),
       ul);
   };
@@ -1800,7 +1803,7 @@ async function openViewer(f, acoes = []) {
     cheia.src = url;
   }
   $('viewer-cap').textContent = f.rotulo;
-  $('viewer-acoes').replaceChildren(...acoes.map(a => el('button', { class: 'btn' + (a.perigo ? ' btn--danger' : ''), type: 'button',
+  preencher($('viewer-acoes'), ...acoes.map(a => el('button', { class: 'btn' + (a.perigo ? ' btn--danger' : ''), type: 'button',
     onclick: () => { fecharViewer(); a.fn(); } }, a.texto)));
   const d = $('viewer'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
@@ -1840,7 +1843,7 @@ function renderNew(placaRaw) {
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
   const fValor = el('input', { id: 'f-valor', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
   const fotosBox = el('div');
-  const drawFotos = () => fotosBox.replaceChildren(photoGrid({
+  const drawFotos = () => preencher(fotosBox, photoGrid({
     items: fotos, slots: ROTULOS,
     onAdd: async rotulo => {
       const file = await pickPhoto(); if (!file) return;
@@ -2264,7 +2267,7 @@ function renderHistory() {
   const draw = () => {
     const q = S.histQuery.trim().toLowerCase(), q2 = norm(q);
     const items = !q ? all : all.filter(a => (q2 && a.placa.includes(q2)) || [a.clienteNome, (DB.veiculos[a.placa] || {}).descricao, a.tipoNome].join(' ').toLowerCase().includes(q));
-    list.replaceChildren(...items.map(a => {
+    preencher(list, ...items.map(a => {
       const capa = capaDe(a), v = DB.veiculos[a.placa] || {};
       return el('li', {}, el('a', { class: 'r', href: `#/veiculo/${esc(a.id)}`, style: 'color:inherit;text-decoration:none' },
         el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
@@ -2674,7 +2677,7 @@ function renderAgendaItem(idRaw) {
   fData.addEventListener('change', calc); fPrazo.addEventListener('input', calc); calc();
   let status = a ? a.status : 'agendado';
   const seg = el('div', { class: 'status-seg', role: 'group', 'aria-label': 'Situação' });
-  const drawSeg = () => seg.replaceChildren(...Object.entries(STATUS_AG).map(([k, t]) =>
+  const drawSeg = () => preencher(seg, ...Object.entries(STATUS_AG).map(([k, t]) =>
     el('button', { type: 'button', 'aria-pressed': String(status === k), onclick: () => { status = k; drawSeg(); } }, t)));
   drawSeg();
 
@@ -2776,7 +2779,7 @@ function renderRelatorios() {
     pdfBtn.disabled = true; pdfBtn.textContent = 'Gerando PDF…';
     try { await baixarRelatorioPDF(r); toast('PDF baixado.'); }
     catch { toast('Não foi possível gerar o PDF. Confira a internet e tente de novo.', true); }
-    finally { pdfBtn.disabled = false; pdfBtn.replaceChildren(icon('file'), 'Baixar PDF'); }
+    finally { pdfBtn.disabled = false; preencher(pdfBtn, icon('file'), 'Baixar PDF'); }
   });
   const verTodos = S.rel.todos;
   const linhasServ = r.concluidos.map(a => [fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']);
@@ -3005,17 +3008,17 @@ function renderClient(placaRaw) {
   if (placa) carregarCliente(placa, result);
 }
 async function carregarCliente(placa, box) {
-  box.replaceChildren(el('p', { class: 'hint', text: 'Buscando…' }));
+  preencher(box, el('p', { class: 'hint', text: 'Buscando…' }));
   let at;
   try { at = (await apiJson(`/api/cliente?placa=${esc(placa)}`)).atendimento; }
   catch (e) {
     if (norm(parts()[0] || '') !== placa) return;
-    box.replaceChildren(el('p', { class: 'empty', text: e && e.code === 'network' ? 'Sem internet. Confira a conexão e tente de novo.' : 'Não deu para buscar agora. Tente de novo em instantes.' }));
+    preencher(box, el('p', { class: 'empty', text: e && e.code === 'network' ? 'Sem internet. Confira a conexão e tente de novo.' : 'Não deu para buscar agora. Tente de novo em instantes.' }));
     return;
   }
   if (norm(parts()[0] || '') !== placa) return; // já saiu desta tela
   if (!at) {
-    box.replaceChildren(el('p', { class: 'empty', text: `Não encontramos serviço para a placa ${fmtPlaca(placa)}. Confira a placa ou fale com a Strike Details.` }));
+    preencher(box, el('p', { class: 'empty', text: `Não encontramos serviço para a placa ${fmtPlaca(placa)}. Confira a placa ou fale com a Strike Details.` }));
     return;
   }
   const desenhar = () => {
@@ -3035,7 +3038,7 @@ async function carregarCliente(placa, box) {
         listaEtapas(at, { fmt: fmtData, src: f => f.mini || f.url, atual: 'Em andamento' })),
       (() => { const entrada = at.fotos.filter(f => !eFotoDeEtapa(f) && f.rotulo !== 'Danos');
         return entrada.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos da entrada' }), photoGrid({ items: entrada })) : null; })()];
-  box.replaceChildren(
+  preencher(box, 
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(at.placa) }),
       el('span', { class: 'veh-sub', text: [at.descricao, at.tipoNome].filter(Boolean).join(' · ') })),
