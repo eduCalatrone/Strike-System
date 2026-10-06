@@ -205,6 +205,13 @@ textarea { resize: vertical; min-height: 76px; }
 .car-plate { font: 700 21px/1 var(--cond); letter-spacing: .08em; }
 .car-desc { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .car-stage { font-size: 13px; font-weight: 600; }
+.car-model { font-weight: 700; font-size: 15px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.car-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.car-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.car-placa { flex: none; font: 700 14px/1 var(--cond); letter-spacing: .07em; color: var(--ink); padding: 3px 6px; border: 1px solid var(--line-2); border-radius: 5px; background: var(--surface); }
+.car-cliente { font-size: 13px; color: var(--ink-2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.car-cliente.is-pendente { color: var(--warn); font-weight: 600; letter-spacing: .02em; }
+.car-stage { border-top: 1px solid var(--line); margin-top: 2px; padding-top: 7px; }
 .bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--ink); }
 
@@ -255,6 +262,8 @@ textarea { resize: vertical; min-height: 76px; }
 .step-concluir:disabled { opacity: .6; }
 .step-foto { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); padding: 0; background: var(--soft); }
 .step-foto img { width: 100%; height: 100%; object-fit: cover; }
+.step-foto-grande { display: block; margin-top: 10px; width: 100%; max-width: 440px; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); padding: 0; background: var(--soft); cursor: zoom-in; }
+.step-foto-grande img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .photos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
 .photo { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: var(--soft); border: 1px solid var(--line); }
@@ -1584,11 +1593,12 @@ function carCard(at) {
   const pct = Math.round(progresso(at) * 100);
   return el('li', {}, el('a', { class: 'car', href: `#/veiculo/${esc(at.id)}`, style: 'color:inherit;text-decoration:none' },
     el('div', { class: 'car-photo' }, capa ? photoImg(capa, `Foto do veículo ${at.placa}`) : el('div', { class: 'ph' }, icon('car'))),
+    // Ordem: modelo do veículo, placa · serviço, cliente, situação. Sem modelo, a placa vira o título.
     el('div', { class: 'car-body' },
-      el('span', { class: 'car-plate', text: fmtPlaca(at.placa) }),
-      at.clienteNome ? el('span', { class: 'car-desc', style: 'color:var(--ink-2);font-weight:500', text: at.clienteNome })
-        : el('span', { class: 'car-desc', style: 'color:var(--warn);font-weight:600;letter-spacing:.02em', text: `(${NOME_PENDENTE})` }),
-      el('span', { class: 'car-desc', text: [v.descricao, at.tipoNome].filter(Boolean).join(' · ') }),
+      v.descricao ? el('span', { class: 'car-model', text: v.descricao }) : el('span', { class: 'car-plate', text: fmtPlaca(at.placa) }),
+      el('span', { class: 'car-meta' }, v.descricao ? el('span', { class: 'car-placa', text: fmtPlaca(at.placa) }) : null, at.tipoNome ? el('span', { text: at.tipoNome }) : null),
+      at.clienteNome ? el('span', { class: 'car-cliente', text: at.clienteNome })
+        : el('span', { class: 'car-cliente is-pendente', text: `(${NOME_PENDENTE})` }),
       el('span', { class: 'car-stage', text: textoEtapa(at) }),
       el('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
 }
@@ -2057,15 +2067,18 @@ function renderNew(placaRaw) {
    ===================================================================== */
 // Etapas com a data e a foto tirada ao concluir cada uma. fmt: formato da data; src(f): endereço da miniatura.
 // acoes(foto, i): botões ao abrir a foto da etapa. semFoto(i): toque no espaço vazio de etapa concluída sem foto.
-function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir }) {
+function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, fotoGrande }) {
   return el('ol', { class: 'steps' }, at.etapas.map((nome, i) => {
     const cur = etapaLiberada(at, i), done = !cur && etapaFeita(at, i);
     const foto = at.fotos.filter(f => f.etapa === i).slice(-1)[0];
     const quando = at.feitas[i] ? fmt(at.feitas[i]) : cur ? atual : '';
     return el('li', { class: 'step ' + (done ? 'is-done' : cur ? 'is-current' : 'is-todo') },
       el('span', { class: 'step-dot' }, done ? icon('check') : null),
-      el('span', { class: 'step-main' }, el('span', { class: 'step-name', text: nome }), quando ? el('span', { class: 'step-when', text: quando }) : null),
-      foto ? el('button', { class: 'step-foto', type: 'button', 'aria-label': `Ver foto: ${nome}`, onclick: () => openViewer(foto, acoes ? acoes(foto, i) : []) },
+      el('span', { class: 'step-main' }, el('span', { class: 'step-name', text: nome }), quando ? el('span', { class: 'step-when', text: quando }) : null,
+        // Página do cliente: a foto da etapa aparece grande, embaixo do nome.
+        foto && fotoGrande ? el('button', { class: 'step-foto-grande', type: 'button', 'aria-label': `Ver foto: ${nome}`, onclick: () => openViewer(foto) },
+          el('img', { src: foto.url, srcset: foto.mini ? `${foto.mini} 480w, ${foto.url} 1600w` : null, sizes: '(max-width: 560px) 80vw, 440px', alt: `Foto: ${nome}`, loading: 'lazy' })) : null),
+      foto && fotoGrande ? el('span') : foto ? el('button', { class: 'step-foto', type: 'button', 'aria-label': `Ver foto: ${nome}`, onclick: () => openViewer(foto, acoes ? acoes(foto, i) : []) },
         el('img', { src: src(foto), alt: '', loading: 'lazy' }))
       : done && semFoto ? el('button', { class: 'step-foto is-vazia', type: 'button', 'aria-label': `Adicionar foto: ${nome}`, onclick: () => semFoto(i) }, icon('camera'))
       : cur && concluir ? (() => { const b = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); b.addEventListener('click', () => concluir(i, b)); return b; })()
@@ -3225,7 +3238,7 @@ async function carregarCliente(placa, box) {
           at.objetos ? el('div', {}, el('dt', { text: 'Objetos pessoais' }), el('dd', { style: 'white-space:pre-wrap', text: at.objetos })) : null)) : null,
       fotosDanos.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos' }), photoGrid({ items: fotosDanos })) : null]
     : [el('div', { class: 'card' }, el('h2', { text: 'Andamento' }),
-        listaEtapas(at, { fmt: fmtData, src: f => f.mini || f.url, atual: 'Em andamento' })),
+        listaEtapas(at, { fmt: fmtData, src: f => f.mini || f.url, atual: 'Em andamento', fotoGrande: true })),
       (() => { const entrada = at.fotos.filter(f => !eFotoDeEtapa(f) && f.rotulo !== 'Danos');
         return entrada.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos da entrada' }), photoGrid({ items: entrada })) : null; })()];
   preencher(box, 
