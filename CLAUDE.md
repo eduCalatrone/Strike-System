@@ -40,7 +40,7 @@ Variáveis na Vercel: `PLATE_RECOGNIZER_TOKEN` (secreta), `SUPABASE_URL`, `SUPAB
 ## Perfis de acesso
 
 Duas páginas separadas:
-- **Equipe** (`/`): login com usuário e senha. Cada pessoa tem o seu, criado pelo Controle em Ajustes > Equipe (botão "Login" também troca a senha).
+- **Equipe** (`/`): login com usuário e senha. Cada pessoa tem o seu, criado pelo Controle em Ajustes > Equipe (botão "Editar": nome, usuário e senha).
 - **Cliente** (`/cliente`, link `/cliente#/PLACA`): sem login, só digita a placa.
 
 Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), sem o Auth do Supabase, de propósito: usuários do Auth teriam acesso às tabelas `leads`, `autorizados` e `historico` do outro sistema pelas políticas de lá. O token dura 60 dias; trocar a senha de alguém ou remover a pessoa derruba as sessões dela. 5 senhas erradas bloqueiam o usuário por 5 minutos. As regras abaixo são conferidas também no servidor (`api/dados`), e o Funcionário não recebe valores.
@@ -54,9 +54,10 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - `#/` login da equipe (usuário e senha) · página do cliente em `/cliente` (hash `#/PLACA`)
 - `#/inicio` galeria dos veículos em serviço (foto de capa = Frente, placa, etapa atual, barra de progresso)
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar
-- `#/novo/PLACA` entrada do veículo: nome do cliente (obrigatório, vem preenchido com o do último serviço da placa), tipo de serviço, descrição, fotos, danos, objetos pessoais (valor só para Controle)
+- `#/novo/PLACA` entrada do veículo: nome do cliente (opcional, vem preenchido com o do último serviço da placa; vazio aparece "(NOME PENDENTE)"), tipo de serviço (obrigatório, começa sem escolha; só vem pronto se o agendamento bater), descrição, fotos, danos, objetos pessoais (valor só para Controle)
 - `#/veiculo/ID` etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
-- `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle, pela engrenagem no topo)
+- `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle, pela engrenagem no topo; tem a Lixeira)
+- Botão de recarregar (seta circular) no topo só aparece no app instalado (no iPhone não há botão do navegador). Espera os envios pendentes antes de recarregar.
 - `#/agenda` calendário (mês/ano, feriados de Jaru/RO, faixa até a entrega, dia escolhido com entradas e entregas) · `#/agenda/ID` agendamento (Controle edita; Funcionário só vê) · `#/agenda/novo`
 - `#/relatorios` (Controle): período (este mês, mês passado, este ano ou escolher), faturamento e estoque na tela e "Baixar PDF"; link para o Histórico de serviços
 - Menu inferior: Início, Agenda, Adicionar (botão preto no meio), Estoque; Controle também tem Relatórios. Ajustes do Controle ficam na engrenagem do topo. A aba aberta tem fundo cinza atrás do ícone.
@@ -64,9 +65,9 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 ## Regras de negócio decididas
 
 - **Status do serviço = a etapa atual** (não existe campo de status separado).
-- Cada tipo de serviço tem sua lista de etapas, editável em Ajustes. Padrão (Cabine Blindada): Inspeção, Desmontagem, Limpeza externa, Limpeza interna, Limpeza de peças desmontadas, Montagem. O atendimento guarda uma cópia das etapas de quando começou.
+- Cada tipo de serviço tem sua lista de etapas, editável em Ajustes. Padrão (Cabine Blindada): Inspeção, Desmontagem, Limpeza externa, Limpeza interna, Limpeza de peças desmontadas, Montagem. O atendimento guarda uma cópia das etapas, mas mudar as etapas de um tipo em Ajustes atualiza também os atendimentos em andamento desse tipo (`sincronizarEtapas`): o que já foi feito continua feito (ligado pelo nome), com data e foto (op `fotos:etapa` muda o número da etapa da foto; foto de etapa removida vira foto comum). Etapa nova no meio fica pendente mesmo com as seguintes feitas (`etapaFeita`: antes da atual ou com data em `feitas`); ao concluir, pula as já feitas. Concluídos não mudam. Se algum em andamento estiver com a lista antiga, Ajustes mostra "Atualizar etapas".
 - Uma placa só pode ter um atendimento em andamento. Ler a placa de um veículo em serviço abre o veículo direto.
-- **Nome do cliente** fica em cada atendimento (`sd_atendimentos.cliente_nome`), porque o carro pode trocar de dono. Aparece no card do Início, no veículo e no Histórico, e entra na busca. O Controle corrige em "Opções do Controle". Não vai para a página do cliente (`api/cliente` não devolve), para quem só sabe a placa não ver o nome.
+- **Nome do cliente** fica em cada atendimento (`sd_atendimentos.cliente_nome`), porque o carro pode trocar de dono. Aparece no card do Início, no veículo e no Histórico, e entra na busca. É opcional: sem nome, aparece "(NOME PENDENTE)" no card, no veículo e na busca. O Controle preenche ou corrige em "Opções do Controle". Não vai para a página do cliente (`api/cliente` não devolve), para quem só sabe a placa não ver o nome.
 - Fotos de entrada com espaços fixos: Frente, Traseira, Lateral esquerda, Lateral direita, Placa, Acessórios (+ extras: Danos, Interior, Objetos pessoais, Outra). A foto usada na leitura da placa entra como "Placa".
 - "Tirar foto" abre a **câmera própria do sistema** (`fotoPelaCamera`, tela cheia, pede a câmera traseira com `facingMode: environment`), porque no Android o app de câmera às vezes abria a frontal. Tem "Cancelar" e "Galeria". Se o navegador não liberar a câmera, cai no app de câmera do aparelho (`capture="environment"`). "Galeria" continua como opção secundária.
 - **Link do cliente** (Controle): em "Opções do Controle", "Copiar link do cliente" copia `/cliente#/PLACA` daquele veículo (se o navegador bloquear a cópia, mostra o link para copiar).
@@ -92,7 +93,7 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 ## Dados: Supabase
 
 - Projeto **"Strike Details DATABASE"** (`afngfcclipuuptskoowh`). As tabelas `leads`, `historico` e `autorizados` são de outro sistema: **não alterar**.
-- **Regra do dono: não apagar registros.** O principal é nunca afetar os dados dos clientes (tabelas do outro sistema). As tabelas do controle não têm permissão de DELETE. "Excluir" no sistema só marca: `excluido_em` (atendimentos), `ativo = false` (funcionários, tipos, materiais), `removida_em` (fotos).
+- **Regra do dono: não apagar registros.** O principal é nunca afetar os dados dos clientes (tabelas do outro sistema). As tabelas do controle não têm permissão de DELETE. "Excluir" no sistema só marca: `excluido_em` (atendimentos; ficam 48 h na **Lixeira** de Ajustes, que o `api/dados` manda só ao Controle, e podem ser restaurados com a op `atendimentos:restaurar`; depois somem da lista mas continuam no banco), `ativo = false` (funcionários, tipos, materiais), `removida_em` (fotos).
 - **Única exclusão permitida: arquivos de foto antigos**, para não encher o plano grátis. `api/limpeza` roda 1x por dia (09:00 UTC) e apaga do Storage as fotos e miniaturas de serviços concluídos há mais de X dias (30 a 40, em Ajustes, tabela `sd_ajustes` chave `limpeza_fotos_dias`), de atendimentos excluídos e de fotos removidas há mais de X dias. O registro em `sd_fotos` fica, com `apagada_em`. Serviços em andamento nunca são mexidos.
 - Tabelas do controle (prefixo `sd_`, com RLS): `sd_funcionarios`, `sd_tipos_servico`, `sd_veiculos`, `sd_atendimentos`, `sd_fotos`, `sd_estoque_itens`, `sd_estoque_movimentos`, `sd_ajustes`, `sd_agenda`. Etapas, datas das etapas (`feitas`) e histórico do atendimento ficam em `jsonb` no próprio atendimento.
 - Uma placa só tem um atendimento em andamento (índice único `sd_atendimentos_placa_em_andamento`).

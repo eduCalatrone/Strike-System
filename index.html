@@ -318,6 +318,8 @@ textarea { resize: vertical; min-height: 76px; }
 .top-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--ink-2); }
 .top-ico svg { width: 20px; height: 20px; }
 .top-ico[aria-current="page"] { background: #E4E4E1; color: var(--ink); }
+.top-ico.girando svg { animation: girar .8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
 
 /* ---------- Valor do serviço (Controle) ---------- */
 .valor-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -547,6 +549,7 @@ const ICON = {
   scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>',
   box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  reload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
   logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v4a1 1 0 0 1-1 1h-1M4 18H3v-5"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -830,7 +833,7 @@ async function buscarDados({ forcar = false } = {}) {
   FOTO_BASE = d.fotoBase || '';
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return a; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -858,7 +861,11 @@ function diffOps(a, b) {
   lista('agenda', a.agenda || [], b.agenda || []);
   lista('atendimentos', semFotos(a.atendimentos), semFotos(b.atendimentos));
   // Foto de atendimento excluído continua marcada como ativa (o atendimento inteiro fica guardado).
-  lista('fotos', fotos(a.atendimentos), fotos(b.atendimentos), 'id', f => atsDepois.has(f.atendimentoId));
+  const fa = new Map(fotos(a.atendimentos).map(f => [f.id, f]));
+  const fotosDepois = fotos(b.atendimentos);
+  // Foto que já existe e só mudou de etapa (etapas do tipo atualizadas): op própria, porque a foto não é regravada.
+  for (const f of fotosDepois) { const o = fa.get(f.id); if (o && o.etapa !== f.etapa) ops.push({ col: 'fotos', acao: 'etapa', id: f.id, etapa: Number.isInteger(f.etapa) ? f.etapa : null }); }
+  lista('fotos', [...fa.values()], fotosDepois.map(f => { const o = fa.get(f.id); return o && o.etapa !== f.etapa ? { ...f, etapa: o.etapa } : f; }), 'id', f => atsDepois.has(f.atendimentoId));
   return ops;
 }
 
@@ -868,6 +875,7 @@ const ERROS_SALVAR = {
   network: 'Sem internet. A última alteração não foi salva.',
   proibido: 'Só o Controle pode fazer isso.',
   usuario_em_uso: 'Esse usuário já existe. Escolha outro.',
+  lixeira_vencida: 'Passou de 48 horas na lixeira. Não dá mais para restaurar.',
 };
 // Envia as operações na ordem. Se falhar: avisa, descarta a fila e recarrega do banco.
 function enviar(ops, { redesenhar: redraw = true } = {}) {
@@ -1067,8 +1075,12 @@ const funcById = id => DB.funcionarios.find(f => f.id === id);
 const ativos = () => DB.atendimentos.filter(a => !a.concluido).sort((a, b) => b.criadoEm - a.criadoEm);
 const ativoDaPlaca = p => DB.atendimentos.find(a => a.placa === p && !a.concluido);
 const atendimentosDaPlaca = p => DB.atendimentos.filter(a => a.placa === p).sort((a, b) => b.criadoEm - a.criadoEm);
+const NOME_PENDENTE = 'NOME PENDENTE'; // atendimento sem nome do cliente (o nome é opcional na entrada)
 const etapaAtual = at => at.concluido ? 'Concluído' : at.etapas[at.etapaIndex];
-const progresso = at => at.concluido ? 1 : at.etapaIndex / at.etapas.length;
+// Etapa feita: antes da atual ou com data. Etapa nova colocada no meio da lista (Ajustes) fica pendente
+// mesmo com as seguintes já feitas.
+const etapaFeita = (at, i) => at.concluido || i < at.etapaIndex || at.feitas[i] != null;
+const progresso = at => at.concluido ? 1 : at.etapas.filter((_, i) => etapaFeita(at, i)).length / at.etapas.length;
 function capaDe(at) {
   return at.fotos.find(x => x.rotulo === 'Frente') || at.fotos.find(x => x.rotulo !== 'Placa') || at.fotos[0] || null;
 }
@@ -1081,6 +1093,7 @@ function concluirEtapa(at) {
   at.feitas[at.etapaIndex] = Date.now();
   registrar(at, `${nome} concluída`);
   at.etapaIndex++;
+  while (at.etapaIndex < at.etapas.length && at.feitas[at.etapaIndex] != null) at.etapaIndex++; // pula as que já estavam feitas
   if (at.etapaIndex >= at.etapas.length) { at.concluido = true; at.concluidoEm = Date.now(); at.etapaIndex = at.etapas.length - 1; registrar(at, 'Serviço concluído'); }
 }
 // Controle pode mover para qualquer etapa (ou concluir / reabrir).
@@ -1096,6 +1109,28 @@ function ajustarEtapa(at, idx) {
   }
   const depois = etapaAtual(at);
   if (antes !== depois) registrar(at, `Etapa ajustada: ${antes} para ${depois}`);
+}
+// Etapas do tipo mudaram em Ajustes: os serviços em andamento desse tipo passam a seguir a lista nova.
+// O que já foi feito continua feito (ligado pelo nome da etapa), com a data e a foto de cada etapa.
+// Foto de etapa que saiu da lista vira foto comum (continua no veículo). Concluídos não mudam.
+const nomeEtapa = s => String(s).trim().toLowerCase();
+const foraDoTipo = t => DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido && t.etapas.length && JSON.stringify(a.etapas) !== JSON.stringify(t.etapas));
+function sincronizarEtapas(t) {
+  for (const at of foraDoTipo(t)) {
+    const novas = [...t.etapas], usadas = new Set(), feitas = {}, mapa = new Map();
+    novas.forEach((nome, j) => {
+      const i = at.etapas.findIndex((n, k) => !usadas.has(k) && nomeEtapa(n) === nomeEtapa(nome));
+      if (i < 0) return;
+      usadas.add(i); mapa.set(i, j);
+      if (etapaFeita(at, i)) feitas[j] = at.feitas[i] != null ? at.feitas[i] : at.criadoEm;
+    });
+    let idx = novas.findIndex((_, j) => feitas[j] == null);
+    if (idx < 0) { idx = novas.length - 1; delete feitas[idx]; } // tudo feito: a última fica como atual (o Controle conclui)
+    for (const f of at.fotos) if (eFotoDeEtapa(f)) f.etapa = mapa.has(f.etapa) ? mapa.get(f.etapa) : null;
+    at.fotos.forEach(f => { if (f.etapa === null) delete f.etapa; });
+    at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx;
+    registrar(at, `Etapas atualizadas pelo tipo de serviço (${t.nome})`);
+  }
 }
 
 /* ---------- Estoque: o saldo é sempre a soma dos movimentos ---------- */
@@ -1247,6 +1282,13 @@ function renderFalha(e) {
       el('button', { class: 'btn', type: 'button', onclick: sair }, 'Sair')))));
 }
 
+// Recarrega a página (pega também a versão nova do sistema). Espera terminar o que está sendo salvo.
+async function recarregar(e) {
+  const b = e && e.currentTarget; if (b) { b.disabled = true; b.classList.add('girando'); }
+  if (pendentes) { toast('Terminando de salvar…'); try { await fila; } catch {} }
+  location.reload();
+}
+
 // Monta a tela: barra do topo, conteúdo e (para a equipe) navegação inferior.
 function shell(body, { nav = true, current = '' } = {}) {
   const u = me();
@@ -1255,6 +1297,8 @@ function shell(body, { nav = true, current = '' } = {}) {
     u ? el('div', { class: 'who' },
       el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
+      // Recarregar: no app da tela inicial (iPhone principalmente) não existe o botão do navegador.
+      appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
       u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
       el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Sair', title: 'Sair', onclick: sair }, icon('logout'))) : null));
   const main = el('main', { class: nav ? '' : 'no-nav' }, body);
@@ -1355,7 +1399,8 @@ function carCard(at) {
     el('div', { class: 'car-photo' }, capa ? photoImg(capa, `Foto do veículo ${at.placa}`) : el('div', { class: 'ph' }, icon('car'))),
     el('div', { class: 'car-body' },
       el('span', { class: 'car-plate', text: fmtPlaca(at.placa) }),
-      at.clienteNome ? el('span', { class: 'car-desc', style: 'color:var(--ink-2);font-weight:500', text: at.clienteNome }) : null,
+      at.clienteNome ? el('span', { class: 'car-desc', style: 'color:var(--ink-2);font-weight:500', text: at.clienteNome })
+        : el('span', { class: 'car-desc', style: 'color:var(--warn);font-weight:600;letter-spacing:.02em', text: `(${NOME_PENDENTE})` }),
       el('span', { class: 'car-desc', text: [v.descricao, at.tipoNome].filter(Boolean).join(' · ') }),
       el('span', { class: 'car-stage', text: at.concluido ? 'Concluído' : `Em ${at.etapas[at.etapaIndex].toLowerCase()}` }),
       el('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
@@ -1368,7 +1413,7 @@ function renderHome() {
     const q = S.homeQuery.trim().toLowerCase(), q2 = norm(q);
     const items = !q ? all : all.filter(a => {
       const v = DB.veiculos[a.placa] || {};
-      return (q2 && a.placa.includes(q2)) || [a.clienteNome, v.descricao, a.tipoNome, etapaAtual(a)].join(' ').toLowerCase().includes(q);
+      return (q2 && a.placa.includes(q2)) || [a.clienteNome || NOME_PENDENTE, v.descricao, a.tipoNome, etapaAtual(a)].join(' ').toLowerCase().includes(q);
     });
     grid.replaceChildren(...items.map(carCard));
     empty.hidden = items.length > 0;
@@ -1700,7 +1745,10 @@ function renderNew(placaRaw) {
   const tiposOk = DB.tipos.filter(t => t.etapas.length);
   const servAg = ag0 ? ag0.servico.toLowerCase() : '';
   const tipoAg = servAg ? tiposOk.find(t => servAg.includes(t.nome.toLowerCase())) : null;
-  const fTipo = el('select', { id: 'f-tipo' }, tiposOk.map(t => el('option', { value: t.id, selected: tipoAg && t.id === tipoAg.id }, t.nome)));
+  // Sem escolha automática: o tipo define as etapas, então precisa ser escolhido (só vem pronto se o agendamento bater).
+  const fTipo = el('select', { id: 'f-tipo', required: true },
+    el('option', { value: '', disabled: true, selected: !tipoAg }, 'Escolha o tipo de serviço'),
+    tiposOk.map(t => el('option', { value: t.id, selected: tipoAg && t.id === tipoAg.id }, t.nome)));
   const fDanos = el('textarea', { id: 'f-danos', rows: '3', maxlength: '1000', placeholder: 'Riscos, amassados, peças soltas, problemas já existentes' });
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
   const fValor = el('input', { id: 'f-valor', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
@@ -1727,10 +1775,10 @@ function renderNew(placaRaw) {
 
   const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, 'Iniciar serviço');
   salvar.addEventListener('click', async () => {
+    if (!tiposOk.length) { toast('Cadastre um tipo de serviço com etapas em Ajustes.', true); return; }
     const tipo = tipoById(fTipo.value);
-    if (!tipo) { toast('Cadastre um tipo de serviço com etapas em Ajustes.', true); return; }
-    const clienteNome = fCliente.value.trim().replace(/\s+/g, ' ');
-    if (!clienteNome) { toast('Digite o nome do cliente.', true); fCliente.focus(); return; }
+    if (!tipo) { toast('Escolha o tipo de serviço.', true); fTipo.focus(); fTipo.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    const clienteNome = fCliente.value.trim().replace(/\s+/g, ' '); // opcional: sem nome aparece "NOME PENDENTE"
     let valor = null;
     if (isCtrl() && fValor.value.trim()) { valor = parseNum(fValor.value); if (isNaN(valor)) { toast('Valor inválido.', true); return; } }
     salvar.disabled = true; salvar.textContent = 'Salvando…';
@@ -1783,7 +1831,7 @@ function renderNew(placaRaw) {
       el('span', { class: 'veh-sub', text: anteriores.length ? `Veículo já atendido ${anteriores.length} ${anteriores.length === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores[0].criadoEm)}.` : 'Novo veículo. Registre a entrada.' })),
     el('div', { class: 'card' },
       el('h2', { text: 'Serviço' }),
-      el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente' }), fCliente),
+      el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
       el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo' }), fDesc),
@@ -1806,7 +1854,7 @@ function renderNew(placaRaw) {
 // acoes(foto, i): botões ao abrir a foto da etapa. semFoto(i): toque no espaço vazio de etapa concluída sem foto.
 function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto }) {
   return el('ol', { class: 'steps' }, at.etapas.map((nome, i) => {
-    const done = at.concluido || i < at.etapaIndex, cur = !at.concluido && i === at.etapaIndex;
+    const cur = !at.concluido && i === at.etapaIndex, done = !cur && etapaFeita(at, i);
     const foto = at.fotos.filter(f => f.etapa === i).slice(-1)[0];
     const quando = at.feitas[i] ? fmt(at.feitas[i]) : cur ? atual : '';
     return el('li', { class: 'step ' + (done ? 'is-done' : cur ? 'is-current' : 'is-todo') },
@@ -1917,8 +1965,12 @@ function renderVehicle(id) {
       el('option', { value: at.etapas.length, selected: at.concluido }, 'Concluído'));
     sel.addEventListener('change', () => { if (commit(() => ajustarEtapa(at, Number(sel.value)))) { toast('Etapa ajustada.'); redraw(); } });
     const excluir = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
-      if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele sai das listas, mas continua guardado no banco com as fotos.`)) return;
-      if (commit(() => { DB.atendimentos = DB.atendimentos.filter(a => a.id !== at.id); })) { toast('Atendimento excluído.'); go('#/inicio'); }
+      if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele fica 48 horas na lixeira (Ajustes > Lixeira) e pode ser restaurado nesse tempo.`)) return;
+      if (commit(() => { DB.atendimentos = DB.atendimentos.filter(a => a.id !== at.id); })) {
+        const u = me();
+        DB.lixeira = [{ id: at.id, placa: at.placa, tipoNome: at.tipoNome, clienteNome: at.clienteNome, concluido: at.concluido, etapa: etapaAtual(at), criadoEm: at.criadoEm, excluidoEm: Date.now(), excluidoPor: u ? u.nome : '', fotos: at.fotos }, ...(DB.lixeira || [])];
+        toast('Atendimento na lixeira por 48 horas.'); go('#/inicio');
+      }
     } }, 'Excluir atendimento');
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
@@ -1956,11 +2008,10 @@ function renderVehicle(id) {
           return el('div', { class: 'row' }, i, el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: salvarPlaca }, 'Corrigir'));
         })()),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome do cliente' }),
-        (() => { const i = el('input', { type: 'text', maxlength: '80', value: at.clienteNome || '', autocapitalize: 'words' });
+        (() => { const i = el('input', { type: 'text', maxlength: '80', value: at.clienteNome || '', placeholder: NOME_PENDENTE, autocapitalize: 'words' });
           i.addEventListener('change', () => {
             const n = i.value.trim().replace(/\s+/g, ' ');
-            if (!n) { toast('O nome do cliente não pode ficar vazio.', true); i.value = at.clienteNome || ''; return; }
-            if (n !== at.clienteNome && commit(() => { registrar(at, `Cliente: ${at.clienteNome || 'sem nome'} para ${n}`); at.clienteNome = n; })) { toast('Nome do cliente salvo.'); redraw(); }
+            if (n !== (at.clienteNome || '') && commit(() => { registrar(at, `Cliente: ${at.clienteNome || 'sem nome'} para ${n || 'sem nome'}`); at.clienteNome = n; })) { toast('Nome do cliente salvo.'); redraw(); }
           });
           return i; })()),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Descrição do veículo' }),
@@ -2006,7 +2057,7 @@ function renderVehicle(id) {
     backLink(at.concluido ? '#/historico' : '#/inicio', at.concluido ? 'Histórico' : 'Em serviço'),
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(at.placa) }),
-      at.clienteNome ? el('span', { style: 'font-weight:600', text: at.clienteNome }) : null,
+      at.clienteNome ? el('span', { style: 'font-weight:600', text: at.clienteNome }) : el('span', { style: 'font-weight:600;color:var(--warn)', text: `(${NOME_PENDENTE})` }),
       el('span', { class: 'veh-sub', text: [v.descricao, at.tipoNome, `entrada em ${fmtDataHora(at.criadoEm)}`].filter(Boolean).join(' · ') })),
     el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : `Em ${at.etapas[at.etapaIndex].toLowerCase()}` }),
@@ -2150,21 +2201,34 @@ function renderHistory() {
 function renderSettings() {
   const redraw = () => { const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
   const tipos = DB.tipos.map(t => {
-    const emUso = DB.atendimentos.some(a => a.tipoId === t.id && !a.concluido);
+    const emUso = DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido).length;
+    const fora = foraDoTipo(t).length;
+    // Toda mudança nas etapas vale também para os veículos em andamento deste tipo.
+    const mudarEtapas = fn => {
+      commit(() => { fn(); sincronizarEtapas(t); });
+      if (emUso && t.etapas.length) toast(`Etapas atualizadas também ${emUso === 1 ? 'no veículo' : `nos ${emUso} veículos`} em andamento.`);
+      redraw();
+    };
     const add = el('input', { type: 'text', maxlength: '60', placeholder: 'Nova etapa' });
-    const addEtapa = () => { const v = add.value.trim(); if (!v) return; if (commit(() => t.etapas.push(v))) redraw(); };
+    const addEtapa = () => { const v = add.value.trim(); if (!v) return; mudarEtapas(() => t.etapas.push(v)); };
     add.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addEtapa(); } });
-    const move = (i, d) => commit(() => { const [x] = t.etapas.splice(i, 1); t.etapas.splice(i + d, 0, x); }) && redraw();
+    const move = (i, d) => mudarEtapas(() => { const [x] = t.etapas.splice(i, 1); t.etapas.splice(i + d, 0, x); });
     return el('details', { class: 'card fold', open: S.tipoAberto === t.id || null, ontoggle: e => { if (e.target.open) S.tipoAberto = t.id; else if (S.tipoAberto === t.id) S.tipoAberto = null; } },
       el('summary', {},
         el('span', { style: 'display:grid;gap:2px' }, el('h3', { text: t.nome }), el('span', { class: 'hint', text: t.etapas.length ? `${t.etapas.length} ${t.etapas.length === 1 ? 'etapa' : 'etapas'}` : 'Sem etapas: adicione para usar' })),
         el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
-      emUso ? el('p', { class: 'hint', text: 'Mudanças nas etapas valem para os próximos serviços. Os que estão em andamento seguem a lista de quando começaram.' }) : null,
+      emUso ? el('p', { class: 'hint', text: 'Mudanças nas etapas valem também para os veículos em andamento deste tipo. O que já foi feito continua marcado.' }) : null,
+      fora ? el('div', { class: 'alert', style: 'display:grid;gap:8px' },
+        el('span', { text: `${fora === 1 ? '1 veículo em andamento está' : `${fora} veículos em andamento estão`} com as etapas antigas deste tipo.` }),
+        el('div', {}, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => mudarEtapas(() => {}) }, 'Atualizar etapas'))) : null,
       el('ol', { class: 'etapas' }, t.etapas.map((nome, i) => el('li', {},
         el('span', { class: 'n', text: String(i + 1) }), el('span', { class: 't', text: nome }),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Subir ${nome}`, disabled: i === 0, onclick: () => move(i, -1) }, icon('up')),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Descer ${nome}`, disabled: i === t.etapas.length - 1, onclick: () => move(i, 1) }, icon('down')),
-        el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remover ${nome}`, onclick: () => commit(() => t.etapas.splice(i, 1)) && redraw() }, '×')))),
+        el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remover ${nome}`, onclick: () => {
+          if (t.etapas.length === 1 && emUso) { toast('O tipo precisa de pelo menos uma etapa enquanto tiver veículo em andamento.', true); return; }
+          mudarEtapas(() => t.etapas.splice(i, 1));
+        } }, '×')))),
       el('div', { class: 'row' }, add, el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: addEtapa }, 'Adicionar')),
       el('div', {}, el('button', { class: 'btn btn--sm btn--danger', type: 'button', onclick: () => {
         if (!window.confirm(`Excluir o tipo de serviço "${t.nome}"? Atendimentos já feitos não são afetados.`)) return;
@@ -2191,20 +2255,27 @@ function renderSettings() {
     const aberto = S.loginAberto === f.id;
     let form = null;
     if (aberto) {
+      const fn = el('input', { type: 'text', maxlength: '60', value: f.nome, autocapitalize: 'words', autocomplete: 'off', 'aria-label': 'Nome' });
       const fu = el('input', { type: 'text', maxlength: '40', value: f.usuario || '', autocapitalize: 'none', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Usuário' });
       const fs = el('input', { type: 'password', maxlength: '200', autocomplete: 'new-password', placeholder: f.temSenha ? 'Deixe em branco para manter' : 'Mínimo 6 caracteres', 'aria-label': 'Senha nova' });
       const ok = el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async () => {
-        const usuario = fu.value.trim().toLowerCase(), senha = fs.value;
-        if (!RE_USUARIO.test(usuario)) { toast('Usuário: de 2 a 40 letras minúsculas, números, ponto, traço ou sublinhado. Sem espaço.', true); return; }
-        if (senha && senha.length < 6) { toast('A senha precisa ter pelo menos 6 caracteres.', true); return; }
-        if (!senha && !f.temSenha) { toast('Defina uma senha.', true); return; }
+        const nome = fn.value.trim().replace(/\s+/g, ' '), usuario = fu.value.trim().toLowerCase(), senha = fs.value;
+        if (!nome) { toast('Digite o nome.', true); fn.focus(); return; }
+        // Só o nome mudou (pessoa ainda sem login pode ficar assim).
+        const soNome = !senha && usuario === (f.usuario || '') && (f.temSenha || !usuario);
+        if (!soNome) {
+          if (!RE_USUARIO.test(usuario)) { toast('Usuário: de 2 a 40 letras minúsculas, números, ponto, traço ou sublinhado. Sem espaço.', true); return; }
+          if (senha && senha.length < 6) { toast('A senha precisa ter pelo menos 6 caracteres.', true); return; }
+          if (!senha && !f.temSenha) { toast('Defina uma senha.', true); return; }
+        }
         ok.disabled = true; S.ocupado = true;
-        const feito = await salvarPessoa(() => { const x = funcById(f.id); if (x) { x.usuario = usuario; if (senha) x.temSenha = true; } }, senha ? { id: f.id, senha } : null);
+        const feito = await salvarPessoa(() => { const x = funcById(f.id); if (x) { x.nome = nome; x.usuario = usuario; if (senha) x.temSenha = true; } }, senha ? { id: f.id, senha } : null);
         S.ocupado = false;
-        if (feito) { S.loginAberto = null; toast(senha ? `Login salvo. ${f.nome} entra com o usuário "${usuario}".` : 'Usuário salvo.'); }
+        if (feito) { S.loginAberto = null; toast(senha ? `Salvo. ${nome} entra com o usuário "${usuario}".` : 'Alterações salvas.'); }
         redraw();
-      } }, 'Salvar login');
+      } }, 'Salvar');
       form = el('div', { class: 'inline-form', style: 'margin:0 14px 12px' },
+        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome' }), fn),
         el('div', { class: 'field' }, el('span', { class: 'label', text: 'Usuário' }), fu),
         el('div', { class: 'field' }, el('span', { class: 'label', text: f.temSenha ? 'Senha nova' : 'Senha' }), fs),
         f.temSenha && f.id !== u.id ? el('p', { class: 'hint', text: 'Ao trocar a senha, os aparelhos em que essa pessoa estava logada saem do sistema.' }) : null,
@@ -2215,7 +2286,7 @@ function renderSettings() {
         el('span', { class: 'r-title', text: f.nome + (f.id === u.id ? ' (você)' : '') }),
         el('span', { class: 'r-sub', style: f.usuario && f.temSenha ? null : 'color:var(--warn)', text: f.usuario && f.temSenha ? `Usuário: ${f.usuario}` : 'Sem login ainda' })),
       nivel,
-      el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px', 'aria-expanded': String(aberto), onclick: () => { S.loginAberto = aberto ? null : f.id; redraw(); } }, 'Login'),
+      el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px', 'aria-expanded': String(aberto), onclick: () => { S.loginAberto = aberto ? null : f.id; redraw(); } }, 'Editar'),
       f.id === u.id ? null : el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remover ${f.nome}`, onclick: () => {
         if (!window.confirm(`Remover ${f.nome}? A pessoa não consegue mais entrar. O histórico com o nome dela continua registrado.`)) return;
         if (commit(() => { DB.funcionarios = DB.funcionarios.filter(x => x.id !== f.id); })) redraw();
@@ -2265,6 +2336,7 @@ function renderSettings() {
         el('div', { class: 'row' }, nNome, el('div', { style: 'flex:.7' }, nNivel)),
         el('div', { class: 'row' }, nUsuario, nSenha),
         el('div', {}, addPessoa))),
+    cartaoLixeira(redraw),
     el('section', { class: 'stack' },
       el('h2', { text: 'Dados' }),
       el('div', { class: 'card' }, el('h3', { text: 'Limpeza automática das fotos' }),
@@ -2279,6 +2351,38 @@ function renderSettings() {
           document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         } }, 'Baixar backup (JSON)')))));
   shell(body, { current: 'ajustes' });
+}
+
+// Lixeira (Controle): atendimentos excluídos ficam 48 h aqui e podem voltar. Depois somem da lista
+// (o registro continua guardado no banco, como sempre).
+const LIXEIRA_H = 48;
+function cartaoLixeira(redraw) {
+  const itens = (DB.lixeira || []).filter(x => Date.now() - x.excluidoEm < LIXEIRA_H * 3600e3);
+  const restam = x => `Restam ${Math.max(1, Math.ceil((x.excluidoEm + LIXEIRA_H * 3600e3 - Date.now()) / 3600e3))} h`;
+  const restaurar = async (x, btn) => {
+    if (ativoDaPlaca(x.placa) && !x.concluido) { toast(`A placa ${fmtPlaca(x.placa)} já tem um serviço em andamento.`, true); return; }
+    btn.disabled = true; S.ocupado = true;
+    const ok = await enviar([{ col: 'atendimentos', acao: 'restaurar', id: x.id }], { redesenhar: false });
+    S.ocupado = false;
+    if (ok) { try { await buscarDados({ forcar: true }); } catch {} toast(`Atendimento da placa ${fmtPlaca(x.placa)} restaurado.`); }
+    redraw();
+  };
+  return el('section', { class: 'stack' },
+    el('h2', { text: 'Lixeira' }),
+    el('div', { class: 'card' },
+      el('p', { class: 'hint', text: `Veículos excluídos ficam aqui por ${LIXEIRA_H} horas e podem ser restaurados com fotos, etapas e histórico.` }),
+      itens.length ? el('ul', { class: 'rows' }, itens.map(x => {
+        const capa = x.fotos.find(f => f.rotulo === 'Frente') || x.fotos[0];
+        const btn = el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none' }, 'Restaurar');
+        btn.addEventListener('click', () => restaurar(x, btn));
+        return el('li', {}, el('div', { class: 'r' },
+          el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
+          el('span', { class: 'r-main' },
+            el('span', { class: 'r-plate', text: fmtPlaca(x.placa) }),
+            el('span', { class: 'r-sub', text: [x.clienteNome || NOME_PENDENTE, x.tipoNome, x.etapa].filter(Boolean).join(' · ') }),
+            el('span', { class: 'r-sub', text: [restam(x), x.excluidoPor && `excluído por ${x.excluidoPor}`].filter(Boolean).join(' · ') })),
+          btn));
+      })) : el('p', { class: 'hint', text: 'A lixeira está vazia.' })));
 }
 
 /* =====================================================================

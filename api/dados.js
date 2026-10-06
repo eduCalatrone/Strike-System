@@ -17,11 +17,13 @@ const { config, send, erro, readJsonBody, rest, restAll, fotoBase, ms, iso, hash
 /* ---------- Leitura ---------- */
 async function carregar(c, eu) {
   const ctrl = eu.nivel === 'controle';
-  const [funcionarios, tipos, veiculos, atendimentos, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
+  // Lixeira (só Controle): excluídos nas últimas 48 h ainda podem ser restaurados.
+  const desde = encodeURIComponent(`"${new Date(Date.now() - LIXEIRA_MS).toISOString()}"`); // entre aspas por causa do ":" no or=()
+  const [funcionarios, tipos, veiculos, todosAts, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
-    restAll(c, 'sd_atendimentos?select=*&excluido_em=is.null&order=criado_em,id'),
+    restAll(c, `sd_atendimentos?select=*&${ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})` : 'excluido_em=is.null'}&order=criado_em,id`),
     restAll(c, 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id'),
     restAll(c, 'sd_estoque_itens?select=id,nome,unidade,minimo&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_estoque_movimentos?select=*&descartado_em=is.null&order=em,id'),
@@ -34,7 +36,14 @@ async function carregar(c, eu) {
     if (!fotosPorAt.has(f.atendimento_id)) fotosPorAt.set(f.atendimento_id, []);
     fotosPorAt.get(f.atendimento_id).push({ id: f.id, rotulo: f.rotulo, em: ms(f.criado_em), caminho: f.caminho, miniatura: f.miniatura || null, ...(f.etapa == null ? {} : { etapa: f.etapa }) });
   }
+  const atendimentos = todosAts.filter(a => !a.excluido_em);
+  const lixeira = todosAts.filter(a => a.excluido_em).sort((a, b) => ms(b.excluido_em) - ms(a.excluido_em));
   return {
+    lixeira: lixeira.map(a => ({
+      id: a.id, placa: a.placa, tipoNome: a.tipo_nome, clienteNome: a.cliente_nome || '', concluido: a.concluido,
+      etapa: a.concluido ? 'Concluído' : (a.etapas || [])[a.etapa_index] || '', criadoEm: ms(a.criado_em),
+      excluidoEm: ms(a.excluido_em), excluidoPor: a.excluido_por || '', fotos: fotosPorAt.get(a.id) || [],
+    })),
     fotoBase: fotoBase(c),
     ajustes: { limpezaDias: Number((ajustes.find(a => a.chave === 'limpeza_fotos_dias') || {}).valor) || 30 },
     // Controle vê o usuário de cada pessoa e se já tem senha; a senha nunca sai daqui.
@@ -61,13 +70,15 @@ async function carregar(c, eu) {
   };
 }
 
+const LIXEIRA_MS = 48 * 3600e3;
+
 /* ---------- Validação ---------- */
 const RE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'fotos:remover', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -231,6 +242,17 @@ async function aplicar(c, op, eu, versoes) {
     }
     case 'atendimentos:remover':
       return marcar(c, 'sd_atendimentos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
+    // Lixeira: volta o atendimento excluído há menos de 48 h. Se a placa já tem outro serviço em andamento, não volta.
+    case 'atendimentos:restaurar': {
+      const atId = id(op.id);
+      const desde = new Date(Date.now() - LIXEIRA_MS).toISOString();
+      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&excluido_em=gte.${q(desde)}&select=id,versao`, {
+        method: 'PATCH', body: { excluido_em: null, excluido_por: null, atualizado_em: agora() }, prefer: 'return=representation',
+      }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
+      if (!r || !r.length) throw erro(409, 'lixeira_vencida', atId);
+      versoes[atId] = r[0].versao;
+      return;
+    }
 
     case 'fotos:salvar': {
       const caminho = String(it.caminho || ''); if (!RE_CAMINHO.test(caminho)) throw invalido('caminho');
@@ -243,6 +265,12 @@ async function aplicar(c, op, eu, versoes) {
     }
     case 'fotos:remover':
       return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { removida_em: agora(), removida_por: quem });
+    // Etapas do tipo atualizadas em Ajustes: a foto acompanha a etapa na lista nova (null = virou foto comum).
+    case 'fotos:etapa': {
+      const etapa = op.etapa == null ? null : Number(op.etapa);
+      if (etapa !== null && !(Number.isInteger(etapa) && etapa >= 0 && etapa < 1000)) throw invalido('etapa');
+      return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}`, { etapa });
+    }
 
     // Zerar o estoque (Controle): todos os movimentos atuais ficam descartados (não são apagados).
     // O saldo de cada material volta a 0; depois é só lançar entradas ou fazer contagem.
