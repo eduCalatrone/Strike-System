@@ -318,6 +318,11 @@ textarea { resize: vertical; min-height: 76px; }
 .top-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--ink-2); }
 .top-ico svg { width: 20px; height: 20px; }
 .top-ico[aria-current="page"] { background: #E4E4E1; color: var(--ink); }
+.presenca { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.presenca li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.presenca-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.presenca-main { display: grid; gap: 1px; min-width: 0; font-size: 14px; }
+.presenca-main span { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top-ico.girando svg { animation: girar .8s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
 
@@ -1166,7 +1171,7 @@ function me() {
 }
 const isCtrl = () => { const u = me(); return !!u && u.tipo === 'controle'; };
 function esquecerDados() { DB = null; VERS.clear(); geracao++; carregadoEm = 0; }
-function sair() { setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
+function sair() { avisarPresenca({ saiu: true }); setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
 function sessaoTerminou() {
   if (!getSession()) return;
   setSession(null); esquecerDados();
@@ -1221,6 +1226,78 @@ function cartaoInstalar({ fechavel = false } = {}) {
 }
 
 /* =====================================================================
+   Presença: o site avisa (api/presenca) enquanto está aberto e na tela, e avisa quando sai.
+   O Controle recebe a presença da equipe na resposta e vê no cartão "Equipe agora" do Início.
+   Só mostra o que acontece dentro do sistema; outros apps do celular não aparecem.
+   ===================================================================== */
+const PRES_ONLINE_MS = 150e3;  // sem aviso há mais que isso: fora do sistema
+const PRES_PARADO_MS = 5 * 60e3; // sem tocar no sistema há mais que isso: parado
+let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset = 0;
+['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
+function telaDePresenca() {
+  const [r, a] = parts();
+  const nomes = { inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico' };
+  if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
+  if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
+  return nomes[r] || 'Início';
+}
+function avisarPresenca({ saiu = false, forcar = false } = {}) {
+  const s = getSession();
+  if (MODO_CLIENTE || !s || !s.token || !DB) return;
+  const tela = telaDePresenca();
+  if (!saiu && !forcar && tela === presTela && Date.now() - presEnviadoEm < 10e3) return;
+  presTela = saiu ? '' : tela; presEnviadoEm = Date.now();
+  const body = JSON.stringify({ tela, mexeuEm: presUltimoToque, saiu });
+  const req = fetch('/api/presenca', { method: 'POST', keepalive: saiu, cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` }, body });
+  if (saiu) { req.catch(() => {}); return; }
+  req.then(r => r.ok ? r.json() : null).then(d => {
+    if (!d || !d.equipe) return;
+    presOffset = d.agora - Date.now();
+    S.equipe = d.equipe;
+    const card = document.getElementById('equipe-agora');
+    if (card) desenharEquipe(card);
+  }).catch(() => {});
+}
+// Controle no Início: a cada 20 s, para o cartão ficar em dia. Demais telas e Funcionário: a cada 45 s.
+setInterval(() => {
+  if (document.hidden) return;
+  const noInicio = isCtrl() && parts()[0] === 'inicio';
+  if (Date.now() - presEnviadoEm >= (noInicio ? 20e3 : 45e3)) avisarPresenca({ forcar: true });
+}, 5000);
+document.addEventListener('visibilitychange', () => avisarPresenca(document.hidden ? { saiu: true } : { forcar: true }));
+addEventListener('pagehide', () => avisarPresenca({ saiu: true }));
+
+const duracao = ms => { const m = Math.max(1, Math.round(ms / 60e3)); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`; };
+function estadoPresenca(f) {
+  const agora = Date.now() + presOffset;
+  if (!f.vistoEm) return { k: 'fora', ordem: 3, txt: 'Ainda não entrou no sistema' };
+  if (!f.tela || agora - f.vistoEm > PRES_ONLINE_MS) return { k: 'fora', ordem: 2, txt: `Fora do sistema · visto há ${duracao(agora - f.vistoEm)}` };
+  const parado = agora - (f.mexeuEm || f.vistoEm);
+  if (parado > PRES_PARADO_MS) return { k: 'parado', ordem: 1, txt: `Parado há ${duracao(parado)} · ${f.tela}` };
+  return { k: 'online', ordem: 0, txt: `Online · ${f.tela}` };
+}
+function desenharEquipe(card) {
+  const u = me();
+  const lista = (S.equipe || []).filter(f => !u || f.id !== u.id).map(f => ({ f, e: estadoPresenca(f) }))
+    .sort((a, b) => a.e.ordem - b.e.ordem || a.f.nome.localeCompare(b.f.nome));
+  const online = lista.filter(x => x.e.k === 'online').length;
+  const cor = { online: 'var(--ok)', parado: 'var(--warn)', fora: '#C4C4C0' };
+  card.replaceChildren(
+    el('div', { class: 'card-head' }, el('h2', { text: 'Equipe agora' }), el('span', { class: 'count', text: S.equipe ? `${online} online` : '' })),
+    !S.equipe ? el('p', { class: 'hint', text: 'Carregando…' })
+    : !lista.length ? el('p', { class: 'hint', text: 'Ninguém mais na equipe.' })
+    : el('ul', { class: 'presenca' }, lista.map(({ f, e }) => el('li', {},
+        el('span', { class: 'presenca-dot', style: `background:${cor[e.k]}`, 'aria-hidden': 'true' }),
+        el('span', { class: 'presenca-main' }, el('b', { text: f.nome }), el('span', { text: e.txt }))))));
+}
+function cartaoEquipe() {
+  const card = el('div', { class: 'card', id: 'equipe-agora' });
+  desenharEquipe(card);
+  if (!S.equipe || Date.now() - presEnviadoEm > 15e3) setTimeout(() => avisarPresenca({ forcar: true }), 0);
+  return card;
+}
+
+/* =====================================================================
    Estado de tela e navegação
    ===================================================================== */
 const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, ag: null, rel: null, entradaAg: null };
@@ -1240,6 +1317,7 @@ function route(opts) {
   if (!u) { if (s) setSession(null); return renderLogin(); }
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
   atualizarSeVelho();
+  setTimeout(() => avisarPresenca(), 0); // tela nova: avisa (no máximo a cada 10 s)
   switch (r) {
     case 'placa': return renderReader();
     case 'novo': return renderNew(a);
@@ -1423,6 +1501,7 @@ function renderHome() {
   const body = el('div', { class: 'stack' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Em serviço' }), el('span', { class: 'count', text: all.length ? `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}` : '' })),
     cartaoInstalar({ fechavel: true }),
+    isCtrl() ? cartaoEquipe() : null,
     alertas.length ? el('a', { class: 'alert', href: '#/estoque' },
       el('span', {}, el('b', { text: 'Estoque: ' }), alertas.map(it => `${it.nome} (${fmtQ(saldo(it.id))} ${it.unidade})`).join(', ')),
       icon('chev')) : null,
@@ -2929,7 +3008,25 @@ async function carregarCliente(placa, box) {
     box.replaceChildren(el('p', { class: 'empty', text: `Não encontramos serviço para a placa ${fmtPlaca(placa)}. Confira a placa ou fale com a Strike Details.` }));
     return;
   }
+  const desenhar = () => {
   const pct = Math.round(progresso(at) * 100);
+  // Duas abas: Andamento (etapas e fotos da entrada) e Avarias (o que já tinha no veículo ao chegar).
+  const fotosDanos = at.fotos.filter(f => !eFotoDeEtapa(f) && f.rotulo === 'Danos');
+  const nAvarias = fotosDanos.length + (at.danos ? 1 : 0) + (at.objetos ? 1 : 0);
+  const aba = S.clienteAba === 'avarias' ? 'avarias' : 'andamento';
+  const trocar = a => { S.clienteAba = a; desenhar(); };
+  const conteudo = aba === 'avarias'
+    ? [el('div', { class: 'card' }, el('h2', { text: 'Registro de avarias' }),
+        el('p', { class: 'hint', text: `Como o veículo chegou em ${fmtData(at.criadoEm)}, antes do serviço.` }),
+        nAvarias ? null : el('p', { class: 'empty', style: 'padding:8px 0', text: 'Nenhuma avaria registrada na entrada.' }),
+        at.danos || at.objetos ? el('dl', { class: 'kv' },
+          at.danos ? el('div', {}, el('dt', { text: 'Danos ou problemas' }), el('dd', { style: 'white-space:pre-wrap', text: at.danos })) : null,
+          at.objetos ? el('div', {}, el('dt', { text: 'Objetos pessoais' }), el('dd', { style: 'white-space:pre-wrap', text: at.objetos })) : null) : null),
+      fotosDanos.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos dos danos' }), photoGrid({ items: fotosDanos })) : null]
+    : [el('div', { class: 'card' }, el('h2', { text: 'Andamento' }),
+        listaEtapas(at, { fmt: fmtData, src: f => f.mini || f.url, atual: 'Em andamento' })),
+      (() => { const entrada = at.fotos.filter(f => !eFotoDeEtapa(f) && f.rotulo !== 'Danos');
+        return entrada.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos da entrada' }), photoGrid({ items: entrada })) : null; })()];
   box.replaceChildren(
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(at.placa) }),
@@ -2938,10 +3035,12 @@ async function carregarCliente(placa, box) {
       el('span', { class: 'k', text: at.concluido ? 'SERVIÇO CONCLUÍDO' : 'ETAPA ATUAL' }),
       el('span', { class: 'v', text: at.concluido ? 'Pronto' : at.etapas[at.etapaIndex] }),
       el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` }))),
-    el('div', { class: 'card' }, el('h2', { text: 'Andamento' }),
-      listaEtapas(at, { fmt: fmtData, src: f => f.mini || f.url, atual: 'Em andamento' })),
-    (() => { const entrada = at.fotos.filter(f => !eFotoDeEtapa(f));
-      return entrada.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos da entrada' }), photoGrid({ items: entrada })) : null; })());
+    el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Informações do veículo', style: 'display:flex;width:100%' },
+      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-pressed': String(aba === 'andamento'), 'aria-selected': String(aba === 'andamento'), onclick: () => trocar('andamento') }, 'Andamento'),
+      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-pressed': String(aba === 'avarias'), 'aria-selected': String(aba === 'avarias'), onclick: () => trocar('avarias') }, nAvarias ? `Avarias (${nAvarias})` : 'Avarias')),
+    ...conteudo);
+  };
+  desenhar();
 }
 
 /* ---------- Início ---------- */

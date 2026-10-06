@@ -1,13 +1,12 @@
 // Área do cliente: só a placa. Não precisa de login.
 //   GET /api/cliente?placa=ABC1D23
-// Devolve só o que o cliente pode ver: etapa atual, andamento (datas) e fotos.
-// Nunca devolve valores, danos, objetos pessoais nem nomes da equipe.
-// Fotos marcadas como "Danos" ficam de fora (são para controle interno).
+// Devolve só o que o cliente pode ver: etapa atual, andamento (datas), fotos e o registro de avarias
+// da entrada (texto de danos ou problemas, objetos pessoais e fotos de "Danos").
+// Nunca devolve valores, nome do cliente nem nomes da equipe.
 // Fotos das etapas vêm com o número da etapa (etapa), para aparecer no andamento.
 
 const { config, send, rest, fotoBase, ms } = require('./_supabase.js');
 
-const FOTOS_OCULTAS = new Set(['Danos']);
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
@@ -19,7 +18,7 @@ module.exports = async (req, res) => {
 
   try {
     // O em andamento vem primeiro; se não houver, o mais recente.
-    const ats = await rest(c, `sd_atendimentos?select=id,placa,tipo_nome,etapas,etapa_index,feitas,concluido,concluido_em,criado_em&placa=eq.${placa}&excluido_em=is.null&order=concluido.asc,criado_em.desc&limit=1`);
+    const ats = await rest(c, `sd_atendimentos?select=id,placa,tipo_nome,etapas,etapa_index,feitas,concluido,concluido_em,criado_em,danos,objetos&placa=eq.${placa}&excluido_em=is.null&order=concluido.asc,criado_em.desc&limit=1`);
     const at = ats && ats[0];
     if (!at) return send(res, 200, { atendimento: null });
     const [veiculo] = await rest(c, `sd_veiculos?select=descricao&placa=eq.${placa}`) || [];
@@ -36,7 +35,9 @@ module.exports = async (req, res) => {
         concluido: at.concluido,
         concluidoEm: ms(at.concluido_em),
         criadoEm: ms(at.criado_em),
-        fotos: fotos.filter(f => !FOTOS_OCULTAS.has(f.rotulo)).map(f => ({ rotulo: f.rotulo, etapa: f.etapa, url: base + f.caminho, mini: f.miniatura ? base + f.miniatura : null })),
+        danos: at.danos || '',
+        objetos: at.objetos || '',
+        fotos: fotos.map(f => ({ rotulo: f.rotulo, etapa: f.etapa, url: base + f.caminho, mini: f.miniatura ? base + f.miniatura : null })),
       },
     });
   } catch (e) {
