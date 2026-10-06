@@ -979,6 +979,7 @@ function podeRedesenhar() {
   if (r === 'agenda' && parts()[1]) return false; // formulário de agendamento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
+  if (S.entradaEdit) return false; // editando o estado na entrada
   const a = document.activeElement;
   if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.type !== 'search') return false;
   return !$('viewer').open;
@@ -2155,9 +2156,38 @@ function renderVehicle(id) {
     }) }] : null,
   }));
 
-  const entrada = at.danos || at.objetos ? el('div', { class: 'card' }, el('h2', { text: 'Estado na entrada' }), el('dl', { class: 'kv' },
-    at.danos ? el('div', {}, el('dt', { text: 'Danos ou problemas' }), el('dd', { text: at.danos })) : null,
-    at.objetos ? el('div', {}, el('dt', { text: 'Objetos pessoais' }), el('dd', { text: at.objetos })) : null)) : null;
+  // Estado na entrada: o Controle edita os textos (danos e objetos pessoais), que o cliente vê em Observações.
+  let entrada = null;
+  if (ctrl && S.entradaEdit === at.id) {
+    const fD = el('textarea', { rows: '3', maxlength: '1000', 'aria-label': 'Danos ou problemas' }); fD.value = at.danos || '';
+    const fO = el('textarea', { rows: '2', maxlength: '600', 'aria-label': 'Objetos pessoais' }); fO.value = at.objetos || '';
+    const fechar = () => { S.entradaEdit = null; redraw(); };
+    const salvarEntrada = () => {
+      const d = fD.value.trim(), o = fO.value.trim();
+      S.entradaEdit = null;
+      const atual = DB.atendimentos.find(a => a.id === at.id);
+      if (!atual || (d === (atual.danos || '') && o === (atual.objetos || ''))) { redraw(); return; }
+      if (commit(() => {
+        if (d !== (atual.danos || '')) registrar(atual, 'Danos ou problemas editados');
+        if (o !== (atual.objetos || '')) registrar(atual, 'Objetos pessoais editados');
+        atual.danos = d; atual.objetos = o;
+      })) { toast('Estado na entrada salvo.'); redraw(); }
+    };
+    entrada = el('div', { class: 'card' }, el('h2', { text: 'Estado na entrada' }),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Danos ou problemas' }), fD),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Objetos pessoais' }), fO),
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvarEntrada }, 'Salvar'),
+        el('button', { class: 'btn', type: 'button', onclick: fechar }, 'Cancelar')));
+    setTimeout(() => fD.focus(), 30);
+  } else if (at.danos || at.objetos || ctrl) {
+    entrada = el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('h2', { text: 'Estado na entrada' }),
+        ctrl ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.entradaEdit = at.id; redraw(); } }, at.danos || at.objetos ? 'Editar' : 'Adicionar') : null),
+      at.danos || at.objetos ? el('dl', { class: 'kv' },
+        at.danos ? el('div', {}, el('dt', { text: 'Danos ou problemas' }), el('dd', { style: 'white-space:pre-wrap', text: at.danos })) : null,
+        at.objetos ? el('div', {}, el('dt', { text: 'Objetos pessoais' }), el('dd', { style: 'white-space:pre-wrap', text: at.objetos })) : null) : null);
+  }
 
   let ctrlCard = null;
   if (ctrl) {
