@@ -41,7 +41,7 @@ Variáveis na Vercel: `PLATE_RECOGNIZER_TOKEN` (secreta), `SUPABASE_URL`, `SUPAB
 ## Perfis de acesso
 
 Duas páginas separadas:
-- **Equipe** (`/`): login com usuário e senha. Cada pessoa tem o seu, criado pelo Controle em Ajustes > Equipe (botão "Editar": nome, usuário e senha).
+- **Equipe** (`/`): login com usuário e senha. Cada pessoa tem o seu, criado pelo Controle em Ajustes > Equipe. Cada linha mostra iniciais, nome, nível e usuário; o "Editar" abre nome, nível (Funcionário/Controle), usuário, senha e "Remover pessoa".
 - **Cliente** (`/cliente`, link `/cliente#/PLACA`): sem login, só digita a placa.
 
 Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), sem o Auth do Supabase, de propósito: usuários do Auth teriam acesso às tabelas `leads`, `autorizados` e `historico` do outro sistema pelas políticas de lá. O token dura 60 dias; trocar a senha de alguém ou remover a pessoa derruba as sessões dela. 5 senhas erradas bloqueiam o usuário por 5 minutos. As regras abaixo são conferidas também no servidor (`api/dados`), e o Funcionário não recebe valores.
@@ -55,14 +55,14 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - `#/` login da equipe (usuário e senha) · página do cliente em `/cliente` (hash `#/PLACA`)
 - `#/inicio` galeria dos veículos em serviço. Card: foto de capa (Frente), **modelo** (só as 2 primeiras palavras da descrição, em maiúsculas, `modeloCurto`), **placa** (mini placa estilo Mercosul, `miniPlaca`: faixa azul com "BRASIL" no centro e a bandeira do Brasil em SVG no canto direito) com o **nome do cliente** ao lado (desce de linha se não couber; ou "(NOME PENDENTE)"), **serviço**, situação e barra de progresso. Sem modelo cadastrado, a placa vira o título.
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar
-- `#/novo/PLACA` entrada do veículo: nome do cliente (opcional, vem preenchido com o do último serviço da placa; vazio aparece "(NOME PENDENTE)"), tipo de serviço (obrigatório, começa sem escolha; só vem pronto se o agendamento bater), descrição, fotos, danos, objetos pessoais (valor só para Controle)
+- `#/novo/PLACA` entrada do veículo (campo "Veículo (marca e modelo primeiro)", porque o Início usa as 2 primeiras palavras): nome do cliente (opcional, vem preenchido com o do último serviço da placa; vazio aparece "(NOME PENDENTE)"), tipo de serviço (obrigatório, começa sem escolha; só vem pronto se o agendamento bater), descrição, fotos, danos, objetos pessoais (valor só para Controle)
 - `#/veiculo/ID` etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
 - `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle, pela engrenagem no topo; tem a Lixeira)
 - Botão de recarregar (seta circular) no topo só aparece no app instalado (no iPhone não há botão do navegador). Espera os envios pendentes antes de recarregar.
 - `#/agenda` calendário (mês/ano, feriados de Jaru/RO, faixa até a entrega, dia escolhido com entradas e entregas) · `#/agenda/ID` agendamento (Controle edita; Funcionário só vê) · `#/agenda/novo`
 - `#/equipe` (Controle): **Status da equipe**, aberto pelo botão em Relatórios (cartão escuro `#equipe-cta` com "Ao vivo", resumo online/parados/fora e as iniciais de quem está no sistema, atualizado a cada aviso). Resumo Online/Parados/Fora e lista com a tela de cada um; cada pessoa é clicável. Atualiza sozinho a cada 3 s e abre com o último dado já buscado (Relatórios já pede a presença).
 - `#/equipe/ID` (Controle): **histórico do funcionário** (`renderFuncionario`): status ao vivo, período (Hoje, 7 dias, 30 dias, Tudo), quadros (tempo no sistema, etapas concluídas, veículos recebidos, fotos e retiradas) e linha do tempo por dia. Junta as linhas do histórico dos atendimentos com `porId` da pessoa (com link para o veículo), os movimentos de estoque dela e as entradas/saídas do sistema (`GET api/presenca?id=`, tabela `sd_presenca_eventos`, últimos 60 dias).
-- `#/relatorios` (Controle): período (este mês, mês passado, este ano ou escolher), faturamento e estoque na tela e "Baixar PDF"; link para o Histórico de serviços
+- `#/relatorios` (Controle): cartões "Histórico de serviços" (claro) e "Status da equipe" (escuro) no topo; período em grade (este mês, mês passado, este ano ou escolher), faturamento e estoque na tela e "Baixar PDF"
 - Menu inferior: Início, Agenda, Adicionar (botão preto no meio), Estoque; Controle também tem Relatórios. Ajustes do Controle ficam na engrenagem do topo. A aba aberta tem fundo cinza atrás do ícone.
 
 ## Regras de negócio decididas
@@ -93,7 +93,7 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 
 ## Leitor de placa
 
-- Principal: Plate Recognizer via `api/read-plate` (retorna `{plate, score, alternatives}`). Reserva: Tesseract.js no navegador (bem menos preciso), usado quando a API não responde.
+- Principal: Plate Recognizer via `api/read-plate` (retorna `{plate, score, alternatives}`). Reserva: Tesseract.js no navegador (bem menos preciso), usado quando a API não responde. Só é baixado nessa hora (`getWorker` carrega o script), não ao abrir o site.
 - Câmera ao vivo: usa a câmera traseira padrão do navegador (sem troca de câmera; foi testado e removido a pedido). Tem **zoom** (salvo em `localStorage` `sd:zoom`) quando o aparelho suporta.
 - Quadro da câmera fixo em **3:4**, altura limitada para o botão "Capturar placa" caber na tela sem rolar. A imagem enviada à API é só a área visível do quadro.
 - Aparelho de teste do Eduardo: Galaxy A54.
@@ -108,8 +108,8 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - Acesso: só as funções da Vercel falam com o banco. Elas mandam o cabeçalho `x-sd-chave` (variável `SD_CHAVE_BANCO`), que as políticas conferem com `privado.sd_config` pela função `privado.sd_acesso_ok()`. O navegador nunca vê essa chave.
 - Atendimentos têm `versao`: se outro aparelho mudou antes, a gravação é recusada e o site recarrega e avisa.
 - O site guarda os dados em memória no mesmo formato de antes; cada `commit()` compara antes e depois e manda as operações para `api/dados`.
-- **Só baixa tudo de novo quando algo mudou**: a tabela `sd_versao` (1 linha) muda sozinha a cada gravação nas tabelas `sd_` (gatilhos `sd_versao` chamando `privado.sd_mudou_dados()`; em `sd_funcionarios` só conta mudança de nome, nível, usuário, ativo ou senha, nunca presença ou login). O `api/presenca` devolve `versaoDados` a cada aviso (20 s); se for diferente da carregada, o site chama `api/dados` (que também devolve `versaoDados`). Reserva: busca tudo se os dados tiverem mais de 5 min. Só redesenha quando a tela pode ser redesenhada.
-- Fotos no bucket público `sd-fotos` com nomes aleatórios: `fotos/<id>.jpg` (até 1600 px, JPEG 0,82) e `miniaturas/<id>.jpg` (480 px, usada nas listas). Plano grátis: 1 GB de arquivos, 5 GB/mês de tráfego, projeto pausa após 1 semana sem uso.
+- **Só baixa tudo de novo quando algo mudou**: a tabela `sd_versao` (1 linha) muda sozinha a cada gravação nas tabelas `sd_` (gatilhos `sd_versao` chamando `privado.sd_mudou_dados()`; em `sd_funcionarios` só conta mudança de nome, nível, usuário, ativo ou senha, nunca presença ou login). O `api/presenca` devolve `versaoDados` a cada aviso (20 s); se for diferente da carregada, o site chama `api/dados` (que também devolve `versaoDados`). Reserva: busca tudo se os dados tiverem mais de 5 min. Em tela que não pode ser redesenhada (Relatórios, Ajustes, formulário aberto, digitando) nem baixa (`atualizarSeVelho` confere `podeRedesenhar` antes); ao sair dela, o próximo aviso busca.
+- Fotos no bucket público `sd-fotos` com nomes aleatórios: `fotos/<id>.jpg` (até 1280 px, JPEG 0,8, uns 200 KB; antes de 06/10/2026 eram 1600 px) e `miniaturas/<id>.jpg` (480 px, usada nas listas). Plano grátis: 1 GB de arquivos, 5 GB/mês de tráfego, projeto pausa após 1 semana sem uso.
 - Dados antigos do aparelho (`localStorage` `sd:dados:v1` e fotos no IndexedDB `sd-fotos`) continuam guardados no navegador. Em Ajustes, o Controle pode enviá-los ao banco (funcionários, tipos e materiais são ligados pelo nome).
 - As funções rodam em `pdx1` (Oregon), a mesma região do banco (`us-west-2`), para cada consulta ser rápida.
 

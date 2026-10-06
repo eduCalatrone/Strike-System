@@ -20,7 +20,6 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js" defer></script>
 <style>
 :root {
   --bg: #F2F2F1;
@@ -357,6 +356,14 @@ textarea { resize: vertical; min-height: 76px; }
 .pres-chev { flex: none; width: 18px; height: 18px; color: #B5B5B2; display: grid; place-items: center; }
 .pres-chev svg { width: 18px; height: 18px; }
 /* Botão "Status da equipe" em Relatórios */
+.seg.seg-grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line-2); justify-self: stretch; }
+.seg.seg-grade button { border: 0; padding: 10px 6px; white-space: nowrap; }
+@media (max-width: 480px) { .seg.seg-grade { grid-template-columns: 1fr 1fr; } }
+.hist-cta { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; min-width: 0; }
+.hist-cta .cta-ico { background: var(--soft); border-color: var(--line); color: var(--ink); }
+.hist-cta .cta-sub { color: var(--muted); }
+.hist-cta .cta-chev { color: #B5B5B2; }
+.pres-av.is-ctrl { background: var(--ink); border-color: var(--ink); color: #fff; }
 .equipe-cta { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 16px; background: var(--primary-grad); color: #fff; text-decoration: none; box-shadow: 0 10px 28px rgba(0, 0, 0, .16); min-width: 0; }
 .cta-ico { flex: none; width: 46px; height: 46px; border-radius: 13px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14); display: grid; place-items: center; }
 .cta-ico svg { width: 24px; height: 24px; }
@@ -817,6 +824,8 @@ let workerP = null;
 function getWorker() {
   if (!workerP) {
     workerP = (async () => {
+      // Leitor reserva: só é baixado quando a leitura pelo servidor falha.
+      if (!window.Tesseract) await carregarScript('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js').catch(() => {});
       if (!window.Tesseract) throw Object.assign(new Error('lib'), { code: 'lib' });
       const w = await Tesseract.createWorker('eng', 1, { logger: m => { if (S.onOcr) S.onOcr(m); } });
       await w.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', preserve_interword_spaces: '0' });
@@ -1073,6 +1082,8 @@ function redesenhar() {
 async function atualizarSeVelho(maxIdade = 5 * 60e3) {
   if (!DB || pendentes || document.hidden || Date.now() - carregadoEm < maxIdade) return;
   if (MODO_CLIENTE || !(getSession() || {}).token) return;
+  // Tela que não pode ser redesenhada agora: nem baixa (seria jogado fora). Ao sair dela, o próximo aviso busca.
+  if (!podeRedesenhar()) return;
   try { if (await buscarDados()) redesenhar(); } catch {}
 }
 setInterval(() => atualizarSeVelho(), 60e3);
@@ -1130,7 +1141,7 @@ async function fotoAntiga(id) {
   const db = await idb();
   return new Promise((res, rej) => { const r = db.transaction('fotos').objectStore('fotos').get(id); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); });
 }
-async function compress(fileOrBlob, max = 1600, q = 0.82) {
+async function compress(fileOrBlob, max = 1280, q = 0.8) { // foto: 1280 px, JPEG 0,8 (uns 200 KB)
   const url = URL.createObjectURL(fileOrBlob);
   try {
     const img = new Image(); img.src = url; await img.decode();
@@ -2154,7 +2165,7 @@ function renderNew(placaRaw) {
 
   // Nome do cliente: do agendamento ou do último serviço desta placa.
   const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: ag0 ? ag0.cliente : (anteriores[0] && anteriores[0].clienteNome) || '' });
-  const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Strada branca 2022', value: v.descricao || (ag0 ? ag0.marca : '') });
+  const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Fiat Strada branca 2022', value: v.descricao || (ag0 ? ag0.marca : '') });
   const tiposOk = DB.tipos.filter(t => t.etapas.length);
   const servAg = ag0 ? ag0.servico.toLowerCase() : '';
   const tipoAg = servAg ? tiposOk.find(t => servAg.includes(t.nome.toLowerCase())) : null;
@@ -2247,7 +2258,7 @@ function renderNew(placaRaw) {
       el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
-      el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo' }), fDesc),
+      el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo (marca e modelo primeiro)' }), fDesc),
       isCtrl() ? el('div', { class: 'field' }, el('label', { for: 'f-valor', text: 'Valor do serviço (R$)' }), fValor) : null),
     el('div', { class: 'card' },
       el('h2', { text: 'Fotos de entrada' }),
@@ -2742,16 +2753,18 @@ function renderSettings() {
     return !ops.length || enviar(ops, { redesenhar: false });
   };
   const equipe = el('ul', { class: 'rows' }, DB.funcionarios.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(f => {
-    const nivel = el('select', { 'aria-label': `Nível de ${f.nome}`, style: 'width:auto;font-size:14px;padding:8px 32px 8px 10px', disabled: f.id === u.id },
-      el('option', { value: 'funcionario', selected: f.nivel === 'funcionario' }, 'Funcionário'),
-      el('option', { value: 'controle', selected: f.nivel === 'controle' }, 'Controle'));
-    nivel.addEventListener('change', () => commit(() => { f.nivel = nivel.value; }) && toast('Nível alterado.'));
     const aberto = S.loginAberto === f.id;
     let form = null;
     if (aberto) {
       const fn = el('input', { type: 'text', maxlength: '60', value: f.nome, autocapitalize: 'words', autocomplete: 'off', 'aria-label': 'Nome' });
       const fu = el('input', { type: 'text', maxlength: '40', value: f.usuario || '', autocapitalize: 'none', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Usuário' });
       const fs = el('input', { type: 'password', maxlength: '200', autocomplete: 'new-password', placeholder: f.temSenha ? 'Deixe em branco para manter' : 'Mínimo 6 caracteres', 'aria-label': 'Senha nova' });
+      // Nível: Funcionário ou Controle (a própria pessoa não muda o seu).
+      let nivelSel = f.nivel;
+      const segNivel = el('div', { class: 'seg', role: 'group', 'aria-label': 'Nível' });
+      const desenharNivel = () => preencher(segNivel, ...[['funcionario', 'Funcionário'], ['controle', 'Controle']].map(([v, t]) =>
+        el('button', { type: 'button', disabled: f.id === u.id, 'aria-pressed': String(nivelSel === v), onclick: () => { nivelSel = v; desenharNivel(); } }, t)));
+      desenharNivel();
       const ok = el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async () => {
         const nome = fn.value.trim().replace(/\s+/g, ' '), usuario = fu.value.trim().toLowerCase(), senha = fs.value;
         if (!nome) { toast('Digite o nome.', true); fn.focus(); return; }
@@ -2763,28 +2776,32 @@ function renderSettings() {
           if (!senha && !f.temSenha) { toast('Defina uma senha.', true); return; }
         }
         ok.disabled = true; S.ocupado = true;
-        const feito = await salvarPessoa(() => { const x = funcById(f.id); if (x) { x.nome = nome; x.usuario = usuario; if (senha) x.temSenha = true; } }, senha ? { id: f.id, senha } : null);
+        const feito = await salvarPessoa(() => { const x = funcById(f.id); if (x) { x.nome = nome; x.usuario = usuario; x.nivel = nivelSel; if (senha) x.temSenha = true; } }, senha ? { id: f.id, senha } : null);
         S.ocupado = false;
         if (feito) { S.loginAberto = null; toast(senha ? `Salvo. ${nome} entra com o usuário "${usuario}".` : 'Alterações salvas.'); }
         redraw();
       } }, 'Salvar');
       form = el('div', { class: 'inline-form', style: 'margin:0 14px 12px' },
         el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome' }), fn),
+        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nível' }), segNivel),
         el('div', { class: 'field' }, el('span', { class: 'label', text: 'Usuário' }), fu),
         el('div', { class: 'field' }, el('span', { class: 'label', text: f.temSenha ? 'Senha nova' : 'Senha' }), fs),
         f.temSenha && f.id !== u.id ? el('p', { class: 'hint', text: 'Trocar a senha desconecta a pessoa dos aparelhos.' }) : null,
-        el('div', { class: 'actions' }, ok, el('button', { class: 'btn', type: 'button', onclick: () => { S.loginAberto = null; redraw(); } }, 'Cancelar')));
+        el('div', { class: 'actions' }, ok, el('button', { class: 'btn', type: 'button', onclick: () => { S.loginAberto = null; redraw(); } }, 'Cancelar')),
+        f.id === u.id ? null : el('button', { class: 'link-btn', type: 'button', style: 'color:var(--danger);justify-self:start', onclick: () => {
+          if (!window.confirm(`Remover ${f.nome}? A pessoa não consegue mais entrar. O histórico com o nome dela continua registrado.`)) return;
+          S.loginAberto = null;
+          if (commit(() => { DB.funcionarios = DB.funcionarios.filter(x => x.id !== f.id); })) redraw();
+        } }, 'Remover pessoa'));
     }
+    const semLogin = !(f.usuario && f.temSenha);
     return el('li', {}, el('div', { class: 'r' },
+      el('span', { class: 'pres-av' + (f.nivel === 'controle' ? ' is-ctrl' : ''), 'aria-hidden': 'true', text: iniciais(f.nome) }),
       el('span', { class: 'r-main' },
         el('span', { class: 'r-title', text: f.nome + (f.id === u.id ? ' (você)' : '') }),
-        el('span', { class: 'r-sub', style: f.usuario && f.temSenha ? null : 'color:var(--warn)', text: f.usuario && f.temSenha ? `Usuário: ${f.usuario}` : 'Sem login ainda' })),
-      nivel,
-      el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px', 'aria-expanded': String(aberto), onclick: () => { S.loginAberto = aberto ? null : f.id; redraw(); } }, 'Editar'),
-      f.id === u.id ? null : el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remover ${f.nome}`, onclick: () => {
-        if (!window.confirm(`Remover ${f.nome}? A pessoa não consegue mais entrar. O histórico com o nome dela continua registrado.`)) return;
-        if (commit(() => { DB.funcionarios = DB.funcionarios.filter(x => x.id !== f.id); })) redraw();
-      } }, '×')), form);
+        el('span', { class: 'r-sub' }, f.nivel === 'controle' ? 'Controle' : 'Funcionário', ' · ',
+          el('span', { style: semLogin ? 'color:var(--warn)' : null, text: semLogin ? 'sem login ainda' : f.usuario }))),
+      el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px;flex:none', 'aria-expanded': String(aberto), onclick: () => { S.loginAberto = aberto ? null : f.id; redraw(); } }, aberto ? 'Fechar' : 'Editar')), form);
   }));
   const nNome = el('input', { type: 'text', maxlength: '60', placeholder: 'Nome' });
   const nNivel = el('select', {}, el('option', { value: 'funcionario' }, 'Funcionário'), el('option', { value: 'controle' }, 'Controle'));
@@ -2870,8 +2887,8 @@ function cartaoLixeira(redraw) {
           el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
           el('span', { class: 'r-main' },
             el('span', { class: 'r-plate', text: fmtPlaca(x.placa) }),
-            el('span', { class: 'r-sub', text: [x.clienteNome || NOME_PENDENTE, x.tipoNome, x.etapa].filter(Boolean).join(' · ') }),
-            el('span', { class: 'r-sub', text: [restam(x), x.excluidoPor && `excluído por ${x.excluidoPor}`].filter(Boolean).join(' · ') })),
+            el('span', { class: 'r-sub', style: 'white-space:normal', text: [x.clienteNome || NOME_PENDENTE, x.tipoNome, x.etapa].filter(Boolean).join(' · ') }),
+            el('span', { class: 'r-sub', style: 'white-space:normal', text: [restam(x), x.excluidoPor && `excluído por ${x.excluidoPor}`].filter(Boolean).join(' · ') })),
           btn));
       })) : el('p', { class: 'hint', text: 'A lixeira está vazia.' })));
 }
@@ -3188,12 +3205,16 @@ function renderRelatorios() {
   shell(el('div', { class: 'stack-lg', style: 'max-width:720px' },
     el('div', { class: 'stack' },
       el('h1', { text: 'Relatórios' }),
-      el('a', { class: 'alert', href: '#/historico', style: 'background:var(--surface);border-color:var(--line);color:var(--ink)' },
-        el('span', {}, el('b', { text: 'Histórico de serviços' }), ' · todos os concluídos, com busca'), icon('chev')),
+      (() => { const n = DB.atendimentos.filter(a => a.concluido).length;
+        return el('a', { class: 'hist-cta', href: '#/historico' },
+          el('span', { class: 'cta-ico', 'aria-hidden': 'true', html: ICON.clock }),
+          el('span', { class: 'cta-txt' }, el('span', { class: 'cta-tit', text: 'Histórico de serviços' }),
+            el('span', { class: 'cta-sub', text: `${n} ${n === 1 ? 'concluído' : 'concluídos'} · com busca` })),
+          el('span', { class: 'cta-chev', 'aria-hidden': 'true', html: ICON.chev })); })(),
       (() => { const a = el('a', { class: 'equipe-cta', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })()),
     el('div', { class: 'card' },
       el('h2', { text: 'Período' }),
-      el('div', { class: 'seg', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),
+      el('div', { class: 'seg seg-grade', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),
       R.preset === 'custom' ? el('div', { class: 'row' }, el('div', { class: 'field' }, el('span', { class: 'label', text: 'De' }), fDe), el('div', { class: 'field' }, el('span', { class: 'label', text: 'Até' }), fAte))
         : el('p', { class: 'hint', text: `De ${brData(R.de)} a ${brData(R.ate)}` }),
       pdfBtn),
