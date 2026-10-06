@@ -2,12 +2,17 @@
 // Plate Recognizer (https://platerecognizer.com) com a chave secreta guardada
 // no servidor, e devolve só o que o site precisa: { plate, score, alternatives }.
 //
+// Precisa do login da equipe (cabeçalho Authorization com o token da sessão).
 // Variáveis de ambiente (configurar no painel da Vercel, em Project Settings > Environment Variables):
 //   PLATE_RECOGNIZER_TOKEN  (obrigatória) — chave da conta em https://app.platerecognizer.com
 //   ACCESS_CODE             (opcional)    — uma senha simples para travar o uso do leitor
 //
 // Troca de serviço de leitura: essa é a única peça que fala com o Plate Recognizer.
 // Para usar outro serviço, troque só a função callPlateRecognizer() abaixo.
+
+// Só para a equipe logada (token da sessão, igual às outras funções): sem isso, qualquer pessoa
+// poderia chamar este endereço direto e gastar a cota do Plate Recognizer.
+const { config, usuarioDaSessao } = require('./_supabase.js');
 
 const UPSTREAM_URL = 'https://api.platerecognizer.com/v1/plate-reader/';
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // limite do próprio Plate Recognizer
@@ -53,6 +58,11 @@ async function callPlateRecognizer(buffer, token) {
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
+
+  const c = config();
+  if (!c) return send(res, 501, { error: 'not_configured' });
+  try { await usuarioDaSessao(c, req); }
+  catch (e) { return send(res, e.status || 401, { error: e.code || 'sessao' }); }
 
   const token = process.env.PLATE_RECOGNIZER_TOKEN;
   if (!token) return send(res, 501, { error: 'not_configured' });

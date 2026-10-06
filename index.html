@@ -248,6 +248,21 @@ textarea { resize: vertical; min-height: 76px; }
 
 /* ---------- Veículo ---------- */
 .veh-head { display: grid; gap: 4px; }
+/* Topo do veículo */
+.veh-topo { display: grid; gap: 10px; }
+.veh-hero { position: relative; overflow: hidden; border-radius: 18px; background: var(--primary-grad); color: #fff; display: flex; align-items: flex-end; min-height: 128px; }
+.veh-hero.tem-foto { aspect-ratio: 16 / 10; max-height: 300px; min-height: 190px; cursor: zoom-in; }
+.veh-hero-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.veh-hero-sombra { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, .82) 100%); }
+.veh-hero:not(.tem-foto) .veh-hero-sombra { display: none; }
+.veh-hero-txt { position: relative; z-index: 1; width: 100%; padding: 16px; display: grid; gap: 9px; }
+.veh-hero-modelo { font: 800 32px/1 var(--cond); letter-spacing: .03em; text-shadow: 0 1px 12px rgba(0, 0, 0, .35); overflow-wrap: anywhere; }
+.veh-hero-modelo.is-placa { letter-spacing: .08em; }
+.veh-hero-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.veh-hero-cliente { font-weight: 600; font-size: 15px; text-shadow: 0 1px 8px rgba(0, 0, 0, .4); }
+.veh-hero-cliente.is-pendente { color: #FFC56B; letter-spacing: .02em; }
+.veh-info { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.veh-info-desc { font-size: 13px; color: var(--muted); }
 .veh-plate { font: 700 38px/1 var(--cond); letter-spacing: .08em; }
 .veh-sub { color: var(--muted); font-size: 14px; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -888,6 +903,7 @@ const API_NOTES = {
 async function callApi(canvas, retried = false) {
   const image = canvas.toDataURL('image/jpeg', 0.85);
   const headers = { 'Content-Type': 'application/json' };
+  const sessao = getSession(); if (sessao && sessao.token) headers.Authorization = `Bearer ${sessao.token}`; // leitor só para a equipe logada
   let code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch {}
   if (code) headers['x-access-code'] = code;
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 25000);
@@ -896,6 +912,7 @@ async function callApi(canvas, retried = false) {
   catch { throw apiError('network'); }
   finally { clearTimeout(timer); }
   let data = null; try { data = await res.json(); } catch {}
+  if (res.status === 401 && data && data.error === 'sessao') { sessaoTerminou(); throw apiError('sessao'); }
   if (res.status === 401) {
     try { localStorage.removeItem(CODE_KEY); } catch {}
     if (!retried) {
@@ -921,7 +938,7 @@ async function readPlate(frame, crop, mode) {
     const s = Number(d.score) || 0;
     return { plate: p, alts, engine: 'api', confidence: s >= 0.85 ? 'alta' : s >= 0.6 ? 'media' : 'baixa' };
   } catch (e) {
-    if (e.code === 'unauthorized') throw e;
+    if (e.code === 'unauthorized' || e.code === 'sessao') throw e;
     note = API_NOTES[e.code] || API_NOTES.upstream;
   }
   const out = await readLocal(crop, mode);
@@ -971,7 +988,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return a; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -1219,6 +1236,16 @@ const funcById = id => DB.funcionarios.find(f => f.id === id);
 const ativos = () => DB.atendimentos.filter(a => !a.concluido).sort((a, b) => b.criadoEm - a.criadoEm);
 const ativoDaPlaca = p => DB.atendimentos.find(a => a.placa === p && !a.concluido);
 const atendimentosDaPlaca = p => DB.atendimentos.filter(a => a.placa === p).sort((a, b) => b.criadoEm - a.criadoEm);
+// Quantas vezes a placa já veio, quando foi a última e o nome do cliente. O Funcionário só recebe os serviços
+// recentes; os antigos chegam resumidos em DB.anteriores (o Controle recebe tudo em DB.atendimentos).
+function passagensDaPlaca(p) {
+  const ats = atendimentosDaPlaca(p), ant = (DB.anteriores || []).find(x => x.placa === p);
+  return {
+    n: ats.length + (ant ? ant.n : 0),
+    ultimoEm: Math.max(ats[0] ? ats[0].criadoEm : 0, ant ? ant.ultimoEm || 0 : 0) || null,
+    clienteNome: (ats.find(a => a.clienteNome) || {}).clienteNome || (ant && ant.clienteNome) || '',
+  };
+}
 const NOME_PENDENTE = 'NOME PENDENTE'; // atendimento sem nome do cliente (o nome é opcional na entrada)
 const etapaAtual = at => at.concluido ? 'Concluído' : at.etapas[at.etapaIndex];
 // Etapa feita: antes da atual ou com data. Etapa nova colocada no meio da lista (Ajustes) fica pendente
@@ -2014,7 +2041,7 @@ function renderResult() {
   const p = r.plate || '';
   const valid = isValid(p);
   const at = valid ? ativoDaPlaca(p) : null;
-  const known = valid ? atendimentosDaPlaca(p).length : 0;
+  const known = valid ? passagensDaPlaca(p).n : 0;
   const input = el('input', { class: 'plate-input', type: 'text', maxlength: '8', value: p, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', 'aria-label': 'Placa lida',
     oninput: e => { r.plate = norm(e.target.value); const c = e.target.selectionStart; renderResult(); const n = $('result').querySelector('input'); n.focus(); try { n.setSelectionRange(c, c); } catch {} } });
   const alts = (r.alts || []).filter(a => a !== p);
@@ -2154,7 +2181,7 @@ function renderNew(placaRaw) {
   const existente = ativoDaPlaca(placa);
   if (existente) return go(`#/veiculo/${esc(existente.id)}`);
   const v = DB.veiculos[placa] || {};
-  const anteriores = atendimentosDaPlaca(placa);
+  const anteriores = passagensDaPlaca(placa);
   const fotos = []; // {rotulo, blob, url}
   if (S.pending && S.pending.placa === placa && S.pending.blob) {
     fotos.push({ rotulo: 'Placa', blob: S.pending.blob, url: URL.createObjectURL(S.pending.blob) });
@@ -2164,7 +2191,7 @@ function renderNew(placaRaw) {
   const agAberto = agendaEmEntrada(), ag0 = agAberto;
 
   // Nome do cliente: do agendamento ou do último serviço desta placa.
-  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: ag0 ? ag0.cliente : (anteriores[0] && anteriores[0].clienteNome) || '' });
+  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: ag0 ? ag0.cliente : anteriores.clienteNome });
   const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Fiat Strada branca 2022', value: v.descricao || (ag0 ? ag0.marca : '') });
   const tiposOk = DB.tipos.filter(t => t.etapas.length);
   const servAg = ag0 ? ag0.servico.toLowerCase() : '';
@@ -2252,7 +2279,7 @@ function renderNew(placaRaw) {
     avisoAg,
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(placa) }),
-      el('span', { class: 'veh-sub', text: anteriores.length ? `Veículo já atendido ${anteriores.length} ${anteriores.length === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores[0].criadoEm)}.` : 'Novo veículo. Registre a entrada.' })),
+      el('span', { class: 'veh-sub', text: anteriores.n ? `Veículo já atendido ${anteriores.n} ${anteriores.n === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores.ultimoEm)}.` : 'Novo veículo. Registre a entrada.' })),
     el('div', { class: 'card' },
       el('h2', { text: 'Serviço' }),
       el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
@@ -2295,6 +2322,25 @@ function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, 
   }));
 }
 const eFotoDeEtapa = f => Number.isInteger(f.etapa);
+// Topo do veículo no padrão do card do Início: foto da frente de fundo, modelo, mini placa e cliente;
+// embaixo, serviço, entrada e a descrição completa. Sem foto, fundo escuro. Tocar na foto abre ela grande.
+function topoVeiculo(at, v) {
+  const capa = capaDe(at), src = capa ? fotoSrc(capa) : '';
+  const curto = v.descricao ? modeloCurto(v.descricao) : '';
+  const completo = v.descricao && v.descricao.trim().split(/\s+/).length > 2 ? v.descricao.trim() : '';
+  const hero = el('div', { class: 'veh-hero' + (src ? ' tem-foto' : ''), role: src ? 'button' : null, tabindex: src ? '0' : null, 'aria-label': src ? 'Ver foto da frente' : null, onclick: src ? () => openViewer(capa) : null },
+    src ? el('img', { class: 'veh-hero-foto', src, alt: '', decoding: 'async' }) : null,
+    el('span', { class: 'veh-hero-sombra', 'aria-hidden': 'true' }),
+    el('div', { class: 'veh-hero-txt' },
+      curto ? el('span', { class: 'veh-hero-modelo', text: curto }) : el('span', { class: 'veh-hero-modelo is-placa', text: fmtPlaca(at.placa) }),
+      el('div', { class: 'veh-hero-linha' }, curto ? miniPlaca(at.placa) : null,
+        el('span', { class: 'veh-hero-cliente' + (at.clienteNome ? '' : ' is-pendente'), text: at.clienteNome || `(${NOME_PENDENTE})` }))));
+  return el('div', { class: 'veh-topo' }, hero,
+    el('div', { class: 'veh-info' },
+      at.tipoNome ? el('span', { class: 'tag tag--dark', text: at.tipoNome }) : null,
+      el('span', { class: 'tag', text: `Entrada ${fmtDataHora(at.criadoEm)}` }),
+      completo ? el('span', { class: 'veh-info-desc', text: completo }) : null));
+}
 function renderVehicle(id) {
   const at = DB.atendimentos.find(a => a.id === id);
   if (!at) { toast('Atendimento não encontrado.', true); return go('#/inicio'); }
@@ -2523,10 +2569,7 @@ function renderVehicle(id) {
   const pct = Math.round(progresso(at) * 100);
   const body = el('div', { class: 'stack', style: 'max-width:720px' },
     backLink(at.concluido ? '#/historico' : '#/inicio', at.concluido ? 'Histórico' : 'Em serviço'),
-    el('div', { class: 'veh-head' },
-      el('span', { class: 'veh-plate', text: fmtPlaca(at.placa) }),
-      at.clienteNome ? el('span', { style: 'font-weight:600', text: at.clienteNome }) : el('span', { style: 'font-weight:600;color:var(--warn)', text: `(${NOME_PENDENTE})` }),
-      el('span', { class: 'veh-sub', text: [v.descricao, at.tipoNome, `entrada em ${fmtDataHora(at.criadoEm)}`].filter(Boolean).join(' · ') })),
+    topoVeiculo(at, v),
     el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
         el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),

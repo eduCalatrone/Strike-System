@@ -23,7 +23,7 @@ Sistema interno da **Strike Details Estética Automotiva** (matriz em Jaru/RO) p
 | Arquivo | Função |
 | --- | --- |
 | `index.html` | O sistema inteiro: telas, dados, leitor de placa. HTML + CSS + JS num arquivo só, sem build. |
-| `api/read-plate.js` | Função da Vercel que chama o Plate Recognizer (Snapshot Cloud, `regions=br`) e esconde a chave. Não mudar sem motivo: está funcionando em produção. |
+| `api/read-plate.js` | Função da Vercel que chama o Plate Recognizer (Snapshot Cloud, `regions=br`) e esconde a chave. Exige o login da equipe (token da sessão, como as outras funções), para ninguém de fora gastar a cota. Fora isso, não mudar sem motivo: está funcionando em produção. |
 | `api/dados.js` | Lê e grava os dados da equipe no Supabase (GET tudo, POST lista de operações). |
 | `api/foto.js` | Envia uma foto (e a miniatura) para o Storage do Supabase. |
 | `api/cliente.js` | Área do cliente: etapa, andamento, fotos e registro de avarias de uma placa. Sem valores nem nomes. |
@@ -44,7 +44,7 @@ Duas páginas separadas:
 - **Equipe** (`/`): login com usuário e senha. Cada pessoa tem o seu, criado pelo Controle em Ajustes > Equipe. Cada linha mostra iniciais, nome, nível e usuário; o "Editar" abre nome, nível (Funcionário/Controle), usuário, senha e "Remover pessoa".
 - **Cliente** (`/cliente`, link `/cliente#/PLACA`): sem login, só digita a placa.
 
-Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), sem o Auth do Supabase, de propósito: usuários do Auth teriam acesso às tabelas `leads`, `autorizados` e `historico` do outro sistema pelas políticas de lá. O token dura 60 dias; trocar a senha de alguém ou remover a pessoa derruba as sessões dela. 5 senhas erradas bloqueiam o usuário por 5 minutos. As regras abaixo são conferidas também no servidor (`api/dados`), e o Funcionário não recebe valores.
+Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), sem o Auth do Supabase, de propósito: usuários do Auth teriam acesso às tabelas `leads`, `autorizados` e `historico` do outro sistema pelas políticas de lá. O token dura 60 dias; trocar a senha de alguém ou remover a pessoa derruba as sessões dela. 5 senhas erradas bloqueiam o usuário por 5 minutos. As regras abaixo são conferidas também no servidor (`api/dados`), e o Funcionário não recebe valores. O Funcionário também só recebe os atendimentos em andamento e os concluídos dos últimos 7 dias (fotos só desses); os antigos chegam resumidos por placa em `anteriores` (quantas vezes veio, última vez, nome do cliente), usados por `passagensDaPlaca` na leitura da placa e na entrada. O Controle recebe tudo.
 
 - **Funcionário**: lê a placa, registra a entrada do veículo com fotos, conclui etapas, registra retiradas do estoque.
 - **Controle** (nível máximo): tudo do funcionário + ajustar etapa, valor do serviço, entradas/contagem/mínimo do estoque, histórico, tipos de serviço e equipe.
@@ -56,7 +56,7 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 - `#/inicio` galeria dos veículos em serviço. Card: foto de capa (Frente), **modelo** (só as 2 primeiras palavras da descrição, em maiúsculas, `modeloCurto`), **placa** (mini placa estilo Mercosul, `miniPlaca`: faixa azul com "BRASIL" no centro e a bandeira do Brasil em SVG no canto direito) com o **nome do cliente** ao lado (desce de linha se não couber; ou "(NOME PENDENTE)"), **serviço**, situação e barra de progresso. Sem modelo cadastrado, a placa vira o título.
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar
 - `#/novo/PLACA` entrada do veículo (campo "Veículo (marca e modelo primeiro)", porque o Início usa as 2 primeiras palavras): nome do cliente (opcional, vem preenchido com o do último serviço da placa; vazio aparece "(NOME PENDENTE)"), tipo de serviço (obrigatório, começa sem escolha; só vem pronto se o agendamento bater), descrição, fotos, danos, objetos pessoais (valor só para Controle)
-- `#/veiculo/ID` etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
+- `#/veiculo/ID` topo no padrão do card do Início (`topoVeiculo`: foto da Frente de fundo com degradê, modelo curto, mini placa e cliente; embaixo serviço, entrada e a descrição completa; sem foto, fundo escuro; tocar abre a foto), etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
 - `#/estoque`, `#/historico` (Controle), `#/ajustes` (Controle, pela engrenagem no topo; tem a Lixeira)
 - Botão de recarregar (seta circular) no topo só aparece no app instalado (no iPhone não há botão do navegador). Espera os envios pendentes antes de recarregar.
 - `#/agenda` calendário (mês/ano, feriados de Jaru/RO, faixa até a entrega, dia escolhido com entradas e entregas) · `#/agenda/ID` agendamento (Controle edita; Funcionário só vê) · `#/agenda/novo`

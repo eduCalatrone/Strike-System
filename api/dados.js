@@ -21,17 +21,41 @@ async function carregar(c, eu) {
   const desde = encodeURIComponent(`"${new Date(Date.now() - LIXEIRA_MS).toISOString()}"`); // entre aspas por causa do ":" no or=()
   // Versão lida antes dos dados: se algo mudar no meio, a próxima conferência vê a versão nova e busca de novo.
   const [ver] = await rest(c, 'sd_versao?select=em&id=eq.1') || [];
-  const [funcionarios, tipos, veiculos, todosAts, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
+  // Funcionário: só os em andamento e os concluídos dos últimos 7 dias (o histórico antigo é só do Controle).
+  const limiteRecentes = new Date(Date.now() - RECENTES_MS).toISOString();
+  const filtroAts = ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})`
+    : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
+  const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
-    restAll(c, `sd_atendimentos?select=*&${ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})` : 'excluido_em=is.null'}&order=criado_em,id`),
-    restAll(c, 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id'),
+    restAll(c, `sd_atendimentos?select=*&${filtroAts}&order=criado_em,id`),
+    ctrl ? restAll(c, fotosQ) : Promise.resolve(null),
     restAll(c, 'sd_estoque_itens?select=id,nome,unidade,minimo&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_estoque_movimentos?select=*&descartado_em=is.null&order=em,id'),
     restAll(c, 'sd_ajustes?select=chave,valor'),
     restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,obs,status&excluido_em=is.null&order=data,id'),
   ]);
+  // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
+  // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
+  let fotos = fotosCtrl, anteriores = [];
+  if (!ctrl) {
+    const ids = todosAts.map(a => a.id), lotes = [];
+    for (let i = 0; i < ids.length; i += 80) lotes.push(restAll(c, `${fotosQ}&atendimento_id=in.(${ids.slice(i, i + 80).map(encodeURIComponent).join(',')})`));
+    const [velhos, ...fotosLotes] = await Promise.all([
+      restAll(c, `sd_atendimentos?select=placa,cliente_nome,criado_em&excluido_em=is.null&concluido=eq.true&concluido_em=lt.${encodeURIComponent(limiteRecentes)}&order=criado_em.desc`),
+      ...lotes,
+    ]);
+    fotos = fotosLotes.flat();
+    const porPlaca = new Map();
+    for (const a of velhos) {
+      const x = porPlaca.get(a.placa) || { placa: a.placa, n: 0, ultimoEm: ms(a.criado_em), clienteNome: '' };
+      x.n++; if (!x.clienteNome && a.cliente_nome) x.clienteNome = a.cliente_nome;
+      porPlaca.set(a.placa, x);
+    }
+    anteriores = [...porPlaca.values()];
+  }
   const fotosPorAt = new Map(), apagadasPorAt = new Map();
   for (const f of fotos) {
     if (f.apagada_em) { apagadasPorAt.set(f.atendimento_id, (apagadasPorAt.get(f.atendimento_id) || 0) + 1); continue; }
@@ -42,6 +66,7 @@ async function carregar(c, eu) {
   const lixeira = todosAts.filter(a => a.excluido_em).sort((a, b) => ms(b.excluido_em) - ms(a.excluido_em));
   return {
     versaoDados: ver ? ver.em : null,
+    anteriores,
     lixeira: lixeira.map(a => ({
       id: a.id, placa: a.placa, tipoNome: a.tipo_nome, clienteNome: a.cliente_nome || '', concluido: a.concluido,
       etapa: a.concluido ? 'Concluído' : (a.etapas || [])[a.etapa_index] || '', criadoEm: ms(a.criado_em),
@@ -74,6 +99,7 @@ async function carregar(c, eu) {
 }
 
 const LIXEIRA_MS = 48 * 3600e3;
+const RECENTES_MS = 7 * 864e5; // concluídos que o Funcionário ainda recebe
 
 /* ---------- Validação ---------- */
 const RE_ID = /^[A-Za-z0-9_-]{1,64}$/;
