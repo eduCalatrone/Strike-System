@@ -23,7 +23,7 @@ async function carregar(c, eu) {
   const [ver] = await rest(c, 'sd_versao?select=em&id=eq.1') || [];
   const [funcionarios, tipos, veiculos, todosAts, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
-    restAll(c, 'sd_tipos_servico?select=id,nome,etapas&ativo=eq.true&order=criado_em,id'),
+    restAll(c, 'sd_tipos_servico?select=id,nome,etapas,ordem_livre&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
     restAll(c, `sd_atendimentos?select=*&${ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})` : 'excluido_em=is.null'}&order=criado_em,id`),
     restAll(c, 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id'),
@@ -51,7 +51,7 @@ async function carregar(c, eu) {
     ajustes: { limpezaDias: Number((ajustes.find(a => a.chave === 'limpeza_fotos_dias') || {}).valor) || 30 },
     // Controle vê o usuário de cada pessoa e se já tem senha; a senha nunca sai daqui.
     funcionarios: funcionarios.map(f => ctrl ? { id: f.id, nome: f.nome, nivel: f.nivel, usuario: f.usuario || '', temSenha: !!f.senha_hash } : { id: f.id, nome: f.nome, nivel: f.nivel }),
-    tipos: tipos.map(t => ({ id: t.id, nome: t.nome, etapas: Array.isArray(t.etapas) ? t.etapas : [] })),
+    tipos: tipos.map(t => ({ id: t.id, nome: t.nome, etapas: Array.isArray(t.etapas) ? t.etapas : [], ordemLivre: !!t.ordem_livre })),
     veiculos: Object.fromEntries(veiculos.map(v => [v.placa, { placa: v.placa, descricao: v.descricao || '', criadoEm: ms(v.criado_em) }])),
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
@@ -172,7 +172,9 @@ async function aplicar(c, op, eu, versoes) {
 
     case 'tipos:salvar': {
       const nome = txt(it.nome, 60); if (!nome) throw invalido('nome');
-      return upsert(c, 'sd_tipos_servico', { id: id(it.id), nome, etapas: etapas(it.etapas), ativo: true, atualizado_em: agora() });
+      const linhaTipo = { id: id(it.id), nome, etapas: etapas(it.etapas), ativo: true, atualizado_em: agora() };
+      if (it.ordemLivre !== undefined) linhaTipo.ordem_livre = !!it.ordemLivre; // Ajustes: etapas em qualquer ordem
+      return upsert(c, 'sd_tipos_servico', linhaTipo);
     }
     case 'tipos:remover':
       return marcar(c, 'sd_tipos_servico', `id=eq.${q(id(op.id))}`, { ativo: false, atualizado_em: agora() });

@@ -1174,7 +1174,7 @@ function ajustarEtapa(at, idx) {
 // O que já foi feito continua feito (ligado pelo nome da etapa), com a data e a foto de cada etapa.
 // Foto de etapa que saiu da lista vira foto comum (continua no veículo). Concluídos não mudam.
 const nomeEtapa = s => String(s).trim().toLowerCase();
-const foraDoTipo = t => DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido && t.etapas.length && JSON.stringify(a.etapas) !== JSON.stringify(t.etapas));
+const foraDoTipo = t => DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido && t.etapas.length && (JSON.stringify(a.etapas) !== JSON.stringify(t.etapas) || !!a.ordemLivre !== !!t.ordemLivre));
 function sincronizarEtapas(t) {
   for (const at of foraDoTipo(t)) {
     const novas = [...t.etapas], usadas = new Set(), feitas = {}, mapa = new Map();
@@ -1188,8 +1188,10 @@ function sincronizarEtapas(t) {
     if (idx < 0) { idx = novas.length - 1; delete feitas[idx]; } // tudo feito: a última fica como atual (o Controle conclui)
     for (const f of at.fotos) if (eFotoDeEtapa(f)) f.etapa = mapa.has(f.etapa) ? mapa.get(f.etapa) : null;
     at.fotos.forEach(f => { if (f.etapa === null) delete f.etapa; });
-    at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx;
-    registrar(at, `Etapas atualizadas pelo tipo de serviço (${t.nome})`);
+    const mudouOrdem = !!at.ordemLivre !== !!t.ordemLivre, mudouLista = JSON.stringify(at.etapas) !== JSON.stringify(novas);
+    at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx; at.ordemLivre = !!t.ordemLivre;
+    if (mudouLista) registrar(at, `Etapas atualizadas pelo tipo de serviço (${t.nome})`);
+    if (mudouOrdem) registrar(at, t.ordemLivre ? 'Ordem das etapas: livre (pelo tipo de serviço)' : 'Ordem das etapas: seguir a ordem (pelo tipo de serviço)');
   }
 }
 
@@ -1939,16 +1941,6 @@ function renderNew(placaRaw) {
   let ag = agAberto; // vira null se tocar em "Não usar"
   const avisoAg = ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; avisoAg.remove(); toast('A entrada segue sem o agendamento.'); }) : null;
 
-  // Ordem das etapas: seguir a ordem (padrão) ou livre (qualquer etapa pendente pode ser concluída).
-  let ordemLivre = false;
-  const segOrdem = el('div', { class: 'seg', role: 'group', 'aria-label': 'Ordem das etapas' });
-  const dicaOrdem = el('span', { class: 'hint' });
-  const desenharOrdem = () => {
-    preencher(segOrdem, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, t]) =>
-      el('button', { type: 'button', 'aria-pressed': String(ordemLivre === v), onclick: () => { ordemLivre = v; desenharOrdem(); } }, t)));
-    dicaOrdem.textContent = ordemLivre ? 'As etapas podem ser concluídas em qualquer ordem (ex.: limpeza externa antes da interna).' : 'Cada etapa só pode ser concluída depois da anterior.';
-  };
-  desenharOrdem();
   const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, 'Iniciar serviço');
   salvar.addEventListener('click', async () => {
     if (!tiposOk.length) { toast('Cadastre um tipo de serviço com etapas em Ajustes.', true); return; }
@@ -1971,7 +1963,7 @@ function renderNew(placaRaw) {
     salvar.textContent = 'Salvando…';
     const u = me();
     const at = {
-      id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, ordemLivre,
+      id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, ordemLivre: !!tipo.ordemLivre, // ordem livre vem do tipo (Ajustes)
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
       danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
     };
@@ -2010,7 +2002,6 @@ function renderNew(placaRaw) {
       el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem das etapas' }), segOrdem, dicaOrdem),
       el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo' }), fDesc),
       isCtrl() ? el('div', { class: 'field' }, el('label', { for: 'f-valor', text: 'Valor do serviço (R$)' }), fValor) : null),
     el('div', { class: 'card' },
@@ -2163,12 +2154,6 @@ function renderVehicle(id) {
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ajustar etapa' }), sel),
-      at.concluido ? null : el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem das etapas' }),
-        el('div', { class: 'seg', role: 'group', 'aria-label': 'Ordem das etapas' }, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, t]) =>
-          el('button', { type: 'button', 'aria-pressed': String(!!at.ordemLivre === v), onclick: () => {
-            if (!!at.ordemLivre === v) return;
-            if (commit(() => { at.ordemLivre = v; registrar(at, v ? 'Ordem das etapas: livre' : 'Ordem das etapas: seguir a ordem'); })) { toast(v ? 'Etapas em ordem livre.' : 'Etapas seguindo a ordem.'); redraw(); }
-          } }, t)))),
       // Link de acompanhamento para mandar ao cliente (página /cliente já com a placa deste veículo).
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Link para o cliente acompanhar' }),
         (() => {
@@ -2412,6 +2397,10 @@ function renderSettings() {
         el('span', { style: 'display:grid;gap:2px' }, el('h3', { text: t.nome }), el('span', { class: 'hint', text: t.etapas.length ? `${t.etapas.length} ${t.etapas.length === 1 ? 'etapa' : 'etapas'}` : 'Sem etapas: adicione para usar' })),
         el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       emUso ? el('p', { class: 'hint', text: 'Mudanças nas etapas valem também para os veículos em andamento deste tipo. O que já foi feito continua marcado.' }) : null,
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem das etapas' }),
+        el('div', { class: 'seg', role: 'group', 'aria-label': `Ordem das etapas de ${t.nome}` }, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, txt]) =>
+          el('button', { type: 'button', 'aria-pressed': String(!!t.ordemLivre === v), onclick: () => { if (!!t.ordemLivre !== v) mudarEtapas(() => { t.ordemLivre = v; }); } }, txt))),
+        el('span', { class: 'hint', text: t.ordemLivre ? 'A equipe conclui as etapas em qualquer ordem (cada uma com foto).' : 'Cada etapa só pode ser concluída depois da anterior.' })),
       fora ? el('div', { class: 'alert', style: 'display:grid;gap:8px' },
         el('span', { text: `${fora === 1 ? '1 veículo em andamento está' : `${fora} veículos em andamento estão`} com as etapas antigas deste tipo.` }),
         el('div', {}, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => mudarEtapas(() => {}) }, 'Atualizar etapas'))) : null,
@@ -2521,7 +2510,7 @@ function renderSettings() {
         el('div', { class: 'row' }, novoTipo, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: () => {
           const nome = novoTipo.value.trim(); if (!nome) { toast('Digite o nome.', true); return; }
           const tid = uid();
-          if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [] }))) { S.tipoAberto = tid; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
+          if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [], ordemLivre: false }))) { S.tipoAberto = tid; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
         } }, 'Criar')))),
     el('section', { class: 'stack' },
       el('h2', { text: 'Equipe' }),
