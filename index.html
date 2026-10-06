@@ -449,6 +449,11 @@ dialog.viewer::backdrop { background: rgba(0, 0, 0, .9); }
 .viewer-acoes { display: flex; gap: 10px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); }
 .viewer-acoes:empty { display: none; }
 .viewer-acoes .btn { flex: 1; background: transparent; color: #fff; border-color: #5A5A5A; }
+.viewer-acoes.is-tipos { flex-wrap: wrap; gap: 8px; }
+.viewer-tipos-tit { flex-basis: 100%; color: rgba(255, 255, 255, .7); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.viewer-acoes .chip { background: transparent; color: #fff; border: 1px solid #5A5A5A; border-radius: 999px; padding: 8px 13px; font: 600 14px/1.2 var(--body); letter-spacing: 0; }
+.viewer-acoes .chip.is-atual { background: #fff; color: #000; border-color: #fff; }
+.viewer-acoes .viewer-tipos-cancelar { flex-basis: 100%; margin-top: 4px; }
 .viewer-acoes .btn--danger { color: #FF8A80; border-color: #7A3A34; }
 .step-foto.is-vazia { display: grid; place-items: center; border: 1.5px dashed var(--line-2); background: var(--surface); color: var(--muted); }
 .step-foto.is-vazia svg { width: 20px; height: 20px; }
@@ -902,8 +907,13 @@ function diffOps(a, b) {
   const fa = new Map(fotos(a.atendimentos).map(f => [f.id, f]));
   const fotosDepois = fotos(b.atendimentos);
   // Foto que já existe e só mudou de etapa (etapas do tipo atualizadas): op própria, porque a foto não é regravada.
-  for (const f of fotosDepois) { const o = fa.get(f.id); if (o && o.etapa !== f.etapa) ops.push({ col: 'fotos', acao: 'etapa', id: f.id, etapa: Number.isInteger(f.etapa) ? f.etapa : null }); }
-  lista('fotos', [...fa.values()], fotosDepois.map(f => { const o = fa.get(f.id); return o && o.etapa !== f.etapa ? { ...f, etapa: o.etapa } : f; }), 'id', f => atsDepois.has(f.atendimentoId));
+  // Foto que já existe e só mudou de tipo (Controle corrigiu o rótulo): também op própria.
+  for (const f of fotosDepois) {
+    const o = fa.get(f.id); if (!o) continue;
+    if (o.etapa !== f.etapa) ops.push({ col: 'fotos', acao: 'etapa', id: f.id, etapa: Number.isInteger(f.etapa) ? f.etapa : null });
+    if (o.rotulo !== f.rotulo) ops.push({ col: 'fotos', acao: 'rotulo', id: f.id, rotulo: f.rotulo });
+  }
+  lista('fotos', [...fa.values()], fotosDepois.map(f => { const o = fa.get(f.id); return o ? { ...f, etapa: o.etapa, rotulo: o.rotulo } : f; }), 'id', f => atsDepois.has(f.atendimentoId));
   return ops;
 }
 
@@ -1790,13 +1800,13 @@ async function runRead(frame, crop, mode) {
    Fotos: grade com espaços por lado do veículo
    ===================================================================== */
 // items: [{id?, rotulo, url?}] ; onAdd(rotulo) ; onRemove(item) ; openable
-function photoGrid({ items, slots = [], onAdd, onRemove, extraLabel = 'Adicionar foto' }) {
+function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto' }) {
   const ul = el('ul', { class: 'photos' });
   const tiles = [];
   for (const f of items) {
     const img = f.url ? el('img', { src: f.mini || f.url, alt: f.rotulo, loading: 'lazy' }) : photoImg(f, f.rotulo);
     tiles.push(el('li', { class: 'photo' }, img,
-      el('button', { class: 'open', type: 'button', 'aria-label': `Ver foto: ${f.rotulo}`, onclick: () => openViewer(f) }),
+      el('button', { class: 'open', type: 'button', 'aria-label': `Ver foto: ${f.rotulo}`, onclick: () => openViewer(f, acoes ? acoes(f) : []) }),
       el('span', { class: 'cap', text: f.rotulo }),
       onRemove ? el('button', { class: 'rm', type: 'button', 'aria-label': `Remover foto ${f.rotulo}`, onclick: () => onRemove(f) }, '×') : null));
   }
@@ -1827,7 +1837,8 @@ function photoGrid({ items, slots = [], onAdd, onRemove, extraLabel = 'Adicionar
   draw();
   return wrap;
 }
-// acoes: botões embaixo da foto, [{ texto, perigo, fn }]. O visualizador fecha antes de rodar a ação.
+// acoes: botões embaixo da foto, [{ texto, perigo, manter, fn }]. O visualizador fecha antes de rodar a ação
+// (a não ser com manter: true, usado para escolher o tipo da foto com ela ainda aberta).
 // A foto grande é trocada por uma <img> nova a cada abertura: a anterior nunca aparece no lugar da escolhida.
 // Mostra na hora a miniatura (já baixada para a lista) e troca pela foto inteira quando ela chegar.
 let viewerVez = 0;
@@ -1846,8 +1857,19 @@ async function openViewer(f, acoes = []) {
   }
   $('viewer-cap').textContent = f.rotulo;
   preencher($('viewer-acoes'), ...acoes.map(a => el('button', { class: 'btn' + (a.perigo ? ' btn--danger' : ''), type: 'button',
-    onclick: () => { fecharViewer(); a.fn(); } }, a.texto)));
+    onclick: () => { if (!a.manter) fecharViewer(); a.fn(); } }, a.texto)));
+  $('viewer-acoes').classList.remove('is-tipos');
   const d = $('viewer'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+// Troca os botões embaixo da foto aberta pela lista de tipos. Escolher fecha a foto e chama aoEscolher(tipo).
+function escolherTipoFoto(atual, aoEscolher) {
+  const box = $('viewer-acoes');
+  box.classList.add('is-tipos');
+  preencher(box,
+    el('span', { class: 'viewer-tipos-tit', text: 'Tipo da foto' }),
+    [...ROTULOS, ...ROTULOS_EXTRA].map(r => el('button', { class: 'chip' + (r === atual ? ' is-atual' : ''), type: 'button', 'aria-pressed': String(r === atual),
+      onclick: () => { fecharViewer(); aoEscolher(r); } }, r)),
+    el('button', { class: 'btn viewer-tipos-cancelar', type: 'button', onclick: fecharViewer }, 'Cancelar'));
 }
 function fecharViewer() { const d = $('viewer'); if (d.close) d.close(); else d.removeAttribute('open'); }
 $('viewer-close').addEventListener('click', fecharViewer);
@@ -2084,6 +2106,13 @@ function renderVehicle(id) {
       if (!window.confirm(`Remover a foto "${f.rotulo}"?`)) return;
       if (commit(() => { at.fotos = at.fotos.filter(x => x.id !== f.id); registrar(at, `Foto removida: ${f.rotulo}`); })) redraw();
     } : null,
+    // Controle corrige o tipo da foto (ex.: objeto pessoal marcado como Danos) sem tirar outra.
+    acoes: ctrl ? f => [{ texto: 'Mudar tipo', manter: true, fn: () => escolherTipoFoto(f.rotulo, novo => {
+      const atual = DB.atendimentos.find(a => a.id === at.id), foto = atual && atual.fotos.find(x => x.id === f.id);
+      if (!foto || novo === foto.rotulo) return;
+      const antes = foto.rotulo;
+      if (commit(() => { foto.rotulo = novo; registrar(atual, `Tipo da foto: ${antes} para ${novo}`); })) { toast(`Foto marcada como ${novo}.`); if (parts()[1] === id) redraw(); }
+    }) }] : null,
   }));
 
   const entrada = at.danos || at.objetos ? el('div', { class: 'card' }, el('h2', { text: 'Estado na entrada' }), el('dl', { class: 'kv' },

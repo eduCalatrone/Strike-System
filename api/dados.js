@@ -81,7 +81,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -268,6 +268,11 @@ async function aplicar(c, op, eu, versoes) {
     }
     case 'fotos:remover':
       return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { removida_em: agora(), removida_por: quem });
+    // Controle corrige o tipo de uma foto da entrada (ex.: objeto pessoal marcado como Danos). Foto de etapa não muda.
+    case 'fotos:rotulo': {
+      const rotulo = txt(op.rotulo, 40); if (!rotulo) throw invalido('rotulo');
+      return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&etapa=is.null&removida_em=is.null`, { rotulo });
+    }
     // Etapas do tipo atualizadas em Ajustes: a foto acompanha a etapa na lista nova (null = virou foto comum).
     case 'fotos:etapa': {
       const etapa = op.etapa == null ? null : Number(op.etapa);
