@@ -48,12 +48,12 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 
 - **Funcionário**: lê a placa, registra a entrada do veículo com fotos, conclui etapas, registra retiradas do estoque.
 - **Controle** (nível máximo): tudo do funcionário + ajustar etapa, valor do serviço, entradas/contagem/mínimo do estoque, histórico, tipos de serviço e equipe.
-- **Cliente**: só digita a placa e vê etapa atual, andamento (datas) e fotos, em duas abas: **Andamento** (etapas e fotos da entrada, sem as de "Danos") e **Observações** (texto de "Danos ou problemas", "Objetos pessoais" e, no bloco "Fotos", as fotos de "Danos"). No Andamento, a foto de cada etapa concluída aparece grande, embaixo do nome da etapa (toque abre a foto inteira). Nunca mostrar valores, nome do cliente nem nomes da equipe.
+- **Cliente**: só digita a placa e vê etapa atual, andamento (datas) e fotos, em duas abas: **Andamento** (etapas e fotos da entrada, sem as de "Danos") e **Observações** (texto de "Danos ou problemas", "Objetos pessoais" e, no bloco "Fotos", as fotos de "Danos"). No Andamento, a foto de cada etapa concluída aparece embaixo do nome da etapa (até 300 px de largura) (toque abre a foto inteira). Nunca mostrar valores, nome do cliente nem nomes da equipe.
 
 ## Telas (roteamento por hash)
 
 - `#/` login da equipe (usuário e senha) · página do cliente em `/cliente` (hash `#/PLACA`)
-- `#/inicio` galeria dos veículos em serviço. Card: foto de capa (Frente), **modelo do veículo** (título), **placa · serviço**, **nome do cliente** (ou "(NOME PENDENTE)"), situação e barra de progresso. Sem modelo cadastrado, a placa vira o título.
+- `#/inicio` galeria dos veículos em serviço. Card: foto de capa (Frente), **modelo** (só as 2 primeiras palavras da descrição, em maiúsculas, `modeloCurto`), **placa** (mini placa estilo Mercosul, faixa azul em cima) com o **nome do cliente** ao lado (desce de linha se não couber; ou "(NOME PENDENTE)"), **serviço**, situação e barra de progresso. Sem modelo cadastrado, a placa vira o título.
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar
 - `#/novo/PLACA` entrada do veículo: nome do cliente (opcional, vem preenchido com o do último serviço da placa; vazio aparece "(NOME PENDENTE)"), tipo de serviço (obrigatório, começa sem escolha; só vem pronto se o agendamento bater), descrição, fotos, danos, objetos pessoais (valor só para Controle)
 - `#/veiculo/ID` etapas com botão "Concluir: etapa", fotos, estado na entrada, histórico; bloco extra do Controle
