@@ -1667,6 +1667,7 @@ function route(opts) {
   const u = me();
   if (!u) { if (s) setSession(null); return renderLogin(); }
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
+  if (r !== 'placa' && r !== 'novo') setTimeout(avisoNovidades, 700);
   atualizarSeVelho();
   setTimeout(() => avisarPresenca(), 0); // tela nova: avisa (no máximo a cada 10 s)
   switch (r) {
@@ -1723,6 +1724,25 @@ async function conferirVersao() {
   if (!etag) return;
   if (!etagInicial) { etagInicial = etag; return; }
   if (etag !== etagInicial && Date.now() > avisoVersaoAte) mostrarAvisoVersao();
+}
+/* Aviso único "Sistema atualizado": aparece uma vez em cada aparelho (localStorage sd:novidades).
+   Para avisar de novo numa próxima leva de mudanças, trocar NOVIDADES_ID. */
+const NOVIDADES_ID = '2026-10-06';
+function avisoNovidades() {
+  if (MODO_CLIENTE || !me() || document.querySelector('dialog[open]')) return;
+  const [r] = parts();
+  if (r === 'placa' || r === 'novo') return; // não atrapalha a entrada de veículo
+  try { if (localStorage.getItem('sd:novidades') === NOVIDADES_ID) return; } catch { return; }
+  const d = el('dialog', { id: 'pop-novidades', class: 'sheet', 'aria-label': 'Sistema atualizado' });
+  const ok = () => { try { localStorage.setItem('sd:novidades', NOVIDADES_ID); } catch {} d.close(); d.remove(); };
+  d.addEventListener('cancel', () => { try { localStorage.setItem('sd:novidades', NOVIDADES_ID); } catch {} setTimeout(() => d.remove(), 0); });
+  d.append(el('div', { class: 'sheet-in versao-in' },
+    el('span', { class: 'versao-ico', 'aria-hidden': 'true', html: ICON.reload }),
+    el('h2', { text: 'Sistema atualizado' }),
+    el('p', { class: 'hint', text: 'Algumas coisas foram alteradas e melhoradas. Se algo estiver diferente do que você conhece, é por isso.' }),
+    el('div', { class: 'actions' }, el('button', { class: 'btn btn--primary btn--lg grow', type: 'button', onclick: ok }, 'Entendi'))));
+  document.body.append(d);
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
 function mostrarAvisoVersao() {
   let d = $('pop-versao');
