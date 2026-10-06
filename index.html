@@ -562,6 +562,11 @@ dialog.viewer::backdrop { background: rgba(0, 0, 0, .9); }
 /* Câmera própria das fotos (sempre a traseira) */
 dialog.sheet { border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 560px; max-height: 92dvh; border-radius: 18px 18px 0 0; background: var(--surface); color: var(--ink); box-shadow: 0 -10px 40px rgba(0, 0, 0, .18); }
 dialog.sheet::backdrop { background: rgba(0, 0, 0, .45); }
+.versao-in { justify-items: center; text-align: center; }
+.versao-in h2 { margin: 0; }
+.versao-in .actions { width: 100%; }
+.versao-ico { width: 52px; height: 52px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; }
+.versao-ico svg { width: 26px; height: 26px; }
 @media (min-width: 600px) { dialog.sheet { margin: auto; border-radius: 18px; } }
 .sheet-in { display: grid; gap: 14px; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
 .sheet-tags { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1443,7 +1448,7 @@ function avisarPresenca({ saiu = false, forcar = false } = {}) {
   const tela = telaDePresenca();
   if (!saiu && !forcar && tela === presTela && Date.now() - presEnviadoEm < 3e3) return;
   presTela = saiu ? '' : tela; presEnviadoEm = Date.now();
-  const body = JSON.stringify({ tela, mexeuEm: presUltimoToque, saiu });
+  const body = JSON.stringify({ tela, mexeuEm: presUltimoToque, saiu, app: 2 }); // app: o service worker sabe que é o site novo
   const req = fetch('/api/presenca', { method: 'POST', keepalive: saiu, cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` }, body });
   if (saiu) { req.catch(() => {}); return; }
   req.then(r => r.ok ? r.json() : null).then(d => {
@@ -1707,6 +1712,38 @@ function renderFalha(e) {
       el('button', { class: 'btn', type: 'button', onclick: sair }, 'Sair')))));
 }
 
+/* Versão nova do sistema: compara a etiqueta (ETag) da página no servidor com a de quando o site abriu.
+   Mudou (publiquei algo): aparece a janela "Versão nova do sistema". Confere ao abrir, a cada 5 min e ao voltar
+   para o app (é o caso do iPhone, que volta para o app sem recarregar). "Depois" lembra de novo em 10 min. */
+let etagInicial = null, avisoVersaoAte = 0;
+async function conferirVersao() {
+  if (MODO_CLIENTE || document.hidden) return;
+  let etag = null;
+  try { const r = await fetch(location.pathname || '/', { method: 'HEAD', cache: 'no-store' }); etag = r.ok ? (r.headers.get('etag') || r.headers.get('last-modified')) : null; } catch {}
+  if (!etag) return;
+  if (!etagInicial) { etagInicial = etag; return; }
+  if (etag !== etagInicial && Date.now() > avisoVersaoAte) mostrarAvisoVersao();
+}
+function mostrarAvisoVersao() {
+  let d = $('pop-versao');
+  if (d && d.open) return;
+  if (document.querySelector('dialog[open]')) return; // câmera ou outra janela aberta: avisa na próxima conferida
+  if (!d) { d = el('dialog', { id: 'pop-versao', class: 'sheet', 'aria-label': 'Versão nova do sistema' }); document.body.append(d); }
+  try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); } catch {}
+  preencher(d, el('div', { class: 'sheet-in versao-in' },
+    el('span', { class: 'versao-ico', 'aria-hidden': 'true', html: ICON.reload }),
+    el('h2', { text: 'Versão nova do sistema' }),
+    el('p', { class: 'hint', text: 'Atualize para carregar as últimas mudanças.' }),
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn btn--primary btn--lg grow', type: 'button', onclick: e => recarregar(e) }, 'Atualizar agora'),
+      el('button', { class: 'btn btn--lg', type: 'button', onclick: () => { avisoVersaoAte = Date.now() + 10 * 60e3; d.close(); } }, 'Depois'))));
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+if (!MODO_CLIENTE) {
+  addEventListener('load', () => conferirVersao());
+  setInterval(conferirVersao, 5 * 60e3);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) conferirVersao(); });
+}
 // Recarrega a página (pega também a versão nova do sistema). Espera terminar o que está sendo salvo.
 async function recarregar(e) {
   const b = e && e.currentTarget; if (b) { b.disabled = true; b.classList.add('girando'); }
@@ -3520,6 +3557,8 @@ async function carregarCliente(placa, box) {
 
 /* ---------- Início ---------- */
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(); });
+// Aberto em "/" (ex.: recarregado pelo service worker): vai para o Início, com a aba marcada no menu.
+if (!MODO_CLIENTE && !location.hash && getSession()) history.replaceState(null, '', '#/inicio');
 route();
 
 // Só para testes automatizados; não afeta o uso normal.
