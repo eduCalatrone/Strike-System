@@ -19,6 +19,8 @@ async function carregar(c, eu) {
   const ctrl = eu.nivel === 'controle';
   // Lixeira (só Controle): excluídos nas últimas 48 h ainda podem ser restaurados.
   const desde = encodeURIComponent(`"${new Date(Date.now() - LIXEIRA_MS).toISOString()}"`); // entre aspas por causa do ":" no or=()
+  // Versão lida antes dos dados: se algo mudar no meio, a próxima conferência vê a versão nova e busca de novo.
+  const [ver] = await rest(c, 'sd_versao?select=em&id=eq.1') || [];
   const [funcionarios, tipos, veiculos, todosAts, fotos, itens, movimentos, ajustes, agenda] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas&ativo=eq.true&order=criado_em,id'),
@@ -39,6 +41,7 @@ async function carregar(c, eu) {
   const atendimentos = todosAts.filter(a => !a.excluido_em);
   const lixeira = todosAts.filter(a => a.excluido_em).sort((a, b) => ms(b.excluido_em) - ms(a.excluido_em));
   return {
+    versaoDados: ver ? ver.em : null,
     lixeira: lixeira.map(a => ({
       id: a.id, placa: a.placa, tipoNome: a.tipo_nome, clienteNome: a.cliente_nome || '', concluido: a.concluido,
       etapa: a.concluido ? 'Concluído' : (a.etapas || [])[a.etapa_index] || '', criadoEm: ms(a.criado_em),

@@ -836,6 +836,7 @@ async function readPlate(frame, crop, mode) {
 let DB = null;
 let FOTO_BASE = '';
 let carregadoEm = 0;
+let versaoCarregada = null; // versão dos dados (sd_versao) que está na tela
 let mudancas = 0;          // conta os commits, para não sobrescrever com dados velhos
 let pendentes = 0;         // envios ainda sem resposta
 let geracao = 0;           // muda quando um envio falha: descarta o que estava na fila
@@ -867,6 +868,7 @@ async function buscarDados({ forcar = false } = {}) {
   // Mudou algo enquanto buscava, ou a tela não pode ser redesenhada agora: fica com o que está na tela.
   if (!forcar && (antes !== mudancas || pendentes || !podeRedesenhar())) return false;
   FOTO_BASE = d.fotoBase || '';
+  if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return a; });
   const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [] };
@@ -969,14 +971,14 @@ function redesenhar() {
   route({ manterScroll: true });
   window.scrollTo(0, y);
 }
-// Busca de novo no banco se os dados tiverem mais de 20 segundos (outros aparelhos podem ter mudado algo).
-async function atualizarSeVelho(maxIdade = 20000) {
+// Busca de novo no banco se os dados tiverem mais que maxIdade. O normal é buscar só quando o aviso de
+// presença (a cada 20 s) disser que a versão dos dados mudou; esta busca por tempo é só uma reserva.
+async function atualizarSeVelho(maxIdade = 5 * 60e3) {
   if (!DB || pendentes || document.hidden || Date.now() - carregadoEm < maxIdade) return;
   if (MODO_CLIENTE || !(getSession() || {}).token) return;
   try { if (await buscarDados()) redesenhar(); } catch {}
 }
-setInterval(() => atualizarSeVelho(), 30000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarSeVelho(5000); });
+setInterval(() => atualizarSeVelho(), 60e3);
 
 /* ---------- Fotos (Storage do Supabase) ---------- */
 const fotoId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
@@ -1201,7 +1203,7 @@ function me() {
   return { tipo: f.nivel, id: f.id, nome: f.nome };
 }
 const isCtrl = () => { const u = me(); return !!u && u.tipo === 'controle'; };
-function esquecerDados() { DB = null; VERS.clear(); geracao++; carregadoEm = 0; }
+function esquecerDados() { DB = null; VERS.clear(); geracao++; carregadoEm = 0; versaoCarregada = null; }
 function sair() { avisarPresenca({ saiu: true }); setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
 function sessaoTerminou() {
   if (!getSession()) return;
@@ -1282,6 +1284,7 @@ function avisarPresenca({ saiu = false, forcar = false } = {}) {
   const req = fetch('/api/presenca', { method: 'POST', keepalive: saiu, cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` }, body });
   if (saiu) { req.catch(() => {}); return; }
   req.then(r => r.ok ? r.json() : null).then(d => {
+    if (d && d.versaoDados && versaoCarregada && d.versaoDados !== versaoCarregada) atualizarSeVelho(0); // outro aparelho mudou algo
     if (!d || !d.equipe) return;
     presOffset = d.agora - Date.now();
     S.equipe = d.equipe;
