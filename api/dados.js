@@ -56,7 +56,7 @@ async function carregar(c, eu) {
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
-      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, danos: a.danos || '', objetos: a.objetos || '',
+      criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, ordemLivre: !!a.ordem_livre, danos: a.danos || '', objetos: a.objetos || '',
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
@@ -209,6 +209,8 @@ async function aplicar(c, op, eu, versoes) {
         danos: txt(it.danos, 1000), objetos: txt(it.objetos, 600),
         historico: historico(it.historico || []), atualizado_em: agora(),
       };
+      // Ordem livre das etapas: só grava quando veio (aparelho com versão antiga do site não manda e não apaga a escolha).
+      if (it.ordemLivre !== undefined) linha.ordem_livre = !!it.ordemLivre;
       // Valor só o Controle define. O Funcionário não recebe o valor, então não mexe nele.
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
       const atId = id(it.id);

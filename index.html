@@ -250,6 +250,9 @@ textarea { resize: vertical; min-height: 76px; }
 .step-name { font-weight: 600; }
 .step.is-todo .step-name { color: var(--muted); font-weight: 500; }
 .step-when { font-size: 12px; color: var(--muted); }
+.step-concluir { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: #fff; font: 600 13px/1 var(--body); }
+.step-concluir svg { width: 16px; height: 16px; }
+.step-concluir:disabled { opacity: .6; }
 .step-foto { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); padding: 0; background: var(--soft); }
 .step-foto img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -1128,6 +1131,12 @@ const etapaAtual = at => at.concluido ? 'Concluído' : at.etapas[at.etapaIndex];
 // Etapa feita: antes da atual ou com data. Etapa nova colocada no meio da lista (Ajustes) fica pendente
 // mesmo com as seguintes já feitas.
 const etapaFeita = (at, i) => at.concluido || i < at.etapaIndex || at.feitas[i] != null;
+// Texto do andamento no card e no veículo. Ordem livre com várias pendentes: quantas faltam.
+function textoEtapa(at) {
+  if (at.concluido) return 'Concluído';
+  const faltam = at.etapas.filter((_, i) => !etapaFeita(at, i)).length;
+  return at.ordemLivre && faltam > 1 ? `Faltam ${faltam} etapas` : `Em ${at.etapas[at.etapaIndex].toLowerCase()}`;
+}
 const progresso = at => at.concluido ? 1 : at.etapas.filter((_, i) => etapaFeita(at, i)).length / at.etapas.length;
 function capaDe(at) {
   return at.fotos.find(x => x.rotulo === 'Frente') || at.fotos.find(x => x.rotulo !== 'Placa') || at.fotos[0] || null;
@@ -1136,10 +1145,13 @@ function registrar(at, texto) {
   const u = me();
   at.historico.push({ texto, em: Date.now(), porId: u ? u.id : null, porNome: u ? u.nome : '' });
 }
-function concluirEtapa(at) {
-  const nome = at.etapas[at.etapaIndex];
-  at.feitas[at.etapaIndex] = Date.now();
+// Conclui a etapa idx (padrão: a atual). Na ordem livre pode ser qualquer etapa pendente: ela fica feita e a
+// "atual" continua sendo a primeira pendente. Concluir a atual pula as que já estavam feitas.
+function concluirEtapa(at, idx = at.etapaIndex) {
+  const nome = at.etapas[idx];
+  at.feitas[idx] = Date.now();
   registrar(at, `${nome} concluída`);
+  if (idx !== at.etapaIndex) return;
   at.etapaIndex++;
   while (at.etapaIndex < at.etapas.length && at.feitas[at.etapaIndex] != null) at.etapaIndex++; // pula as que já estavam feitas
   if (at.etapaIndex >= at.etapas.length) { at.concluido = true; at.concluidoEm = Date.now(); at.etapaIndex = at.etapas.length - 1; registrar(at, 'Serviço concluído'); }
@@ -1544,7 +1556,7 @@ function carCard(at) {
       at.clienteNome ? el('span', { class: 'car-desc', style: 'color:var(--ink-2);font-weight:500', text: at.clienteNome })
         : el('span', { class: 'car-desc', style: 'color:var(--warn);font-weight:600;letter-spacing:.02em', text: `(${NOME_PENDENTE})` }),
       el('span', { class: 'car-desc', text: [v.descricao, at.tipoNome].filter(Boolean).join(' · ') }),
-      el('span', { class: 'car-stage', text: at.concluido ? 'Concluído' : `Em ${at.etapas[at.etapaIndex].toLowerCase()}` }),
+      el('span', { class: 'car-stage', text: textoEtapa(at) }),
       el('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
 }
 function renderHome() {
@@ -1927,6 +1939,16 @@ function renderNew(placaRaw) {
   let ag = agAberto; // vira null se tocar em "Não usar"
   const avisoAg = ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; avisoAg.remove(); toast('A entrada segue sem o agendamento.'); }) : null;
 
+  // Ordem das etapas: seguir a ordem (padrão) ou livre (qualquer etapa pendente pode ser concluída).
+  let ordemLivre = false;
+  const segOrdem = el('div', { class: 'seg', role: 'group', 'aria-label': 'Ordem das etapas' });
+  const dicaOrdem = el('span', { class: 'hint' });
+  const desenharOrdem = () => {
+    preencher(segOrdem, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, t]) =>
+      el('button', { type: 'button', 'aria-pressed': String(ordemLivre === v), onclick: () => { ordemLivre = v; desenharOrdem(); } }, t)));
+    dicaOrdem.textContent = ordemLivre ? 'As etapas podem ser concluídas em qualquer ordem (ex.: limpeza externa antes da interna).' : 'Cada etapa só pode ser concluída depois da anterior.';
+  };
+  desenharOrdem();
   const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, 'Iniciar serviço');
   salvar.addEventListener('click', async () => {
     if (!tiposOk.length) { toast('Cadastre um tipo de serviço com etapas em Ajustes.', true); return; }
@@ -1949,7 +1971,7 @@ function renderNew(placaRaw) {
     salvar.textContent = 'Salvando…';
     const u = me();
     const at = {
-      id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {},
+      id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, ordemLivre,
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
       danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
     };
@@ -1988,6 +2010,7 @@ function renderNew(placaRaw) {
       el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem das etapas' }), segOrdem, dicaOrdem),
       el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo' }), fDesc),
       isCtrl() ? el('div', { class: 'field' }, el('label', { for: 'f-valor', text: 'Valor do serviço (R$)' }), fValor) : null),
     el('div', { class: 'card' },
@@ -2006,9 +2029,9 @@ function renderNew(placaRaw) {
    ===================================================================== */
 // Etapas com a data e a foto tirada ao concluir cada uma. fmt: formato da data; src(f): endereço da miniatura.
 // acoes(foto, i): botões ao abrir a foto da etapa. semFoto(i): toque no espaço vazio de etapa concluída sem foto.
-function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto }) {
+function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir }) {
   return el('ol', { class: 'steps' }, at.etapas.map((nome, i) => {
-    const cur = !at.concluido && i === at.etapaIndex, done = !cur && etapaFeita(at, i);
+    const cur = !at.concluido && i === at.etapaIndex && !at.ordemLivre, done = !cur && etapaFeita(at, i);
     const foto = at.fotos.filter(f => f.etapa === i).slice(-1)[0];
     const quando = at.feitas[i] ? fmt(at.feitas[i]) : cur ? atual : '';
     return el('li', { class: 'step ' + (done ? 'is-done' : cur ? 'is-current' : 'is-todo') },
@@ -2017,6 +2040,7 @@ function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto }) {
       foto ? el('button', { class: 'step-foto', type: 'button', 'aria-label': `Ver foto: ${nome}`, onclick: () => openViewer(foto, acoes ? acoes(foto, i) : []) },
         el('img', { src: src(foto), alt: '', loading: 'lazy' }))
       : done && semFoto ? el('button', { class: 'step-foto is-vazia', type: 'button', 'aria-label': `Adicionar foto: ${nome}`, onclick: () => semFoto(i) }, icon('camera'))
+      : !done && concluir ? (() => { const b = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); b.addEventListener('click', () => concluir(i, b)); return b; })()
       : el('span'));
   }));
 }
@@ -2058,15 +2082,16 @@ function renderVehicle(id) {
       } } : null,
     ].filter(Boolean),
     semFoto: i => fotoEtapa(i, null),
+    concluir: at.ordemLivre && !at.concluido ? (i, b) => concluirComFoto(i, b) : null,
   });
 
   // Concluir etapa: abre a câmera; a foto é obrigatória e aparece para o cliente no andamento.
-  const concluirBtn = at.concluido ? null : el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, icon('camera'), `Concluir: ${at.etapas[at.etapaIndex]}`);
-  if (concluirBtn) concluirBtn.addEventListener('click', async () => {
-    const idx = at.etapaIndex, nome = at.etapas[idx];
+  // Seguindo a ordem: um botão grande para a etapa atual. Ordem livre: botão "Concluir" em cada etapa pendente.
+  const concluirComFoto = async (idx, concluirBtn) => {
+    const nome = at.etapas[idx];
     const file = await pickPhoto();
     if (!file) { toast('Tire a foto da etapa para concluir.'); return; }
-    concluirBtn.disabled = true; concluirBtn.textContent = 'Enviando foto…';
+    concluirBtn.disabled = true; concluirBtn.textContent = 'Enviando…';
     S.ocupado = true;
     let m;
     try { m = await enviarFoto(await compress(file)); }
@@ -2078,11 +2103,13 @@ function renderVehicle(id) {
     }
     S.ocupado = false;
     const atual = DB.atendimentos.find(a => a.id === at.id);
-    if (!atual || atual.concluido || atual.etapaIndex !== idx) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
-    commit(() => { atual.fotos.push({ ...m, rotulo: nome, etapa: idx, em: Date.now() }); concluirEtapa(atual); });
+    if (!atual || atual.concluido || etapaFeita(atual, idx) || atual.etapas[idx] !== nome) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
+    commit(() => { atual.fotos.push({ ...m, rotulo: nome, etapa: idx, em: Date.now() }); concluirEtapa(atual, idx); });
     toast(atual.concluido ? 'Serviço concluído.' : `${nome} concluída.`);
     if (parts()[1] === id) redraw();
-  });
+  };
+  const concluirBtn = at.concluido || at.ordemLivre ? null : el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, icon('camera'), `Concluir: ${at.etapas[at.etapaIndex]}`);
+  if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(at.etapaIndex, concluirBtn));
 
   const fotosBox = el('div');
   fotosBox.append(photoGrid({
@@ -2136,6 +2163,12 @@ function renderVehicle(id) {
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ajustar etapa' }), sel),
+      at.concluido ? null : el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem das etapas' }),
+        el('div', { class: 'seg', role: 'group', 'aria-label': 'Ordem das etapas' }, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, t]) =>
+          el('button', { type: 'button', 'aria-pressed': String(!!at.ordemLivre === v), onclick: () => {
+            if (!!at.ordemLivre === v) return;
+            if (commit(() => { at.ordemLivre = v; registrar(at, v ? 'Ordem das etapas: livre' : 'Ordem das etapas: seguir a ordem'); })) { toast(v ? 'Etapas em ordem livre.' : 'Etapas seguindo a ordem.'); redraw(); }
+          } }, t)))),
       // Link de acompanhamento para mandar ao cliente (página /cliente já com a placa deste veículo).
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Link para o cliente acompanhar' }),
         (() => {
@@ -2221,7 +2254,7 @@ function renderVehicle(id) {
       at.clienteNome ? el('span', { style: 'font-weight:600', text: at.clienteNome }) : el('span', { style: 'font-weight:600;color:var(--warn)', text: `(${NOME_PENDENTE})` }),
       el('span', { class: 'veh-sub', text: [v.descricao, at.tipoNome, `entrada em ${fmtDataHora(at.criadoEm)}`].filter(Boolean).join(' · ') })),
     el('div', { class: 'card' },
-      el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : `Em ${at.etapas[at.etapaIndex].toLowerCase()}` }),
+      el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
         el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),
       el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
       steps, concluirBtn),
