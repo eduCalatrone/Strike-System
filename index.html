@@ -279,6 +279,9 @@ textarea { resize: vertical; min-height: 76px; }
 .step-concluir { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: #fff; font: 600 13px/1 var(--body); }
 .step-concluir svg { width: 16px; height: 16px; }
 .step-concluir:disabled { opacity: .6; }
+.step-acoes { display: inline-flex; align-items: center; gap: 6px; }
+.step-marcar { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); display: grid; place-items: center; padding: 0; }
+.step-marcar svg { width: 16px; height: 16px; }
 .step-foto { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); padding: 0; background: var(--soft); }
 .step-foto img { width: 100%; height: 100%; object-fit: cover; }
 .step-foto-grande { display: block; margin-top: 10px; width: 86%; max-width: 300px; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); padding: 0; background: var(--soft); cursor: zoom-in; }
@@ -1267,11 +1270,13 @@ function etapaLiberada(at, i) {
   return true;
 }
 const liberadas = at => at.etapas.map((_, i) => i).filter(i => etapaLiberada(at, i));
-// Texto do andamento no card e no veículo. Bloco livre: mostra as etapas que podem ser feitas agora.
+// Texto do andamento no card e no veículo. Uma etapa liberada: "Em <etapa>". Bloco livre com várias
+// liberadas: só a quantidade que falta, para não juntar todos os nomes.
 function textoEtapa(at) {
   if (at.concluido) return 'Concluído';
   const l = liberadas(at);
-  return `Em ${(l.length ? l : [at.etapaIndex]).map(i => at.etapas[i].toLowerCase()).join(' / ')}`;
+  if (l.length > 1) { const n = at.etapas.filter((_, i) => !etapaFeita(at, i)).length; return `Faltam ${n} etapas`; }
+  return `Em ${at.etapas[l.length ? l[0] : at.etapaIndex].toLowerCase()}`;
 }
 const progresso = at => at.concluido ? 1 : at.etapas.filter((_, i) => etapaFeita(at, i)).length / at.etapas.length;
 function capaDe(at) {
@@ -1283,10 +1288,10 @@ function registrar(at, texto) {
 }
 // Conclui a etapa idx (padrão: a atual). Na ordem livre pode ser qualquer etapa pendente: ela fica feita e a
 // "atual" continua sendo a primeira pendente. Concluir a atual pula as que já estavam feitas.
-function concluirEtapa(at, idx = at.etapaIndex) {
+function concluirEtapa(at, idx = at.etapaIndex, texto) {
   const nome = at.etapas[idx];
   at.feitas[idx] = Date.now();
-  registrar(at, `${nome} concluída`);
+  registrar(at, texto || `${nome} concluída`);
   if (idx !== at.etapaIndex) return;
   at.etapaIndex++;
   while (at.etapaIndex < at.etapas.length && at.feitas[at.etapaIndex] != null) at.etapaIndex++; // pula as que já estavam feitas
@@ -2360,7 +2365,7 @@ function renderNew(placaRaw) {
    ===================================================================== */
 // Etapas com a data e a foto tirada ao concluir cada uma. fmt: formato da data; src(f): endereço da miniatura.
 // acoes(foto, i): botões ao abrir a foto da etapa. semFoto(i): toque no espaço vazio de etapa concluída sem foto.
-function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, fotoGrande }) {
+function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, marcar, fotoGrande }) {
   return el('ol', { class: 'steps' }, at.etapas.map((nome, i) => {
     const cur = etapaLiberada(at, i), done = !cur && etapaFeita(at, i);
     const foto = at.fotos.filter(f => f.etapa === i).slice(-1)[0];
@@ -2374,8 +2379,13 @@ function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, 
       foto && fotoGrande ? el('span') : foto ? el('button', { class: 'step-foto', type: 'button', 'aria-label': `Ver foto: ${nome}`, onclick: () => openViewer(foto, acoes ? acoes(foto, i) : []) },
         el('img', { src: src(foto), alt: '', loading: 'lazy' }))
       : done && semFoto ? el('button', { class: 'step-foto is-vazia', type: 'button', 'aria-label': `Adicionar foto: ${nome}`, onclick: () => semFoto(i) }, icon('camera'))
-      : cur && concluir ? (() => { const b = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); b.addEventListener('click', () => concluir(i, b)); return b; })()
-      : el('span'));
+      : (() => {
+        const b = cur && concluir ? el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir') : null;
+        if (b) b.addEventListener('click', () => concluir(i, b));
+        // Controle: marca qualquer etapa pendente como feita, sem foto e sem precisar das anteriores.
+        const m = marcar && !done ? el('button', { class: 'step-marcar', type: 'button', title: 'Marcar como feita (sem foto)', 'aria-label': `Marcar como feita: ${nome}`, onclick: () => marcar(i) }, icon('check')) : null;
+        return b || m ? el('span', { class: 'step-acoes' }, b, m) : el('span');
+      })());
   }));
 }
 const eFotoDeEtapa = f => Number.isInteger(f.etapa);
@@ -2437,6 +2447,13 @@ function renderVehicle(id) {
     ].filter(Boolean),
     semFoto: i => fotoEtapa(i, null),
     concluir: bloco ? (i, b) => concluirComFoto(i, b) : null,
+    marcar: ctrl && !at.concluido ? i => {
+      const nome = at.etapas[i];
+      if (!window.confirm(`Marcar "${nome}" como concluída, sem foto?`)) return;
+      const atual = DB.atendimentos.find(a => a.id === at.id);
+      if (!atual || atual.concluido || atual.etapas[i] !== nome || etapaFeita(atual, i)) { toast('Esta etapa já foi concluída em outro aparelho.', true); return redraw(); }
+      if (commit(() => concluirEtapa(atual, i, `${nome} marcada como concluída pelo Controle (sem foto)`))) { toast(atual.concluido ? 'Serviço concluído.' : `${nome} concluída.`); redraw(); }
+    } : null,
   });
 
   // Concluir etapa: abre a câmera; a foto é obrigatória e aparece para o cliente no andamento.
