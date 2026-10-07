@@ -473,11 +473,8 @@ textarea { resize: vertical; min-height: 76px; }
 .tl-dot { position: relative; z-index: 1; width: 12px; height: 12px; margin-top: 3px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line-2); }
 .tl-item.is-etapa .tl-dot, .tl-item.is-concluido .tl-dot { background: var(--ink); border-color: var(--ink); }
 .tl-item.is-entrada .tl-dot { background: #fff; border-color: var(--ink); border-width: 3px; }
-.tl-item.is-entrou .tl-dot { background: #2FBF6B; border-color: #2FBF6B; }
-.tl-item.is-saiu .tl-dot { background: var(--surface); border-color: #BDBDB9; }
 .tl-item.is-retirada .tl-dot, .tl-item.is-estoque .tl-dot { background: #E39A1B; border-color: #E39A1B; }
 .tl-main { display: grid; gap: 2px; min-width: 0; font-size: 14px; }
-.tl-item.is-entrou .tl-txt, .tl-item.is-saiu .tl-txt { color: var(--muted); }
 .tl-item.is-concluido .tl-txt { font-weight: 700; }
 .tl-veic { font-size: 12px; color: var(--muted); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tl-veic b { color: var(--ink-2); font: 700 12px var(--cond); letter-spacing: .06em; }
@@ -1633,11 +1630,10 @@ function renderEquipe() {
 
 /* =====================================================================
    Status da equipe > funcionário: histórico completo do que a pessoa fez no sistema.
-   Junta: ações nos veículos (histórico de cada atendimento, com porId), movimentos de estoque
-   e entradas/saídas do sistema (api/presenca?id=, tabela sd_presenca_eventos, últimos 60 dias).
+   Junta: ações nos veículos (histórico de cada atendimento, com porId) e movimentos de estoque.
+   Entradas e saídas do sistema não são mais registradas (gatilho sd_presenca_evento desligado).
    ===================================================================== */
 const PERIODOS_FUNC = [['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']];
-const presEventos = {}; // id -> { em, eventos }
 function inicioPeriodo(k) {
   const d = new Date(); d.setHours(0, 0, 0, 0);
   if (k === 'hoje') return d.getTime();
@@ -1648,7 +1644,7 @@ function inicioPeriodo(k) {
 function tipoAcao(t) {
   if (/^Entrada do veículo/.test(t)) return 'entrada';
   if (t === 'Serviço concluído') return 'concluido';
-  if (/ concluída$/.test(t)) return 'etapa';
+  if (/ concluída$|^Opcional concluído/.test(t)) return 'etapa';
   if (/^Foto/.test(t)) return 'foto';
   if (/^Valor/.test(t)) return 'valor';
   return 'outro';
@@ -1665,36 +1661,17 @@ function atividadesDe(fid) {
     const it = DB.estoque.itens.find(x => x.id === m.itemId);
     out.push({ em: m.em, tipo: m.tipo === 'saida' ? 'retirada' : 'estoque', texto: `${tipoMov[m.tipo] || 'Estoque'}: ${fmtQ(Math.abs(m.delta))} ${it ? `${it.unidade} ${it.nome}` : ''}`.trim() });
   }
-  for (const e of (presEventos[fid] || {}).eventos || []) out.push({ em: e.em, tipo: e.evento, texto: e.evento === 'entrou' ? 'Entrou no sistema' : 'Saiu do sistema' });
   return out.sort((a, b) => b.em - a.em);
 }
-// Tempo com o sistema aberto no período (pares entrou/saiu; se está online agora, conta até agora).
-function tempoNoSistema(fid, desde) {
-  const ev = ((presEventos[fid] || {}).eventos || []).slice().sort((a, b) => a.em - b.em);
-  let total = 0, ini = null;
-  for (const e of ev) {
-    if (e.evento === 'entrou') ini = e.em;
-    else if (ini != null) { total += Math.max(0, e.em - Math.max(ini, desde)); ini = null; }
-  }
-  const p = (S.equipe || []).find(x => x.id === fid);
-  if (ini != null && p && ['online', 'parado'].includes(estadoPresenca(p).k)) total += Date.now() - Math.max(ini, desde);
-  return total;
-}
-const fmtDuracao = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`; };
 function desenharStatusFunc(box) {
   const p = (S.equipe || []).find(x => x.id === box.dataset.id);
   const e = p ? estadoPresenca(p) : null;
   preencher(box, e ? el('span', { class: `func-st is-${e.k}` }, el('i', { class: `pres-dot is-${e.k}`, 'aria-hidden': 'true' }), e.tela ? `${e.txt} · ${e.tela}` : e.quando ? `${e.txt} · ${e.quando}` : e.txt) : null);
 }
-async function carregarEventos(fid) {
-  try { const d = await apiJson(`/api/presenca?id=${esc(fid)}`); presEventos[fid] = { em: Date.now(), eventos: d.eventos || [] }; }
-  catch { presEventos[fid] = { em: Date.now(), eventos: (presEventos[fid] || {}).eventos || [], erro: true }; }
-}
 function renderFuncionario(fid) {
   const f = DB.funcionarios.find(x => x.id === fid);
   if (!f) { toast('Pessoa não encontrada.', true); return go('#/equipe'); }
   const redraw = () => { if (parts()[0] === 'equipe' && parts()[1] === fid) { const y = window.scrollY; renderFuncionario(fid); window.scrollTo(0, y); } };
-  if (!presEventos[fid] || Date.now() - presEventos[fid].em > 30e3) { presEventos[fid] = presEventos[fid] || { em: 0, eventos: [], carregando: true }; presEventos[fid].em = Date.now(); carregarEventos(fid).then(redraw); }
   const per = S.funcPeriodo || '7', desde = inicioPeriodo(per);
   const todas = atividadesDe(fid), lista = todas.filter(x => x.em >= desde);
   const conta = t => lista.filter(x => x.tipo === t).length;
@@ -1708,8 +1685,8 @@ function renderFuncionario(fid) {
   const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
   // Filtro do histórico (mesmos grupos do histórico do veículo, mais Estoque e Sistema).
   const grupo = x => x.at ? ({ entrada: 'etapas', etapa: 'etapas', opcional: 'etapas', concluido: 'etapas', controle: 'etapas', tipo: 'etapas', foto: 'fotos' }[tipoHist(x.texto)] || 'alteracoes')
-    : x.tipo === 'entrou' || x.tipo === 'saiu' ? 'sistema' : 'estoque';
-  const FILTROS = [['todos', 'Todos'], ['etapas', 'Etapas'], ['fotos', 'Fotos'], ['estoque', 'Estoque'], ['alteracoes', 'Alterações'], ['sistema', 'Entrou e saiu']];
+    : 'estoque';
+  const FILTROS = [['todos', 'Todos'], ['etapas', 'Etapas'], ['fotos', 'Fotos'], ['estoque', 'Estoque'], ['alteracoes', 'Alterações']];
   const filtro = (S.funcFiltro || {})[fid] || 'todos';
   const vistos = filtro === 'todos' ? lista : lista.filter(x => grupo(x) === filtro);
   const filtros = lista.length > 3 ? el('div', { class: 'hv-filtros', role: 'group', 'aria-label': 'Filtrar histórico' }, FILTROS.map(([k, rot]) => {
@@ -1729,7 +1706,6 @@ function renderFuncionario(fid) {
         el('span', { class: 'tl-txt', text: x.texto }),
         x.at ? el('a', { class: 'tl-veic', href: `#/veiculo/${esc(x.at.id)}` }, el('b', { text: fmtPlaca(x.at.placa) }), v.descricao ? ` · ${modeloCurto(v.descricao)}` : '', x.at.tipoNome ? ` · ${x.at.tipoNome}` : '') : null));
   };
-  const carregando = presEventos[fid] && presEventos[fid].carregando && !presEventos[fid].eventos.length;
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     backLink('#/equipe', 'Status da equipe'),
     el('div', { class: 'func-head' },
@@ -1738,14 +1714,14 @@ function renderFuncionario(fid) {
     el('div', { class: 'seg', role: 'group', 'aria-label': 'Período', style: 'display:flex;width:100%' },
       PERIODOS_FUNC.map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(per === k), onclick: () => { S.funcPeriodo = k; redraw(); } }, t))),
     el('div', { class: 'func-tiles' },
-      tile(fmtDuracao(tempoNoSistema(fid, desde)), 'No sistema'),
       tile(conta('etapa'), 'Etapas concluídas'),
       tile(conta('entrada'), 'Veículos recebidos'),
-      tile(conta('foto') + conta('retirada'), 'Fotos e retiradas')),
+      tile(conta('foto'), 'Fotos'),
+      tile(conta('retirada'), 'Retiradas do estoque')),
     el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: 'Histórico' }), el('span', { class: 'count', text: lista.length ? `${lista.length} ${lista.length === 1 ? 'registro' : 'registros'}` : '' })),
       filtros,
-      !vistos.length ? el('p', { class: 'hint', text: carregando ? 'Carregando…' : lista.length ? 'Nada deste tipo no período.' : 'Nada neste período.' })
+      !vistos.length ? el('p', { class: 'hint', text: lista.length ? 'Nada deste tipo no período.' : 'Nada neste período.' })
       : el('div', { class: 'tl' }, dias.map(d => el('section', { class: 'tl-dia' }, el('h3', { text: d.r }), el('ol', {}, d.itens.map(item))))),
       vistos.length > limite ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.funcMais = fid; redraw(); } }, `Mostrar mais (${vistos.length - limite})`) : null)),
     { current: 'relatorios' });
