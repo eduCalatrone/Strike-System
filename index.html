@@ -65,6 +65,28 @@ img { display: block; max-width: 100%; }
 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .who-name { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .who-name b { color: var(--ink); font-weight: 600; }
+button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.notif-aparelho { display: grid; gap: 10px; }
+.notif-sit { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+.notif-dot { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: #BDBDB9; }
+.notif-sit.is-ativo .notif-dot { background: #2FBF6B; }
+.notif-sit.is-bloqueado .notif-dot { background: var(--danger); }
+.row > .notif-card-ico, .notif-card-ico { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 12px; background: var(--ink); color: #fff; display: grid; place-items: center; }
+.notif-card-ico svg { width: 22px; height: 22px; }
+.notif-chave { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 4px 0; cursor: pointer; }
+.notif-chave input { flex: none; appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--line-2); position: relative; margin: 0; cursor: pointer; transition: background .15s; }
+.notif-chave input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .15s; }
+.notif-chave input:checked { background: var(--ink); }
+.notif-chave input:checked::after { transform: translateX(18px); }
+.notif-chave.is-off { opacity: .5; }
+.card.is-off { opacity: .55; }
+.notif-sem { font-weight: 400; opacity: .7; }
+.notif-equipe, .notif-envios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.notif-equipe li { display: flex; align-items: center; gap: 10px; }
+.notif-equipe .r-sub.is-sem { color: var(--muted); font-style: italic; }
+.notif-envios li { display: grid; gap: 2px; justify-items: start; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.notif-envios li:last-child { border-bottom: 0; padding-bottom: 0; }
+.notif-card { gap: 12px; }
 @media (max-width: 440px) { .who-role { display: none; } }
 .link-btn { border: 0; background: none; padding: 8px 2px; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
@@ -763,6 +785,7 @@ const ICON = {
   camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/></svg>',
@@ -1464,7 +1487,7 @@ function me() {
 }
 const isCtrl = () => { const u = me(); return !!u && u.tipo === 'controle'; };
 function esquecerDados() { DB = null; VERS.clear(); geracao++; carregadoEm = 0; versaoCarregada = null; }
-function sair() { avisarPresenca({ saiu: true }); setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
+function sair() { avisarPresenca({ saiu: true }); const t = (getSession() || {}).token; if (t) desativarNotificacoes({ token: t }); notifConferida = false; setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
 function sessaoTerminou() {
   if (!getSession()) return;
   setSession(null); esquecerDados();
@@ -1488,6 +1511,118 @@ if (!MODO_CLIENTE) {
     toast('App instalado. Agora é só abrir pela tela inicial.');
   });
   if ('serviceWorker' in navigator && window.isSecureContext) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+/* =====================================================================
+   Notificações no celular (Web Push, api/notificacoes). Cada pessoa ativa no próprio aparelho
+   (cartão no Início ou tocando no nome, no topo). Android: Chrome, no site ou no app. iPhone: só com o
+   app na tela inicial (iOS 16.4 ou mais novo). O Controle configura em Ajustes > Notificações.
+   ===================================================================== */
+const NKEY = 'sd:notif:fechado';
+const pushSuportado = () => !MODO_CLIENTE && window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const nomeAparelho = () => { const ua = navigator.userAgent;
+  return (eIOS() ? 'iPhone' : /android/i.test(ua) ? 'Android' : /windows/i.test(ua) ? 'Computador (Windows)' : /mac/i.test(ua) ? 'Computador (Mac)' : 'Aparelho') + (appInstalado() ? ' · app' : ''); };
+const bytesB64u = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, ch => ch.charCodeAt(0)); };
+async function swPronto() {
+  return Promise.race([navigator.serviceWorker.ready, new Promise((_, rej) => setTimeout(() => rej(new Error('sw')), 8000))]);
+}
+async function inscricaoAtual() {
+  if (!pushSuportado()) return null;
+  try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch { return null; }
+}
+// Situação deste aparelho: 'ativo', 'inativo', 'bloqueado', 'iphone' (precisa instalar) ou 'sem' (navegador não tem).
+async function situacaoNotif() {
+  if (!pushSuportado()) return eIOS() && !appInstalado() ? 'iphone' : 'sem';
+  if (Notification.permission === 'denied') return 'bloqueado';
+  return Notification.permission === 'granted' && await inscricaoAtual() ? 'ativo' : 'inativo';
+}
+const TEXTO_NOTIF = {
+  ativo: 'Ativadas neste aparelho.',
+  inativo: 'Desativadas neste aparelho.',
+  bloqueado: 'Bloqueadas no navegador. Libere em Configurações > Notificações do navegador e tente de novo.',
+  iphone: 'No iPhone, instale o app na tela inicial (Usar como app) e abra por ele para ativar.',
+  sem: 'Este navegador não recebe notificações.',
+};
+async function ativarNotificacoes() {
+  const sit = await situacaoNotif();
+  if (sit === 'iphone' || sit === 'sem' || sit === 'bloqueado') { toast(TEXTO_NOTIF[sit], true); return false; }
+  const perm = await Notification.requestPermission(); // precisa vir de um toque
+  if (perm !== 'granted') { toast(perm === 'denied' ? TEXTO_NOTIF.bloqueado : 'Notificações não ativadas.', true); return false; }
+  try {
+    const { chave } = await apiJson('/api/notificacoes');
+    const reg = await swPronto();
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesB64u(chave) }); }
+      catch { const velha = await reg.pushManager.getSubscription(); if (velha) await velha.unsubscribe(); sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesB64u(chave) }); }
+    }
+    await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'inscrever', inscricao: sub.toJSON(), aparelho: nomeAparelho() } });
+    try { localStorage.setItem(NKEY, '1'); } catch {}
+    return true;
+  } catch (e) { toast(e && e.code === 'network' ? 'Sem internet. Tente de novo.' : 'Não deu para ativar as notificações agora.', true); return false; }
+}
+async function desativarNotificacoes({ token } = {}) {
+  const sub = await inscricaoAtual(); if (!sub) return;
+  const t = token || (getSession() || {}).token;
+  // keepalive: também funciona ao sair do sistema (a sessão some logo em seguida).
+  try { await fetch('/api/notificacoes', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` }, body: JSON.stringify({ acao: 'sair', endpoint: sub.endpoint }) }); } catch {}
+  try { await sub.unsubscribe(); } catch {}
+}
+// Ao abrir o sistema: aparelho que já recebe confirma que é da pessoa logada (mesmo celular, outra pessoa).
+let notifConferida = false;
+async function conferirNotificacoes() {
+  if (notifConferida || !me() || !pushSuportado() || Notification.permission !== 'granted') return;
+  notifConferida = true;
+  const sub = await inscricaoAtual(); if (!sub) return;
+  apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'inscrever', inscricao: sub.toJSON(), aparelho: nomeAparelho() } }).catch(() => {});
+}
+async function testarNotificacao() {
+  try { const r = await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'testar' } }); toast(r.entregues ? 'Teste enviado. Deve chegar em instantes.' : 'Nenhum aparelho ativo para receber o teste.', !r.entregues); }
+  catch { toast('Não deu para enviar o teste agora.', true); }
+}
+// Bloco "Este aparelho" (janela do nome e Ajustes): situação + Ativar/Desativar + Testar.
+function blocoEsteAparelho(aoMudar) {
+  const box = el('div', { class: 'notif-aparelho' }, el('p', { class: 'hint', text: 'Conferindo…' }));
+  const desenhar = async () => {
+    const sit = await situacaoNotif();
+    preencher(box,
+      el('div', { class: 'notif-sit is-' + sit }, el('span', { class: 'notif-dot', 'aria-hidden': 'true' }), el('span', { text: TEXTO_NOTIF[sit] })),
+      sit === 'ativo' ? el('div', { class: 'actions' },
+        el('button', { class: 'btn grow', type: 'button', onclick: testarNotificacao }, 'Enviar teste'),
+        el('button', { class: 'btn grow', type: 'button', onclick: async e => { e.currentTarget.disabled = true; await desativarNotificacoes(); toast('Notificações desativadas neste aparelho.'); desenhar(); aoMudar && aoMudar(); } }, 'Desativar'))
+      : sit === 'inativo' ? el('button', { class: 'btn btn--primary btn--block', type: 'button', onclick: async e => {
+          const b = e.currentTarget; b.disabled = true;
+          if (await ativarNotificacoes()) { toast('Notificações ativadas.'); testarNotificacao(); }
+          desenhar(); aoMudar && aoMudar();
+        } }, icon('bell'), 'Ativar notificações') : null);
+  };
+  desenhar();
+  return box;
+}
+function janelaNotificacoes() {
+  let d = $('pop-notif');
+  if (!d) { d = el('dialog', { id: 'pop-notif', class: 'sheet', 'aria-label': 'Notificações' }); d.addEventListener('click', e => { if (e.target === d) d.close(); }); document.body.append(d); }
+  const u = me();
+  preencher(d, el('div', { class: 'sheet-in' },
+    el('div', { class: 'card-head' }, el('h2', { text: 'Notificações' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Fechar')),
+    el('p', { class: 'hint', text: `${u ? u.nome : ''}, os avisos do sistema chegam neste celular mesmo com o app fechado.` }),
+    blocoEsteAparelho(),
+    isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes', style: 'justify-self:start', onclick: () => { S.irNotif = true; d.close(); } }, 'Configurar notificações da equipe') : null));
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+// Cartão do Início: aparece até a pessoa ativar ou tocar em "Agora não".
+function cartaoNotificacoes() {
+  if (!pushSuportado()) return null;
+  try { if (localStorage.getItem(NKEY)) return null; } catch {}
+  const card = el('div', { class: 'card notif-card', hidden: true },
+    el('div', { class: 'row', style: 'align-items:center;gap:12px' },
+      el('span', { class: 'notif-card-ico', 'aria-hidden': 'true', html: ICON.bell }),
+      el('div', { style: 'display:grid;gap:2px' }, el('b', { text: 'Receber avisos no celular' }),
+        el('span', { class: 'hint', text: 'Avisos da equipe e do estoque chegam mesmo com o app fechado.' }))),
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async e => { e.currentTarget.disabled = true; if (await ativarNotificacoes()) { toast('Notificações ativadas.'); testarNotificacao(); card.remove(); } else e.currentTarget.disabled = false; } }, 'Ativar'),
+      el('button', { class: 'btn', type: 'button', onclick: () => { try { localStorage.setItem(NKEY, '1'); } catch {} card.remove(); } }, 'Agora não')));
+  situacaoNotif().then(sit => { if (sit === 'inativo') card.hidden = false; else card.remove(); });
+  return card;
 }
 function cartaoInstalar({ fechavel = false } = {}) {
   if (MODO_CLIENTE || appInstalado()) return null;
@@ -1791,6 +1926,7 @@ function route(opts) {
   if (!u) { if (s) setSession(null); return renderLogin(); }
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
   if (r !== 'placa' && r !== 'novo') setTimeout(avisoNovidades, 700);
+  conferirNotificacoes();
   atualizarSeVelho();
   setTimeout(() => avisarPresenca(), 0); // tela nova: avisa (no máximo a cada 10 s)
   switch (r) {
@@ -1900,7 +2036,7 @@ function shell(body, { nav = true, current = '' } = {}) {
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
     el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     u ? el('div', { class: 'who' },
-      el('span', { class: 'who-name' }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
+      el('button', { class: 'who-name', type: 'button', title: 'Notificações', 'aria-label': `${u.nome}: notificações`, onclick: janelaNotificacoes }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       // Recarregar: no app da tela inicial (iPhone principalmente) não existe o botão do navegador.
       appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
@@ -2105,6 +2241,7 @@ function renderHome() {
   const body = el('div', { class: 'stack' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Em serviço' }), el('span', { class: 'count', text: all.length ? `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}` : '' })),
     cartaoInstalar({ fechavel: true }),
+    cartaoNotificacoes(),
     alertas.length ? el('a', { class: 'alert', href: '#/estoque' },
       el('span', {}, el('b', { text: 'Estoque: ' }), alertas.map(it => `${it.nome} (${fmtQ(saldo(it.id))} ${it.unidade})`).join(', ')),
       icon('chev')) : null,
@@ -3308,6 +3445,7 @@ function renderSettings() {
         el('div', { class: 'row' }, nNome, el('div', { style: 'flex:.7' }, nNivel)),
         el('div', { class: 'row' }, nUsuario, nSenha),
         el('div', {}, addPessoa))),
+    secaoNotificacoes(redraw),
     cartaoLixeira(redraw),
     el('section', { class: 'stack' },
       el('h2', { text: 'Dados' }),
@@ -3321,6 +3459,78 @@ function renderSettings() {
           document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         } }, 'Baixar backup (JSON)')))));
   shell(body, { current: 'ajustes' });
+  if (S.irNotif) { S.irNotif = false; const n = $('notif'); if (n) n.scrollIntoView({ block: 'start' }); }
+}
+
+/* Ajustes > Notificações (Controle): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
+   quem tem notificação ativa e os últimos avisos. Dados de api/notificacoes (S.notif, busca de novo a cada minuto). */
+const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque' };
+function secaoNotificacoes(redraw) {
+  const n = S.notif;
+  if ((!n || Date.now() - n.em > 60e3) && !(n && n.carregando)) {
+    S.notif = { ...(n || {}), carregando: true, em: Date.now() };
+    apiJson('/api/notificacoes').then(d => { S.notif = { em: Date.now(), d }; }).catch(() => { S.notif = { em: Date.now(), erro: true }; })
+      .then(() => { if (parts()[0] === 'ajustes') redraw(); });
+  }
+  const recarregar = () => { if (S.notif) S.notif.em = 0; redraw(); };
+  const d = S.notif && S.notif.d;
+  const head = el('h2', { id: 'notif', text: 'Notificações' });
+  if (!d) return el('section', { class: 'stack' }, head, el('div', { class: 'card' }, el('p', { class: 'hint', text: S.notif && S.notif.erro ? 'Não deu para carregar agora.' : 'Carregando…' })));
+  const cfg = d.config;
+  const salvarCfg = async novo => {
+    try { const r = await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'config', config: novo } }); d.config = r.config; toast('Notificações salvas.'); }
+    catch { toast('Não deu para salvar agora.', true); }
+    redraw();
+  };
+  const chave = (rot, sub, ligado, fn, desl = false) => el('label', { class: 'notif-chave' + (desl ? ' is-off' : '') },
+    el('span', { style: 'display:grid;gap:2px' }, el('b', { text: rot }), sub ? el('span', { class: 'hint', text: sub }) : null),
+    el('input', { type: 'checkbox', role: 'switch', checked: ligado, disabled: desl, onchange: e => fn(e.target.checked) }));
+  // Aviso personalizado
+  const f = S.notifForm = S.notifForm || { titulo: '', texto: '', para: 'todos', escolhidos: [] };
+  const fTit = el('input', { type: 'text', maxlength: '80', placeholder: 'Título (opcional)', value: f.titulo, 'aria-label': 'Título do aviso', oninput: e => { f.titulo = e.target.value; } });
+  const fTxt = el('textarea', { rows: '3', maxlength: '300', placeholder: 'Mensagem para a equipe', 'aria-label': 'Mensagem do aviso', oninput: e => { f.texto = e.target.value; } }); fTxt.value = f.texto;
+  const segPara = el('div', { class: 'seg', role: 'group', 'aria-label': 'Para quem', style: 'display:flex;width:100%' },
+    [['todos', 'Todos'], ['controle', 'Controle'], ['funcionarios', 'Funcionários'], ['escolher', 'Escolher']].map(([k, t]) =>
+      el('button', { type: 'button', style: 'flex:1;padding:8px 6px', 'aria-pressed': String(f.para === k), onclick: () => { f.para = k; redraw(); } }, t)));
+  const pessoas = f.para === 'escolher' ? el('div', { class: 'sheet-tags' }, d.equipe.map(p =>
+    el('button', { class: 'sheet-tag', type: 'button', 'aria-pressed': String(f.escolhidos.includes(p.id)), onclick: () => {
+      f.escolhidos = f.escolhidos.includes(p.id) ? f.escolhidos.filter(x => x !== p.id) : [...f.escolhidos, p.id]; redraw();
+    } }, p.nome, p.aparelhos.length ? null : el('span', { class: 'notif-sem', text: ' (sem aparelho)' })))) : null;
+  const btnEnviar = el('button', { class: 'btn btn--primary btn--block', type: 'button', disabled: !cfg.ativo, onclick: async () => {
+    if (!f.titulo.trim() && !f.texto.trim()) { toast('Escreva a mensagem.', true); fTxt.focus(); return; }
+    if (f.para === 'escolher' && !f.escolhidos.length) { toast('Escolha quem recebe.', true); return; }
+    btnEnviar.disabled = true; btnEnviar.textContent = 'Enviando…';
+    try {
+      const r = await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'enviar', titulo: f.titulo, texto: f.texto, para: f.para === 'escolher' ? f.escolhidos : f.para } });
+      if (!r.aparelhos) toast('Ninguém desse grupo ativou as notificações ainda.', true);
+      else { toast(`Aviso enviado: chegou em ${r.entregues} de ${r.aparelhos} ${r.aparelhos === 1 ? 'aparelho' : 'aparelhos'}.`); S.notifForm = null; }
+    } catch (e) { toast(e && e.code === 'desligadas' ? 'As notificações estão desligadas.' : 'Não deu para enviar agora.', true); }
+    recarregar();
+  } }, icon('bell'), 'Enviar aviso');
+  const ativos = d.equipe.filter(p => p.aparelhos.length).length;
+  return el('section', { class: 'stack' }, head,
+    el('div', { class: 'card' }, el('h3', { text: 'Este aparelho' }), blocoEsteAparelho(recarregar)),
+    el('div', { class: 'card' }, el('h3', { text: 'Envio' }),
+      chave('Notificações ligadas', cfg.ativo ? 'Desligue para não enviar nenhum aviso.' : 'Desligadas: nada é enviado (só o teste de cada aparelho).', cfg.ativo, v => salvarCfg({ ...cfg, ativo: v })),
+      chave('Aviso automático: estoque baixo', 'Quando um material chega no mínimo ou acaba.', cfg.ativo && cfg.estoque.ativo, v => salvarCfg({ ...cfg, estoque: { ...cfg.estoque, ativo: v } }), !cfg.ativo),
+      cfg.ativo && cfg.estoque.ativo ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Quem recebe o aviso de estoque' }),
+        el('div', { class: 'seg', role: 'group', 'aria-label': 'Quem recebe o aviso de estoque', style: 'display:flex;width:100%' },
+          [['controle', 'Só o Controle'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(cfg.estoque.para === k),
+            onclick: () => { if (cfg.estoque.para !== k) salvarCfg({ ...cfg, estoque: { ...cfg.estoque, para: k } }); } }, t)))) : null),
+    el('div', { class: 'card' + (cfg.ativo ? '' : ' is-off') }, el('h3', { text: 'Enviar aviso' }),
+      fTit, fTxt,
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Para' }), segPara), pessoas,
+      btnEnviar),
+    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h3', { text: 'Quem recebe' }), el('span', { class: 'count', text: `${ativos} de ${d.equipe.length}` })),
+      el('ul', { class: 'notif-equipe' }, d.equipe.map(p => el('li', {},
+        el('span', { class: 'pres-av' + (p.nivel === 'controle' ? ' is-ctrl' : ''), 'aria-hidden': 'true', text: iniciais(p.nome) }),
+        el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: p.nome }),
+          el('span', { class: 'r-sub' + (p.aparelhos.length ? '' : ' is-sem'), text: p.aparelhos.length ? p.aparelhos.join(', ') : 'Ainda não ativou' })))))),
+    d.envios.length ? el('div', { class: 'card' }, el('h3', { text: 'Últimos avisos' }),
+      el('ul', { class: 'notif-envios' }, d.envios.map(e => el('li', {},
+        el('span', { class: 'tag' + (e.tipo === 'estoque' ? ' tag--warn' : ''), text: TIPO_ENVIO[e.tipo] || e.tipo }),
+        el('b', { text: e.titulo }), e.texto ? el('span', { text: e.texto }) : null,
+        el('span', { class: 'hint', text: [`Chegou em ${e.entregues} de ${e.aparelhos} ${e.aparelhos === 1 ? 'aparelho' : 'aparelhos'}`, e.porNome && e.tipo === 'personalizado' ? `por ${e.porNome}` : '', ago(e.em)].filter(Boolean).join(' · ') }))))) : null);
 }
 
 // Lixeira (Controle): atendimentos excluídos ficam 48 h aqui e podem voltar. Depois somem da lista

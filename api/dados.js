@@ -13,6 +13,7 @@
 // O Funcionário não recebe valores dos serviços.
 
 const { config, send, erro, readJsonBody, rest, restAll, fotoBase, ms, iso, hashSenha, usuarioDaSessao } = require('./_supabase.js');
+const push = require('./_push.js');
 
 /* ---------- Leitura ---------- */
 async function carregar(c, eu) {
@@ -375,6 +376,37 @@ async function aplicar(c, op, eu, versoes) {
   }
 }
 
+/* ---------- Aviso de estoque baixo ---------- */
+// Depois de um movimento (retirada, entrada ou contagem): se o material passou para "Acabando" (chegou no mínimo)
+// ou "Sem estoque" (saldo 0 ou menos), manda a notificação (Ajustes > Notificações decide se manda e para quem).
+const fmtQtd = n => String(Math.round(n * 100) / 100).replace('.', ',');
+const nivelEstoque = (saldo, minimo) => (saldo <= 0 ? 2 : minimo > 0 && saldo <= minimo ? 1 : 0);
+async function avisarEstoque(c, ops, eu, req) {
+  const novos = new Map(); // item -> { soma, n } dos movimentos novos
+  for (const op of ops) {
+    if (!op || op.col !== 'movimentos' || op.acao !== 'salvar' || !op.item) continue;
+    const it = String(op.item.itemId || ''), d = Number(op.item.delta);
+    if (RE_ID.test(it) && Number.isFinite(d)) { const x = novos.get(it) || { soma: 0, n: 0 }; x.soma += d; x.n++; novos.set(it, x); }
+  }
+  if (!novos.size) return;
+  const cfg = await push.lerConfig(c);
+  if (!cfg.ativo || !cfg.estoque.ativo) return;
+  for (const [itemId, { soma: somaNova, n: nNovos }] of novos) {
+    const [item] = await rest(c, `sd_estoque_itens?select=nome,unidade,minimo&ativo=eq.true&id=eq.${q(itemId)}`) || [];
+    if (!item) continue;
+    const movs = await restAll(c, `sd_estoque_movimentos?select=delta&descartado_em=is.null&item_id=eq.${q(itemId)}`);
+    const depois = movs.reduce((t, m) => t + Number(m.delta), 0), antes = depois - somaNova;
+    const minimo = Number(item.minimo) || 0;
+    // Material sem nenhum movimento antes (recém-cadastrado) conta como "ok" antes.
+    const nAntes = movs.length > nNovos ? nivelEstoque(antes, minimo) : 0, nDepois = nivelEstoque(depois, minimo);
+    if (nDepois <= nAntes) continue;
+    const un = item.unidade || 'un';
+    await push.enviar(c, { para: cfg.estoque.para, tipo: 'estoque', por: eu, origem: push.origemDe(req), mensagem: nDepois === 2
+      ? { titulo: `Sem estoque: ${item.nome}`, texto: `O saldo chegou a ${fmtQtd(depois)} ${un}. Última movimentação: ${eu.nome}.`, url: '/#/estoque', tag: `estoque-${itemId}` }
+      : { titulo: `Estoque acabando: ${item.nome}`, texto: `Restam ${fmtQtd(depois)} ${un} (mínimo ${fmtQtd(minimo)}). Última movimentação: ${eu.nome}.`, url: '/#/estoque', tag: `estoque-${itemId}` } });
+  }
+}
+
 module.exports = async (req, res) => {
   const c = config();
   if (!c) return send(res, 501, { error: 'not_configured' });
@@ -394,6 +426,8 @@ module.exports = async (req, res) => {
       try { await aplicar(c, ops[i] || {}, eu, versoes); }
       catch (e) { e.index = i; e.versoes = versoes; throw e; }
     }
+    // Aviso automático de estoque baixo (notificação no celular). Nunca atrapalha a gravação.
+    try { await avisarEstoque(c, ops, eu, req); } catch (e) { console.error('aviso de estoque', e); }
     return send(res, 200, { ok: true, versoes });
   } catch (e) {
     if (!e.status) console.error(e);

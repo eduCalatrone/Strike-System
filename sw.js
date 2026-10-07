@@ -1,7 +1,7 @@
 // Service worker do app instalado (acesso interno).
 // Só guarda a página e as imagens da marca para o app abrir mesmo com a internet ruim.
 // Os dados (/api) nunca passam pelo cache: sempre vêm do banco.
-const CACHE = 'sd-app-v2';
+const CACHE = 'sd-app-v3';
 const ARQUIVOS = ['/', '/logo-letras.png', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
 
 /* Telas abertas com o site antigo (sem o aviso de versão nova): recarrega uma vez, sozinho, quando é seguro.
@@ -60,4 +60,24 @@ self.addEventListener('fetch', e => {
   if (ARQUIVOS.includes(url.pathname)) {
     e.respondWith(caches.match(req).then(r => r || fetch(req)));
   }
+});
+
+// Notificações (api/notificacoes): mostra o aviso e, ao tocar, abre o sistema na tela certa.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { texto: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.titulo || 'Strike Details', {
+    body: d.texto || '', icon: '/icons/icon-192.png', lang: 'pt-BR',
+    tag: d.tag || undefined, renotify: !!d.tag, data: { url: d.url || '/#/inicio' },
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const alvo = new URL((e.notification.data && e.notification.data.url) || '/#/inicio', self.location.origin).href;
+  e.waitUntil((async () => {
+    const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const j = janelas.find(c => new URL(c.url).pathname === '/');
+    if (j) { await j.focus(); try { await j.navigate(alvo); } catch {} return; }
+    await self.clients.openWindow(alvo);
+  })());
 });
