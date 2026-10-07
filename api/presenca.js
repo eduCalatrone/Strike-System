@@ -7,17 +7,25 @@
 // Colunas em sd_funcionarios: visto_em, mexeu_em, tela (null = fora do sistema).
 // A resposta traz também versaoDados (tabela sd_versao, muda a cada gravação): o site só baixa
 // tudo de novo (api/dados) quando ela mudou.
-// Entradas e saídas do sistema não são mais registradas (gatilho sd_presenca_evento desligado; a tabela
-// sd_presenca_eventos ficou com o que já tinha).
+//   GET /api/presenca?id=FUNCIONARIO  (só Controle): entradas e saídas do sistema dessa pessoa nos últimos 60 dias
+//   (tabela sd_presenca_eventos, preenchida por gatilho quando a presença muda).
 
 const { config, send, readJsonBody, rest, iso, ms, usuarioDaSessao } = require('./_supabase.js');
 
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
+  if (req.method !== 'POST' && req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const c = config();
   if (!c) return send(res, 501, { error: 'not_configured' });
   try {
     const eu = await usuarioDaSessao(c, req);
+    if (req.method === 'GET') {
+      if (eu.nivel !== 'controle') return send(res, 403, { error: 'proibido' });
+      const fid = String(new URL(req.url, 'http://x').searchParams.get('id') || '');
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(fid)) return send(res, 400, { error: 'invalido' });
+      const desde = new Date(Date.now() - 60 * 864e5).toISOString();
+      const ev = await rest(c, `sd_presenca_eventos?select=evento,em,tela&funcionario_id=eq.${encodeURIComponent(fid)}&em=gte.${encodeURIComponent(desde)}&order=em.desc,id.desc&limit=1000`) || [];
+      return send(res, 200, { eventos: ev.map(e => ({ evento: e.evento, em: ms(e.em), tela: e.tela || '' })) });
+    }
     let body = {};
     try { body = await readJsonBody(req); } catch {}
     const agora = Date.now();
