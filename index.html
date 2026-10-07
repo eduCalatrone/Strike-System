@@ -284,6 +284,10 @@ textarea { resize: vertical; min-height: 76px; }
 .step-fotos-grandes.is-varias { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
 .step-fotos-grandes.is-varias .step-foto-grande { flex: 0 0 78%; max-width: 280px; scroll-snap-align: start; }
 .etapa-fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.etapas-check { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
+.etapa-check { display: flex; align-items: center; gap: 12px; padding: 12px 14px; font-weight: 500; cursor: pointer; }
+.etapa-check + .etapa-check { border-top: 1px solid var(--line); }
+.etapa-check input { width: 20px; height: 20px; accent-color: var(--ink); flex: none; margin: 0; }
 .etapa-foto { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--soft); border: 1px solid var(--line); }
 .etapa-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .etapa-foto-x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .6); color: #fff; display: grid; place-items: center; padding: 0; font: 600 16px/1 var(--body); }
@@ -1302,19 +1306,24 @@ function concluirEtapa(at, idx = at.etapaIndex, texto) {
   while (at.etapaIndex < at.etapas.length && at.feitas[at.etapaIndex] != null) at.etapaIndex++; // pula as que já estavam feitas
   if (at.etapaIndex >= at.etapas.length) { at.concluido = true; at.concluidoEm = Date.now(); at.etapaIndex = at.etapas.length - 1; registrar(at, 'Serviço concluído'); }
 }
-// Controle pode mover para qualquer etapa (ou concluir / reabrir).
-function ajustarEtapa(at, idx) {
-  const antes = etapaAtual(at), total = at.etapas.length;
-  const now = Date.now();
-  if (idx >= total) {
-    for (let i = 0; i < total; i++) if (!at.feitas[i]) at.feitas[i] = now;
-    at.concluido = true; at.concluidoEm = at.concluidoEm || now; at.etapaIndex = total - 1;
-  } else {
-    for (let i = 0; i < total; i++) { if (i < idx) { if (!at.feitas[i]) at.feitas[i] = now; } else delete at.feitas[i]; }
-    at.concluido = false; at.concluidoEm = null; at.etapaIndex = idx;
-  }
-  const depois = etapaAtual(at);
-  if (antes !== depois) registrar(at, `Etapa ajustada: ${antes} para ${depois}`);
+// Controle marca e desmarca quais etapas estão feitas, em qualquer ordem e sem foto. Marcada continua com a data
+// que já tinha (ou agora); desmarcada perde a data (as fotos ficam). Todas marcadas: serviço concluído; alguma
+// desmarcada num concluído: reabre. A atual passa a ser a primeira não marcada.
+function ajustarEtapas(at, marcadas) {
+  const now = Date.now(), feitas = {}, mudou = [];
+  at.etapas.forEach((nome, i) => {
+    const era = etapaFeita(at, i), fica = marcadas.has(i);
+    if (fica) feitas[i] = at.feitas[i] != null ? at.feitas[i] : (era ? at.criadoEm : now);
+    if (fica !== era) mudou.push(`${nome} ${fica ? 'concluída' : 'desmarcada'}`);
+  });
+  if (!mudou.length) return false;
+  const idx = at.etapas.findIndex((_, i) => !marcadas.has(i));
+  at.feitas = feitas;
+  if (idx < 0) { at.concluido = true; at.concluidoEm = at.concluidoEm || now; at.etapaIndex = at.etapas.length - 1; }
+  else { at.concluido = false; at.concluidoEm = null; at.etapaIndex = idx; }
+  registrar(at, `Etapas ajustadas pelo Controle (sem foto): ${mudou.join(', ')}`);
+  if (at.concluido) registrar(at, 'Serviço concluído');
+  return true;
 }
 // Etapas do tipo mudaram em Ajustes: os serviços em andamento desse tipo passam a seguir a lista nova.
 // O que já foi feito continua feito (ligado pelo nome da etapa), com a data e a foto de cada etapa.
@@ -2589,28 +2598,21 @@ function renderVehicle(id) {
 
   let ctrlCard = null;
   if (ctrl) {
-    const sel = el('select', { 'aria-label': 'Ajustar etapa' },
-      at.etapas.map((n, i) => el('option', { value: i, selected: !at.concluido && i === at.etapaIndex }, n)),
-      el('option', { value: at.etapas.length, selected: at.concluido }, 'Concluído'));
-    sel.addEventListener('change', () => { if (commit(() => ajustarEtapa(at, Number(sel.value)))) { toast('Etapa ajustada.'); redraw(); } });
-    // Marcar uma etapa só como feita, sem foto e sem precisar das anteriores (o "Ajustar etapa" mexe em todas).
-    const pendentes = at.concluido ? [] : at.etapas.map((n, i) => i).filter(i => !etapaFeita(at, i));
-    let marcarCampo = null;
-    if (pendentes.length) {
-      const selM = el('select', { 'aria-label': 'Marcar etapa como feita', style: 'flex:1;min-width:0' },
-        el('option', { value: '' }, 'Escolha a etapa'), pendentes.map(i => el('option', { value: i }, at.etapas[i])));
-      const btnM = el('button', { class: 'btn', type: 'button', disabled: true }, 'Marcar');
-      selM.addEventListener('change', () => { btnM.disabled = selM.value === ''; });
-      btnM.addEventListener('click', () => {
-        const i = Number(selM.value), nome = at.etapas[i];
-        if (selM.value === '' || !window.confirm(`Marcar "${nome}" como concluída, sem foto?`)) return;
-        const atual = DB.atendimentos.find(a => a.id === at.id);
-        if (!atual || atual.concluido || atual.etapas[i] !== nome || etapaFeita(atual, i)) { toast('Esta etapa já foi concluída em outro aparelho.', true); return redraw(); }
-        if (commit(() => concluirEtapa(atual, i, `${nome} marcada como concluída pelo Controle (sem foto)`))) { toast(atual.concluido ? 'Serviço concluído.' : `${nome} concluída.`); redraw(); }
-      });
-      marcarCampo = el('div', { class: 'field' }, el('span', { class: 'label', text: 'Marcar etapa como feita (sem foto)' }),
-        el('div', { style: 'display:flex;gap:8px' }, selM, btnM));
-    }
+    // Etapas: marca ou desmarca qualquer etapa (sem foto, em qualquer ordem) e salva de uma vez.
+    const marcas = at.etapas.map((nome, i) => el('input', { type: 'checkbox', checked: etapaFeita(at, i), 'aria-label': nome }));
+    const salvarEt = el('button', { class: 'btn btn--block', type: 'button', disabled: true }, 'Salvar etapas');
+    const conferir = () => { salvarEt.disabled = marcas.every((c, i) => c.checked === etapaFeita(at, i)); };
+    marcas.forEach(c => c.addEventListener('change', conferir));
+    salvarEt.addEventListener('click', () => {
+      const atual = DB.atendimentos.find(a => a.id === at.id);
+      if (!atual || atual.etapas.length !== marcas.length) { toast('As etapas mudaram em outro aparelho. Confira e faça de novo.', true); return redraw(); }
+      const marcadas = new Set(marcas.map((c, i) => c.checked ? i : -1).filter(i => i >= 0));
+      let ok = false;
+      if (commit(() => { ok = ajustarEtapas(atual, marcadas); }) && ok) { toast(atual.concluido ? 'Serviço concluído.' : 'Etapas ajustadas.'); redraw(); }
+    });
+    const etapasCampo = el('div', { class: 'field' }, el('span', { class: 'label', text: 'Etapas concluídas (sem foto)' }),
+      el('div', { class: 'etapas-check' }, at.etapas.map((nome, i) => el('label', { class: 'etapa-check' }, marcas[i], el('span', { text: nome })))),
+      salvarEt);
     const excluir = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
       if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele fica 48 horas na lixeira (Ajustes > Lixeira) e pode ser restaurado nesse tempo.`)) return;
       if (commit(() => { DB.atendimentos = DB.atendimentos.filter(a => a.id !== at.id); })) {
@@ -2621,8 +2623,7 @@ function renderVehicle(id) {
     } }, 'Excluir atendimento');
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ajustar etapa' }), sel),
-      marcarCampo,
+      etapasCampo,
       // Link de acompanhamento para mandar ao cliente (página /cliente já com a placa deste veículo).
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Link para o cliente acompanhar' }),
         (() => {
