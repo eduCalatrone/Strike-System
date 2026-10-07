@@ -397,6 +397,7 @@ textarea { resize: vertical; min-height: 76px; }
 .seg button + button { border-left: 1px solid var(--line-2); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .seg svg { width: 16px; height: 16px; }
+.seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .seg { justify-self: start; max-width: 100%; flex-wrap: wrap; }
 
 /* ---------- Listas simples ---------- */
@@ -1606,7 +1607,7 @@ function janelaNotificacoes() {
     el('div', { class: 'card-head' }, el('h2', { text: 'Notificações' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Fechar')),
     el('p', { class: 'hint', text: `${u ? u.nome : ''}, os avisos do sistema chegam neste celular mesmo com o app fechado.` }),
     blocoEsteAparelho(),
-    isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes', style: 'justify-self:start', onclick: () => { S.irNotif = true; d.close(); } }, 'Configurar notificações da equipe') : null));
+    isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes/notificacoes', style: 'justify-self:start', onclick: () => d.close() }, 'Configurar notificações da equipe') : null));
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
 // Cartão do Início: aparece até a pessoa ativar ou tocar em "Agora não".
@@ -3210,8 +3211,19 @@ function renderHistory() {
 /* =====================================================================
    Tela: ajustes (Controle): tipos de serviço, equipe, backup
    ===================================================================== */
+// Abas de Ajustes: Geral (#/ajustes) e Notificações (#/ajustes/notificacoes).
+function abasAjustes(aba) {
+  return el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Ajustes', style: 'display:flex;width:100%' },
+    [['geral', 'Geral', '#/ajustes'], ['notif', 'Notificações', '#/ajustes/notificacoes']].map(([k, t, h]) =>
+      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k), onclick: () => go(h) },
+        k === 'notif' ? icon('bell') : null, t)));
+}
 function renderSettings() {
   const redraw = () => { const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
+  if (parts()[1] === 'notificacoes') {
+    shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, el('h1', { text: 'Ajustes' }), abasAjustes('notif'), secaoNotificacoes(redraw)), { current: 'ajustes' });
+    return;
+  }
   const tipos = DB.tipos.map(t => {
     const emUso = DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido).length;
     const fora = foraDoTipo(t).length;
@@ -3424,6 +3436,7 @@ function renderSettings() {
 
   const body = el('div', { class: 'stack-lg', style: 'max-width:720px' },
     el('h1', { text: 'Ajustes' }),
+    abasAjustes('geral'),
     el('section', { class: 'stack' },
       el('h2', { text: 'Tipos de serviço e etapas' }),
       ...tipos,
@@ -3445,7 +3458,6 @@ function renderSettings() {
         el('div', { class: 'row' }, nNome, el('div', { style: 'flex:.7' }, nNivel)),
         el('div', { class: 'row' }, nUsuario, nSenha),
         el('div', {}, addPessoa))),
-    secaoNotificacoes(redraw),
     cartaoLixeira(redraw),
     el('section', { class: 'stack' },
       el('h2', { text: 'Dados' }),
@@ -3459,10 +3471,9 @@ function renderSettings() {
           document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         } }, 'Baixar backup (JSON)')))));
   shell(body, { current: 'ajustes' });
-  if (S.irNotif) { S.irNotif = false; const n = $('notif'); if (n) n.scrollIntoView({ block: 'start' }); }
 }
 
-/* Ajustes > Notificações (Controle): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
+/* Ajustes > aba Notificações (Controle, #/ajustes/notificacoes): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
    quem tem notificação ativa e os últimos avisos. Dados de api/notificacoes (S.notif, busca de novo a cada minuto). */
 const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque' };
 function secaoNotificacoes(redraw) {
@@ -3474,8 +3485,7 @@ function secaoNotificacoes(redraw) {
   }
   const recarregar = () => { if (S.notif) S.notif.em = 0; redraw(); };
   const d = S.notif && S.notif.d;
-  const head = el('h2', { id: 'notif', text: 'Notificações' });
-  if (!d) return el('section', { class: 'stack' }, head, el('div', { class: 'card' }, el('p', { class: 'hint', text: S.notif && S.notif.erro ? 'Não deu para carregar agora.' : 'Carregando…' })));
+  if (!d) return el('section', { class: 'stack', id: 'notif' }, el('div', { class: 'card' }, el('p', { class: 'hint', text: S.notif && S.notif.erro ? 'Não deu para carregar agora.' : 'Carregando…' })));
   const cfg = d.config;
   const salvarCfg = async novo => {
     try { const r = await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'config', config: novo } }); d.config = r.config; toast('Notificações salvas.'); }
@@ -3508,7 +3518,7 @@ function secaoNotificacoes(redraw) {
     recarregar();
   } }, icon('bell'), 'Enviar aviso');
   const ativos = d.equipe.filter(p => p.aparelhos.length).length;
-  return el('section', { class: 'stack' }, head,
+  return el('section', { class: 'stack', id: 'notif' },
     el('div', { class: 'card' }, el('h3', { text: 'Este aparelho' }), blocoEsteAparelho(recarregar)),
     el('div', { class: 'card' }, el('h3', { text: 'Envio' }),
       chave('Notificações ligadas', cfg.ativo ? 'Desligue para não enviar nenhum aviso.' : 'Desligadas: nada é enviado (só o teste de cada aparelho).', cfg.ativo, v => salvarCfg({ ...cfg, ativo: v })),
