@@ -1136,7 +1136,7 @@ function enviar(ops, { redesenhar: redraw = true } = {}) {
     if (e && e.versoes) for (const [id, v] of Object.entries(e.versoes)) VERS.set(id, v);
     geracao++;
     toast(ERROS_SALVAR[e && e.code] || 'Não foi possível salvar. Os dados foram recarregados.', true);
-    try { await buscarDados({ forcar: true }); } catch {}
+    try { await buscarDados({ forcar: true }); } catch { carregadoEm = 0; } // sem internet: busca de novo na próxima chance
     if (redraw) redesenhar();
     return false;
   }).finally(() => { pendentes--; });
@@ -1168,7 +1168,7 @@ function podeRedesenhar() {
   if (r === 'agenda' && parts()[1]) return false; // formulário de agendamento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
-  if (S.entradaEdit) return false; // editando o estado na entrada
+  if (r === 'veiculo' && (S.entradaEdit || S.valorAberto || S.marcandoEtapas)) return false; // editando estado na entrada, valor ou etapas
   const a = document.activeElement;
   if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.type !== 'search') return false;
   return !$('viewer').open;
@@ -1180,7 +1180,7 @@ function redesenhar() {
 }
 // Busca de novo no banco se os dados tiverem mais que maxIdade. O normal é buscar só quando o aviso de
 // presença (a cada 20 s) disser que a versão dos dados mudou; esta busca por tempo é só uma reserva.
-async function atualizarSeVelho(maxIdade = 5 * 60e3) {
+async function atualizarSeVelho(maxIdade = 15 * 60e3) { // reserva: o normal é o aviso de versão (versaoDados)
   if (!DB || pendentes || document.hidden || Date.now() - carregadoEm < maxIdade) return;
   if (MODO_CLIENTE || !(getSession() || {}).token) return;
   // Tela que não pode ser redesenhada agora: nem baixa (seria jogado fora). Ao sair dela, o próximo aviso busca.
@@ -1274,19 +1274,23 @@ async function pickPhoto(origem = 'camera') {
   return escolherArquivo(origem === 'galeria' ? 'file-photo' : 'file-cam');
 }
 // Devolve: Blob (foto), File (escolheu na galeria), null (cancelou) ou undefined (câmera indisponível).
+let camAberta = false; // evita abrir a câmera duas vezes (toque duplo)
 function fotoPelaCamera() {
   return new Promise(async resolve => {
+    if (camAberta) { resolve(null); return; }
+    camAberta = true;
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false });
     } catch (e) {
+      camAberta = false;
       if (e && e.name === 'NotAllowedError') toast('Permita a câmera nas configurações do navegador para tirar fotos direto aqui.', true);
       resolve(undefined); return;
     }
     const d = $('camera'), v = $('camera-video'), shot = $('camera-shot');
     let fechado = false;
     const fechar = r => {
-      if (fechado) return; fechado = true;
+      if (fechado) return; fechado = true; camAberta = false;
       stream.getTracks().forEach(t => t.stop()); v.srcObject = null;
       document.removeEventListener('visibilitychange', aoSair);
       if (d.open) { if (d.close) d.close(); else d.removeAttribute('open'); }
@@ -1488,9 +1492,10 @@ function me() {
 }
 const isCtrl = () => { const u = me(); return !!u && u.tipo === 'controle'; };
 function esquecerDados() { DB = null; VERS.clear(); geracao++; carregadoEm = 0; versaoCarregada = null; }
-function sair() { avisarPresenca({ saiu: true }); const t = (getSession() || {}).token; if (t) desativarNotificacoes({ token: t }); notifConferida = false; setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
+function sair() { avisarPresenca({ saiu: true }); const t = (getSession() || {}).token; if (t) desativarNotificacoes({ token: t }); notifConferida = false; try { localStorage.removeItem(NKEY); } catch {} setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
 function sessaoTerminou() {
   if (!getSession()) return;
+  notifConferida = false;
   setSession(null); esquecerDados();
   go('#/');
   toast('Sua sessão terminou. Entre de novo.', true);
@@ -1926,6 +1931,9 @@ function route(opts) {
   const u = me();
   if (!u) { if (s) setSession(null); return renderLogin(); }
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
+  if (r !== 'veiculo' || a !== S.entradaEdit) S.entradaEdit = null; // edição aberta não fica presa ao sair do veículo
+  if (r !== 'veiculo' || a !== S.valorAberto) S.valorAberto = null;
+  if (r !== 'veiculo' || a !== S.marcandoEtapas) S.marcandoEtapas = null;
   if (r !== 'placa' && r !== 'novo') setTimeout(avisoNovidades, 700);
   conferirNotificacoes();
   atualizarSeVelho();
@@ -2008,6 +2016,7 @@ function mostrarAvisoVersao() {
   let d = $('pop-versao');
   if (d && d.open) return;
   if (document.querySelector('dialog[open]')) return; // câmera ou outra janela aberta: avisa na próxima conferida
+  if (!podeRedesenhar()) return; // entrada de veículo, formulário ou foto enviando: avisa depois
   if (!d) { d = el('dialog', { id: 'pop-versao', class: 'sheet', 'aria-label': 'Versão nova do sistema' }); document.body.append(d); }
   try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); } catch {}
   preencher(d, el('div', { class: 'sheet-in versao-in' },
@@ -2027,7 +2036,9 @@ if (!MODO_CLIENTE) {
 // Recarrega a página (pega também a versão nova do sistema). Espera terminar o que está sendo salvo.
 async function recarregar(e) {
   const b = e && e.currentTarget; if (b) { b.disabled = true; b.classList.add('girando'); }
-  if (pendentes) { toast('Terminando de salvar…'); try { await fila; } catch {} }
+  if (pendentes || S.ocupado) toast('Terminando de salvar…');
+  if (pendentes) { try { await fila; } catch {} }
+  for (let i = 0; S.ocupado && i < 120; i++) await new Promise(r => setTimeout(r, 500)); // foto enviando
   location.reload();
 }
 
@@ -2183,6 +2194,7 @@ function renderLogin() {
       toast({
         login_incorreto: 'Usuário ou senha incorretos.',
         bloqueado: 'Muitas tentativas erradas. Espere 5 minutos e tente de novo.',
+        tente_de_novo: 'Aguarde um instante e tente de novo.',
         network: 'Sem internet. Confira a conexão e tente de novo.',
       }[err && err.code] || 'Não deu para entrar agora. Tente de novo.', true);
       senha.select();
@@ -2344,7 +2356,6 @@ async function openCamera() {
   if (saved > 0) applyZoom(saved);
   $('scan').hidden = true; $('result').hidden = true; $('viewer-live').hidden = false;
   renderZoom();
-  getWorker().catch(() => {});
 }
 function renderZoom() {
   const box = $('cam-tools'); if (!box) return;
@@ -2627,9 +2638,12 @@ function renderNew(placaRaw) {
     const voltar = () => { salvar.disabled = false; salvar.textContent = 'Iniciar serviço'; };
     let fotosMeta;
     try {
-      if (fotos.length) salvar.textContent = `Enviando fotos 0 de ${fotos.length}…`;
-      const enviadas = await enviarFotos(fotos.map(f => f.blob), n => { salvar.textContent = `Enviando fotos ${n} de ${fotos.length}…`; });
-      fotosMeta = enviadas.map((m, i) => ({ ...m, rotulo: fotos[i].rotulo, em: Date.now() }));
+      // Foto já enviada numa tentativa anterior (falhou ao salvar) não sobe de novo.
+      const faltam = fotos.filter(f => !f.meta);
+      if (faltam.length) salvar.textContent = `Enviando fotos 0 de ${faltam.length}…`;
+      const enviadas = await enviarFotos(faltam.map(f => f.blob), n => { salvar.textContent = `Enviando fotos ${n} de ${faltam.length}…`; });
+      enviadas.forEach((m, i) => { faltam[i].meta = m; });
+      fotosMeta = fotos.map(f => ({ ...f.meta, rotulo: f.rotulo, em: Date.now() }));
     } catch (e) {
       voltar();
       toast(e && e.code === 'network' ? 'Sem internet. As fotos não foram enviadas, tente de novo.' : 'Não foi possível enviar as fotos. Tente de novo.', true); return;
@@ -2650,7 +2664,9 @@ function renderNew(placaRaw) {
     if (!ok) {
       voltar();
       const outro = ativoDaPlaca(placa); // outro aparelho abriu esta placa antes
-      if (outro) go(`#/veiculo/${esc(outro.id)}`);
+      if (outro && outro !== at) { go(`#/veiculo/${esc(outro.id)}`); return; }
+      // Não foi salvo (sem internet): tira da lista e fica no formulário para tentar de novo.
+      DB.atendimentos = DB.atendimentos.filter(x => x !== at);
       return;
     }
     for (const f of fotos) URL.revokeObjectURL(f.url);
@@ -2848,6 +2864,7 @@ function renderVehicle(id) {
   // Concluir etapa: abre a câmera; a foto é obrigatória e aparece para o cliente no andamento.
   // Uma etapa liberada: botão grande. Bloco de etapas livres: botão "Concluir" em cada uma delas.
   const concluirComFoto = async (idx, concluirBtn) => {
+    if (camAberta) return; // toque duplo
     const nome = nomeAlvo(idx), opc = typeof idx === 'object';
     const file = await pickPhoto();
     if (!file) { toast('Tire a foto da etapa para concluir.'); return; }
@@ -2952,9 +2969,11 @@ function renderVehicle(id) {
     const opcFeitoNaTela = n => !!at.concluido || opcFeitos(at)[n] != null;
     const marcasOpc = opcionaisDe(at).map(n => el('input', { type: 'checkbox', checked: opcFeitoNaTela(n), 'aria-label': n }));
     const salvarEt = el('button', { class: 'btn btn--block', type: 'button', disabled: true }, 'Salvar etapas');
-    const conferir = () => { salvarEt.disabled = marcas.every((c, i) => c.checked === etapaFeita(at, i)) && marcasOpc.every((c, k) => c.checked === opcFeitoNaTela(opcionaisDe(at)[k])); };
+    const conferir = () => { salvarEt.disabled = marcas.every((c, i) => c.checked === etapaFeita(at, i)) && marcasOpc.every((c, k) => c.checked === opcFeitoNaTela(opcionaisDe(at)[k]));
+      S.marcandoEtapas = salvarEt.disabled ? null : at.id; }; // marcado e não salvo: a atualização em segundo plano espera
     [...marcas, ...marcasOpc].forEach(c => c.addEventListener('change', conferir));
     salvarEt.addEventListener('click', () => {
+      S.marcandoEtapas = null;
       const atual = DB.atendimentos.find(a => a.id === at.id);
       if (!atual || atual.etapas.length !== marcas.length || opcionaisDe(atual).join('|') !== opcionaisDe(at).join('|')) { toast('As etapas mudaram em outro aparelho. Confira e faça de novo.', true); return redraw(); }
       const marcadas = new Set(marcas.map((c, i) => c.checked ? i : -1).filter(i => i >= 0));

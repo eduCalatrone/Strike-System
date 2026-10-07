@@ -73,9 +73,9 @@ function cifrar(texto, p256dh, authSecret) {
 
 // Manda para um aparelho. Devolve 'ok', 'sumiu' (navegador cancelou: desativar) ou o erro.
 async function enviarUm(v, insc, mensagem, sub) {
-  const url = new URL(insc.endpoint);
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 5000);
   try {
+    const url = new URL(insc.endpoint);
     const r = await fetch(insc.endpoint, {
       method: 'POST', signal: ctrl.signal,
       headers: {
@@ -86,7 +86,7 @@ async function enviarUm(v, insc, mensagem, sub) {
     });
     if (r.status === 404 || r.status === 410) return 'sumiu';
     return r.ok ? 'ok' : `HTTP ${r.status} ${(await r.text().catch(() => '')).slice(0, 120)}`;
-  } catch (e) { return e && e.name === 'AbortError' ? 'tempo esgotado' : 'falha de rede'; }
+  } catch (e) { return e && e.name === 'AbortError' ? 'tempo esgotado' : e instanceof TypeError && /URL/i.test(e.message) ? 'sumiu' : 'falha de rede'; }
   finally { clearTimeout(t); }
 }
 

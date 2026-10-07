@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     const antes = v => v && new Date(v).getTime() < limite;
 
     const [ats, fotos] = await Promise.all([
-      restAll(c, 'sd_atendimentos?select=id,concluido,concluido_em,excluido_em'),
+      restAll(c, 'sd_atendimentos?select=id,concluido,concluido_em,excluido_em&order=id'),
       restAll(c, 'sd_fotos?select=id,atendimento_id,caminho,miniatura,removida_em&apagada_em=is.null&order=criado_em,id'),
     ]);
     const vencidos = new Set(ats.filter(a => (a.concluido && antes(a.concluido_em)) || antes(a.excluido_em)).map(a => a.id));

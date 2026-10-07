@@ -15,6 +15,10 @@ const push = require('./_push.js');
 
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 const RE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+// Só endereços dos serviços de notificação dos navegadores (Google/Chrome, Apple, Mozilla, Microsoft).
+const HOSTS_PUSH = /(^|\.)(fcm\.googleapis\.com|android\.googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/;
+const APARELHOS_POR_PESSOA = 5;
+const bytes = s => { try { return Buffer.from(String(s), 'base64url').length; } catch { return 0; } };
 
 module.exports = async (req, res) => {
   const c = config();
@@ -46,13 +50,19 @@ module.exports = async (req, res) => {
       case 'inscrever': {
         const i = b.inscricao || {}, k = i.keys || {};
         const endpoint = String(i.endpoint || '');
-        if (!/^https:\/\//.test(endpoint) || endpoint.length > 1000 || !k.p256dh || !k.auth) return send(res, 400, { error: 'invalido' });
+        let host = '';
+        try { const u = new URL(endpoint); if (u.protocol === 'https:') host = u.hostname; } catch {}
+        if (!host || !HOSTS_PUSH.test(host) || endpoint.length > 1000 || bytes(k.p256dh) !== 65 || bytes(k.auth) !== 16) return send(res, 400, { error: 'invalido' });
         const idInsc = crypto.createHash('sha256').update(endpoint).digest('base64url').slice(0, 40);
         // Mesmo aparelho com outra pessoa logada: passa a ser dela.
         await rest(c, 'sd_push_inscricoes?on_conflict=id', { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: {
           id: idInsc, funcionario_id: eu.id, endpoint, p256dh: txt(k.p256dh, 200), auth: txt(k.auth, 100), aparelho: txt(b.aparelho, 60) || null,
           ativo: true, falhas: 0, ultimo_erro: null, atualizado_em: agora,
         } });
+        // No máximo 5 aparelhos ativos por pessoa: os mais antigos saem.
+        const meus = await restAll(c, `sd_push_inscricoes?select=id&ativo=eq.true&funcionario_id=eq.${encodeURIComponent(eu.id)}&order=atualizado_em.desc,id`);
+        const sobra = meus.slice(APARELHOS_POR_PESSOA).map(x => x.id);
+        if (sobra.length) await rest(c, `sd_push_inscricoes?id=in.(${sobra.map(encodeURIComponent).join(',')})`, { method: 'PATCH', prefer: 'return=minimal', body: { ativo: false, atualizado_em: agora } });
         return send(res, 200, { ok: true });
       }
       case 'sair': {

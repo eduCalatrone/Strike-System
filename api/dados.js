@@ -176,11 +176,11 @@ async function aplicar(c, op, eu, versoes) {
   const quem = eu.nome;
   const ctrl = eu.nivel === 'controle';
   const tipoOp = `${op.col}:${op.acao}`;
-  // Foto de etapa tirada errada: qualquer pessoa da equipe pode trocar (remove a antiga e manda outra).
+  // Foto de etapa (ou de opcional) tirada errada: qualquer pessoa da equipe pode trocar (remove a antiga e manda outra).
   let fotoDeEtapa = false;
   if (!ctrl && tipoOp === 'fotos:remover') {
-    const [f] = await rest(c, `sd_fotos?select=etapa&id=eq.${q(id(op.id))}`) || [];
-    fotoDeEtapa = !!f && f.etapa != null;
+    const [f] = await rest(c, `sd_fotos?select=etapa,opcional&id=eq.${q(id(op.id))}`) || [];
+    fotoDeEtapa = !!f && (f.etapa != null || !!f.opcional);
   }
   if (!ctrl && SO_CONTROLE.has(tipoOp) && !fotoDeEtapa) throw erro(403, 'proibido', tipoOp);
   switch (tipoOp) {
@@ -251,9 +251,13 @@ async function aplicar(c, op, eu, versoes) {
     case 'movimentos:salvar': {
       const tipo = ['entrada', 'saida', 'ajuste'].includes(it.tipo) ? it.tipo : null; if (!tipo) throw invalido('tipo');
       if (!ctrl && tipo !== 'saida') throw erro(403, 'proibido', 'movimento');
+      const delta = num(it.delta, 'delta');
+      if (tipo === 'saida' && !(delta < 0)) throw invalido('delta'); // retirada sempre tira do saldo
+      // Funcionário: a retirada fica no nome de quem está logado, com a hora do servidor.
       return inserirSeNovo(c, 'sd_estoque_movimentos', {
-        id: id(it.id), item_id: id(it.itemId, 'itemId'), tipo, delta: num(it.delta, 'delta'), obs: txt(it.obs, 120),
-        por_id: it.porId ? String(it.porId).slice(0, 64) : null, por_nome: txt(it.porNome, 80), em: quando(it.em, 'em') || agora(),
+        id: id(it.id), item_id: id(it.itemId, 'itemId'), tipo, delta, obs: txt(it.obs, 120),
+        por_id: ctrl ? (it.porId ? String(it.porId).slice(0, 64) : null) : eu.id, por_nome: ctrl ? txt(it.porNome, 80) : eu.nome,
+        em: ctrl ? quando(it.em, 'em') || agora() : agora(),
       });
     }
 
@@ -287,13 +291,30 @@ async function aplicar(c, op, eu, versoes) {
         return;
       }
       const v = Number(op.versao); if (!Number.isInteger(v)) throw invalido('versao');
-      // O Funcionário recebeu o histórico sem as linhas de valor: mantém o que está no banco e só acrescenta as linhas novas.
+      const [atual] = await rest(c, `sd_atendimentos?select=historico,concluido,concluido_em,cliente_nome,danos,objetos,tipo_id,tipo_nome,etapas,opcionais,opcionais_feitos,feitas&id=eq.${q(atId)}&versao=eq.${v}`) || [];
+      if (!atual) throw erro(409, 'conflito', atId);
+      // Data de conclusão pelo relógio do servidor (celular com data errada não adianta a limpeza das fotos
+      // nem muda o mês do faturamento): a de agora quando conclui; a já gravada quando continua concluído.
+      if (linha.concluido) linha.concluido_em = atual.concluido && atual.concluido_em ? atual.concluido_em : agora();
       if (!ctrl) {
-        const [atual] = await rest(c, `sd_atendimentos?select=historico&id=eq.${q(atId)}&versao=eq.${v}`) || [];
-        if (!atual) throw erro(409, 'conflito', atId);
+        // O Funcionário recebeu o histórico sem as linhas de valor: mantém o que está no banco e só acrescenta as linhas novas,
+        // sempre no nome de quem está logado.
         const salvo = Array.isArray(atual.historico) ? atual.historico : [];
-        const novas = linha.historico.slice(semValores(salvo).length).filter(h => !RE_HIST_VALOR.test(h.texto));
+        const novas = linha.historico.slice(semValores(salvo).length).filter(h => !RE_HIST_VALOR.test(h.texto)).map(h => ({ ...h, porId: eu.id, porNome: eu.nome }));
         linha.historico = historico([...salvo, ...novas]);
+        // O que só o Controle muda fica como está no banco (cliente, estado na entrada, tipo, etapas e opcionais).
+        Object.assign(linha, { cliente_nome: atual.cliente_nome, danos: atual.danos, objetos: atual.objetos, tipo_id: atual.tipo_id, tipo_nome: atual.tipo_nome });
+        if (Array.isArray(atual.etapas) && atual.etapas.length) {
+          linha.etapas = atual.etapas;
+          if (linha.etapa_index >= atual.etapas.length) linha.etapa_index = atual.etapas.length - 1;
+        }
+        delete linha.etapas_livres;
+        delete linha.opcionais;
+        // Datas das etapas e dos opcionais: o Funcionário só conclui (acrescenta), não desmarca.
+        linha.feitas = { ...linha.feitas, ...feitas(atual.feitas) };
+        if (it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos({ ...it.opcionaisFeitos, ...(atual.opcionais_feitos || {}) }, atual.opcionais);
+        // Concluído continua concluído (reabrir é do Controle).
+        if (atual.concluido) { linha.concluido = true; linha.concluido_em = atual.concluido_em || agora(); }
       }
       // Correção de placa: só o Controle (o veículo novo é gravado antes, na mesma lista de operações).
       if (ctrl) linha.placa = placa;
@@ -367,7 +388,7 @@ async function aplicar(c, op, eu, versoes) {
     }
     // Entrada do veículo feita a partir do agendamento: qualquer pessoa da equipe pode marcar como concluído.
     case 'agenda:entrada':
-      return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { status: 'em_servico', atualizado_em: agora() });
+      return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null&status=eq.agendado`, { status: 'em_servico', atualizado_em: agora() });
     case 'agenda:remover':
       return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
 
@@ -394,11 +415,11 @@ async function avisarEstoque(c, ops, eu, req) {
   for (const [itemId, { soma: somaNova, n: nNovos }] of novos) {
     const [item] = await rest(c, `sd_estoque_itens?select=nome,unidade,minimo&ativo=eq.true&id=eq.${q(itemId)}`) || [];
     if (!item) continue;
-    const movs = await restAll(c, `sd_estoque_movimentos?select=delta&descartado_em=is.null&item_id=eq.${q(itemId)}`);
+    const movs = await restAll(c, `sd_estoque_movimentos?select=delta&descartado_em=is.null&item_id=eq.${q(itemId)}&order=id`);
+    if (movs.length <= nNovos) continue; // primeiro movimento do material (recém-cadastrado ou depois de zerar): não avisa
     const depois = movs.reduce((t, m) => t + Number(m.delta), 0), antes = depois - somaNova;
     const minimo = Number(item.minimo) || 0;
-    // Material sem nenhum movimento antes (recém-cadastrado) conta como "ok" antes.
-    const nAntes = movs.length > nNovos ? nivelEstoque(antes, minimo) : 0, nDepois = nivelEstoque(depois, minimo);
+    const nAntes = nivelEstoque(antes, minimo), nDepois = nivelEstoque(depois, minimo);
     if (nDepois <= nAntes) continue;
     const un = item.unidade || 'un';
     await push.enviar(c, { para: cfg.estoque.para, tipo: 'estoque', por: eu, origem: push.origemDe(req), mensagem: nDepois === 2
