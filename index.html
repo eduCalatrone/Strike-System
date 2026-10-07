@@ -1660,9 +1660,20 @@ function renderFuncionario(fid) {
   const rotDia = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); const dif = Math.round((hoje - d) / 864e5);
     return dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : `${DIAS_SEMANA[d.getDay()]}, ${fmtData(ts)}`; };
   const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
+  // Filtro do histórico (mesmos grupos do histórico do veículo, mais Estoque e Sistema).
+  const grupo = x => x.at ? ({ entrada: 'etapas', etapa: 'etapas', concluido: 'etapas', controle: 'etapas', tipo: 'etapas', foto: 'fotos' }[tipoHist(x.texto)] || 'alteracoes')
+    : x.tipo === 'entrou' || x.tipo === 'saiu' ? 'sistema' : 'estoque';
+  const FILTROS = [['todos', 'Todos'], ['etapas', 'Etapas'], ['fotos', 'Fotos'], ['estoque', 'Estoque'], ['alteracoes', 'Alterações'], ['sistema', 'Entrou e saiu']];
+  const filtro = (S.funcFiltro || {})[fid] || 'todos';
+  const vistos = filtro === 'todos' ? lista : lista.filter(x => grupo(x) === filtro);
+  const filtros = lista.length > 3 ? el('div', { class: 'hv-filtros', role: 'group', 'aria-label': 'Filtrar histórico' }, FILTROS.map(([k, rot]) => {
+    const qtd = k === 'todos' ? lista.length : lista.filter(x => grupo(x) === k).length;
+    return k !== 'todos' && !qtd && k !== filtro ? null : el('button', { type: 'button', 'aria-pressed': String(k === filtro),
+      onclick: () => { S.funcFiltro = { ...(S.funcFiltro || {}), [fid]: k }; redraw(); } }, rot, el('span', { class: 'hv-qtd', text: String(qtd) }));
+  })) : null;
   const limite = S.funcMais === fid ? Infinity : 80;
   const dias = [];
-  for (const x of lista.slice(0, limite)) { const r = rotDia(x.em); if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(x); }
+  for (const x of vistos.slice(0, limite)) { const r = rotDia(x.em); if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(x); }
   const item = x => {
     const v = x.at ? DB.veiculos[x.at.placa] || {} : null;
     return el('li', { class: `tl-item is-${x.tipo}` },
@@ -1687,9 +1698,10 @@ function renderFuncionario(fid) {
       tile(conta('foto') + conta('retirada'), 'Fotos e retiradas')),
     el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: 'Histórico' }), el('span', { class: 'count', text: lista.length ? `${lista.length} ${lista.length === 1 ? 'registro' : 'registros'}` : '' })),
-      !lista.length ? el('p', { class: 'hint', text: carregando ? 'Carregando…' : 'Nada neste período.' })
+      filtros,
+      !vistos.length ? el('p', { class: 'hint', text: carregando ? 'Carregando…' : lista.length ? 'Nada deste tipo no período.' : 'Nada neste período.' })
       : el('div', { class: 'tl' }, dias.map(d => el('section', { class: 'tl-dia' }, el('h3', { text: d.r }), el('ol', {}, d.itens.map(item))))),
-      lista.length > limite ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.funcMais = fid; redraw(); } }, `Mostrar mais (${lista.length - limite})`) : null)),
+      vistos.length > limite ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.funcMais = fid; redraw(); } }, `Mostrar mais (${vistos.length - limite})`) : null)),
     { current: 'relatorios' });
 }
 
