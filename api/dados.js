@@ -3,8 +3,8 @@
 //   POST /api/dados  { ops: [...], por: {id, nome} } grava as mudanças, uma por uma, na ordem.
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
-//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda
-//   Só do Controle: ajustes, senha, agenda (o Funcionário só vê a agenda, com valores,
+//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | opcionais
+//   Só do Controle: ajustes, senha, opcionais (lista de Ajustes), agenda (o Funcionário só vê a agenda, com valores,
 //   e pode usar 'agenda:entrada', que só marca o agendamento como "em serviço" ao dar entrada no veículo;
 //   quando esse serviço é concluído, o agendamento vira "concluído" aqui mesmo)
 // Nada é apagado: 'remover' só marca o registro (ativo = false, excluido_em, removida_em).
@@ -26,7 +26,7 @@ async function carregar(c, eu) {
   const filtroAts = ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})`
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
-  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda] = await Promise.all([
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -36,6 +36,7 @@ async function carregar(c, eu) {
     restAll(c, 'sd_estoque_movimentos?select=*&descartado_em=is.null&order=em,id'),
     restAll(c, 'sd_ajustes?select=chave,valor'),
     restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,obs,status&excluido_em=is.null&order=data,id'),
+    restAll(c, 'sd_opcionais?select=id,nome&ativo=eq.true&order=nome,id'),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -76,12 +77,14 @@ async function carregar(c, eu) {
     ajustes: { limpezaDias: Number((ajustes.find(a => a.chave === 'limpeza_fotos_dias') || {}).valor) || 30 },
     // Controle vê o usuário de cada pessoa e se já tem senha; a senha nunca sai daqui.
     funcionarios: funcionarios.map(f => ctrl ? { id: f.id, nome: f.nome, nivel: f.nivel, usuario: f.usuario || '', temSenha: !!f.senha_hash } : { id: f.id, nome: f.nome, nivel: f.nivel }),
+    opcionais: opcionais.map(o => ({ id: o.id, nome: o.nome })),
     tipos: tipos.map(t => { const e = Array.isArray(t.etapas) ? t.etapas : []; return { id: t.id, nome: t.nome, etapas: e, livres: livresDe(e, t.etapas_livres) }; }),
     veiculos: Object.fromEntries(veiculos.map(v => [v.placa, { placa: v.placa, descricao: v.descricao || '', criadoEm: ms(v.criado_em) }])),
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
+      opcionais: listaOpcionais(a.opcionais),
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
@@ -106,7 +109,7 @@ const RE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
-const SO_CONTROLE = new Set(['funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
+const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
   'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
@@ -124,6 +127,13 @@ const livresDe = (lista, v) => (Array.isArray(lista) ? lista : []).map((_, i) =>
 function livresAlinhadas(nomes, v) {
   if (!Array.isArray(nomes) || !Array.isArray(v)) return null;
   return nomes.map((n, i) => [txt(n, 80), v[i] === true]).filter(([n]) => n).map(([, l]) => l);
+}
+// Opcionais do atendimento (ex.: carpete): lista de nomes, sem repetir.
+function listaOpcionais(v) {
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  for (const x of v.slice(0, 30)) { const n = txt(x, 60); if (n && !out.includes(n)) out.push(n); }
+  return out;
 }
 function historico(v) {
   if (!Array.isArray(v)) throw invalido('historico');
@@ -209,6 +219,13 @@ async function aplicar(c, op, eu, versoes) {
       if (livresTipo) linhaTipo.etapas_livres = livresTipo;
       return upsert(c, 'sd_tipos_servico', linhaTipo);
     }
+    case 'opcionais:salvar': {
+      const nome = txt(it.nome, 60); if (!nome) throw invalido('nome');
+      return upsert(c, 'sd_opcionais', { id: id(it.id), nome, ativo: true, atualizado_em: agora() });
+    }
+    case 'opcionais:remover':
+      return marcar(c, 'sd_opcionais', `id=eq.${q(id(op.id))}`, { ativo: false, atualizado_em: agora() });
+
     case 'tipos:remover':
       return marcar(c, 'sd_tipos_servico', `id=eq.${q(id(op.id))}`, { ativo: false, atualizado_em: agora() });
 
@@ -247,6 +264,8 @@ async function aplicar(c, op, eu, versoes) {
       // Etapas com ordem livre: só grava quando veio (aparelho com versão antiga do site não manda e não apaga a marca).
       const livresAt = livresAlinhadas(it.etapas, it.livres);
       if (livresAt) linha.etapas_livres = livresAt;
+      // Opcionais: também só quando vieram (site antigo não manda e não apaga).
+      if (Array.isArray(it.opcionais)) linha.opcionais = listaOpcionais(it.opcionais);
       // Valor só o Controle define. O Funcionário não recebe o valor, então não mexe nele.
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
       const atId = id(it.id);

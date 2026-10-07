@@ -202,6 +202,8 @@ textarea { resize: vertical; min-height: 76px; }
 .car-photo .ph svg { width: 44px; height: 44px; }
 .car-body { padding: 10px 12px 12px; display: grid; gap: 6px; align-content: start; }
 .car-plate { font: 700 21px/1 var(--cond); letter-spacing: .08em; }
+.car-opc { font-size: 12px; font-weight: 600; color: #5B3F99; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag--opc { background: #F1ECFA; border-color: #DCD0F0; color: #5B3F99; }
 .car-desc { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .car-stage { font-size: 13px; font-weight: 600; }
 .car-model { font: 700 18px/1.1 var(--cond); letter-spacing: .03em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
@@ -336,6 +338,7 @@ textarea { resize: vertical; min-height: 76px; }
 .hv-item.is-controle .hv-ico { background: #fff; border: 2px dashed var(--ink-2); color: var(--ink); }
 .hv-item.is-valor .hv-ico { background: #E8F5EC; border-color: #BFE3CB; color: #1F7A45; }
 .hv-item.is-foto .hv-ico { background: #EEF1F6; border-color: #D5DCE6; color: #3B4A60; }
+.hv-item.is-opcional .hv-ico { background: #F1ECFA; border-color: #DCD0F0; color: #5B3F99; }
 .hv-item.is-edicao .hv-ico { background: #FBF3E4; border-color: #EBD9B4; color: #8A5A0B; }
 .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
 .log li { display: flex; justify-content: space-between; gap: 12px; }
@@ -1030,8 +1033,8 @@ async function buscarDados({ forcar = false } = {}) {
   FOTO_BASE = d.fotoBase || '';
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
-  const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return a; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [] };
+  const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [] }; });
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -1057,6 +1060,7 @@ function diffOps(a, b) {
   lista('itens', a.estoque.itens, b.estoque.itens);
   lista('movimentos', a.estoque.movimentos, b.estoque.movimentos, 'id', () => false);
   lista('agenda', a.agenda || [], b.agenda || []);
+  lista('opcionais', a.opcionais || [], b.opcionais || []);
   lista('atendimentos', semFotos(a.atendimentos), semFotos(b.atendimentos));
   // Foto de atendimento excluído continua marcada como ativa (o atendimento inteiro fica guardado).
   const fa = new Map(fotos(a.atendimentos).map(f => [f.id, f]));
@@ -1289,7 +1293,15 @@ function passagensDaPlaca(p) {
     clienteNome: (ats.find(a => a.clienteNome) || {}).clienteNome || (ant && ant.clienteNome) || '',
   };
 }
-const NOME_PENDENTE = 'NOME PENDENTE'; // atendimento sem nome do cliente (o nome é opcional na entrada)
+const NOME_PENDENTE = 'NOME PENDENTE';
+// Opcionais (ex.: carpete): lista de Ajustes (DB.opcionais) marcada em cada atendimento (at.opcionais, nomes).
+const opcionaisDe = at => Array.isArray(at.opcionais) ? at.opcionais : [];
+// Botões de marcar/desmarcar. Mostra também o que o veículo tem e saiu da lista de Ajustes.
+function chipsOpcionais(marcados, aoTrocar) {
+  const nomes = [...(DB.opcionais || []).map(o => o.nome), ...marcados.filter(n => !(DB.opcionais || []).some(o => o.nome === n))];
+  return el('div', { class: 'sheet-tags', role: 'group', 'aria-label': 'Opcionais' }, nomes.map(n =>
+    el('button', { class: 'sheet-tag', type: 'button', 'aria-pressed': String(marcados.includes(n)), onclick: () => aoTrocar(n, !marcados.includes(n)) }, n)));
+} // atendimento sem nome do cliente (o nome é opcional na entrada)
 const etapaAtual = at => at.concluido ? 'Concluído' : at.etapas[at.etapaIndex];
 // Etapa feita: antes da atual ou com data. Etapa nova colocada no meio da lista (Ajustes) fica pendente
 // mesmo com as seguintes já feitas.
@@ -1876,10 +1888,11 @@ const HIST_TIPOS = {
   foto: { rot: 'Foto', ico: 'camera' },
   valor: { rot: 'Valor', txt: 'R$' },
   edicao: { rot: 'Alteração', ico: 'edit' },
+  opcional: { rot: 'Opcional', ico: 'plus' },
   tipo: { rot: 'Etapas do serviço', ico: 'gear' },
   outro: { rot: 'Registro', ico: 'file' },
 };
-const HIST_FILTROS = [['todos', 'Todos', null], ['etapas', 'Etapas', ['entrada', 'etapa', 'concluido', 'controle', 'tipo']], ['fotos', 'Fotos', ['foto']], ['alteracoes', 'Alterações', ['edicao', 'valor', 'outro']]];
+const HIST_FILTROS = [['todos', 'Todos', null], ['etapas', 'Etapas', ['entrada', 'etapa', 'concluido', 'controle', 'tipo']], ['fotos', 'Fotos', ['foto']], ['alteracoes', 'Alterações', ['edicao', 'opcional', 'valor', 'outro']]];
 function tipoHist(t) {
   if (/^Entrada do veículo/.test(t)) return 'entrada';
   if (t === 'Serviço concluído') return 'concluido';
@@ -1889,6 +1902,7 @@ function tipoHist(t) {
   if (/^Valor/.test(t)) return 'valor';
   if (/^Etapas atualizadas|^Etapa renomeada/.test(t)) return 'tipo';
   if (/^Placa corrigida|^Cliente:|editados$|^Descrição/.test(t)) return 'edicao';
+  if (/^Opciona/.test(t)) return 'opcional';
   return 'outro';
 }
 // Texto mais curto onde a etiqueta já diz o tipo.
@@ -2015,6 +2029,7 @@ function carCard(at) {
       el('span', { class: 'car-meta' }, v.descricao ? miniPlaca(at.placa) : null,
         at.clienteNome ? el('span', { class: 'car-cliente', text: at.clienteNome }) : el('span', { class: 'car-cliente is-pendente', text: `(${NOME_PENDENTE})` })),
       at.tipoNome ? el('span', { class: 'car-desc', text: at.tipoNome }) : null,
+      opcionaisDe(at).length ? el('span', { class: 'car-opc', text: `+ ${opcionaisDe(at).join(', ')}` }) : null,
       el('span', { class: 'car-stage', text: textoEtapa(at) }),
       el('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
 }
@@ -2026,7 +2041,7 @@ function renderHome() {
     const q = S.homeQuery.trim().toLowerCase(), q2 = norm(q);
     const items = !q ? all : all.filter(a => {
       const v = DB.veiculos[a.placa] || {};
-      return (q2 && a.placa.includes(q2)) || [a.clienteNome || NOME_PENDENTE, v.descricao, a.tipoNome, etapaAtual(a)].join(' ').toLowerCase().includes(q);
+      return (q2 && a.placa.includes(q2)) || [a.clienteNome || NOME_PENDENTE, v.descricao, a.tipoNome, etapaAtual(a), ...opcionaisDe(a)].join(' ').toLowerCase().includes(q);
     });
     preencher(grid, ...items.map(carCard));
     empty.hidden = items.length > 0;
@@ -2040,7 +2055,7 @@ function renderHome() {
       el('span', {}, el('b', { text: 'Estoque: ' }), alertas.map(it => `${it.nome} (${fmtQ(saldo(it.id))} ${it.unidade})`).join(', ')),
       icon('chev')) : null,
     all.length > 4 ? el('div', { class: 'search' }, icon('search'),
-      el('input', { type: 'search', placeholder: 'Buscar placa, cliente ou veículo', value: S.homeQuery, 'aria-label': 'Buscar veículos', oninput: e => { S.homeQuery = e.target.value; draw(); } })) : null,
+      el('input', { type: 'search', placeholder: 'Buscar placa, cliente, veículo ou opcional', value: S.homeQuery, 'aria-label': 'Buscar veículos', oninput: e => { S.homeQuery = e.target.value; draw(); } })) : null,
     grid, empty);
   shell(body, { current: 'inicio' });
   draw();
@@ -2383,6 +2398,10 @@ function renderNew(placaRaw) {
   const fDanos = el('textarea', { id: 'f-danos', rows: '3', maxlength: '1000', placeholder: 'Riscos, amassados, peças soltas, problemas já existentes' });
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
   const fValor = el('input', { id: 'f-valor', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
+  const opcSel = []; // opcionais marcados na entrada
+  const opcBox = el('div');
+  const drawOpc = () => preencher(opcBox, chipsOpcionais(opcSel, (n, on) => { if (on) opcSel.push(n); else opcSel.splice(opcSel.indexOf(n), 1); drawOpc(); }));
+  drawOpc();
   const fotosBox = el('div');
   const drawFotos = () => preencher(fotosBox, photoGrid({
     items: fotos, slots: ROTULOS,
@@ -2428,9 +2447,10 @@ function renderNew(placaRaw) {
     const at = {
       id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, livres: livresDe(tipo), // etapas livres vêm do tipo (Ajustes)
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
-      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [],
+      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [], opcionais: [...opcSel],
     };
     registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
+    if (opcSel.length) registrar(at, `Opcionais na entrada: ${opcSel.join(', ')}`);
     const ok = await commitAgora(() => {
       DB.veiculos[placa] = { ...(DB.veiculos[placa] || { criadoEm: Date.now() }), placa, descricao: fDesc.value.trim() };
       DB.atendimentos.push(at);
@@ -2466,6 +2486,7 @@ function renderNew(placaRaw) {
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
       el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo (marca e modelo primeiro)' }), fDesc),
+      (DB.opcionais || []).length ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Opcionais (ex.: carpete que vai no veículo)' }), opcBox) : null,
       isCtrl() ? el('div', { class: 'field' }, el('label', { for: 'f-valor', text: 'Valor do serviço (R$)' }), fValor) : null),
     el('div', { class: 'card' },
       el('h2', { text: 'Fotos de entrada' }),
@@ -2561,6 +2582,7 @@ function topoVeiculo(at, v) {
     el('div', { class: 'veh-info' },
       at.tipoNome ? el('span', { class: 'tag tag--dark', text: at.tipoNome }) : null,
       el('span', { class: 'tag', text: `Entrada ${fmtDataHora(at.criadoEm)}` }),
+      ...opcionaisDe(at).map(n => el('span', { class: 'tag tag--opc', text: `+ ${n}` })),
       completo ? el('span', { class: 'veh-info-desc', text: completo }) : null));
 }
 function renderVehicle(id) {
@@ -2714,6 +2736,15 @@ function renderVehicle(id) {
       let ok = false;
       if (commit(() => { ok = ajustarEtapas(atual, marcadas); }) && ok) { toast(atual.concluido ? 'Serviço concluído.' : 'Etapas ajustadas.'); redraw(); }
     });
+    // Opcionais do veículo: tocar marca ou desmarca na hora (fica no histórico).
+    const opcCampo = (DB.opcionais || []).length || opcionaisDe(at).length ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Opcionais' }),
+      chipsOpcionais(opcionaisDe(at), (n, on) => {
+        const atual = DB.atendimentos.find(a => a.id === at.id); if (!atual) return redraw();
+        if (commit(() => {
+          const l = opcionaisDe(atual).filter(x => x !== n); if (on) l.push(n);
+          atual.opcionais = l; registrar(atual, `${on ? 'Opcional adicionado' : 'Opcional removido'}: ${n}`);
+        })) { toast(on ? `${n} adicionado.` : `${n} removido.`); redraw(); }
+      })) : null;
     const etapasCampo = el('div', { class: 'field' }, el('span', { class: 'label', text: 'Etapas concluídas (sem foto)' }),
       el('div', { class: 'etapas-check' }, at.etapas.map((nome, i) => el('label', { class: 'etapa-check' }, marcas[i], el('span', { text: nome })))),
       salvarEt);
@@ -2728,6 +2759,7 @@ function renderVehicle(id) {
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
       etapasCampo,
+      opcCampo,
       // Link de acompanhamento para mandar ao cliente (página /cliente já com a placa deste veículo).
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Link para o cliente acompanhar' }),
         (() => {
@@ -3102,6 +3134,52 @@ function renderSettings() {
     redraw();
   } }, 'Adicionar');
 
+  // Opcionais (ex.: carpete): adicionar, renomear ou remover. Renomear troca o nome nos veículos em serviço;
+  // remover só tira da lista (quem já tem continua com ele).
+  const opcLista = el('ul', { class: 'rows' }, (DB.opcionais || []).map(o => {
+    const aberto = S.opcAberto === o.id;
+    const emUso = DB.atendimentos.filter(a => !a.concluido && opcionaisDe(a).includes(o.nome)).length;
+    let form = null;
+    if (aberto) {
+      const fn = el('input', { type: 'text', maxlength: '60', value: o.nome, autocomplete: 'off', 'aria-label': 'Nome do opcional' });
+      form = el('div', { class: 'inline-form', style: 'margin:0 14px 12px' },
+        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome' }), fn),
+        el('div', { class: 'actions' },
+          el('button', { class: 'btn btn--primary grow', type: 'button', onclick: () => {
+            const nome = fn.value.trim().replace(/\s+/g, ' ');
+            if (!nome) { toast('Digite o nome.', true); return; }
+            if (DB.opcionais.some(x => x.id !== o.id && x.nome.toLowerCase() === nome.toLowerCase())) { toast('Já existe um opcional com esse nome.', true); return; }
+            const antigo = o.nome;
+            if (nome !== antigo && commit(() => {
+              const x = DB.opcionais.find(y => y.id === o.id); if (x) x.nome = nome;
+              for (const at of DB.atendimentos.filter(a => !a.concluido && opcionaisDe(a).includes(antigo))) {
+                at.opcionais = opcionaisDe(at).map(n => n === antigo ? nome : n);
+                registrar(at, `Opcional renomeado: ${antigo} para ${nome}`);
+              }
+            })) toast('Opcional renomeado.');
+            S.opcAberto = null; redraw();
+          } }, 'Salvar'),
+          el('button', { class: 'btn', type: 'button', onclick: () => { S.opcAberto = null; redraw(); } }, 'Cancelar')),
+        el('button', { class: 'link-btn', type: 'button', style: 'color:var(--danger);justify-self:start', onclick: () => {
+          if (!window.confirm(`Remover "${o.nome}" da lista? Os veículos que já têm continuam com ele.`)) return;
+          S.opcAberto = null;
+          if (commit(() => { DB.opcionais = DB.opcionais.filter(x => x.id !== o.id); })) { toast('Opcional removido da lista.'); redraw(); }
+        } }, 'Remover opcional'));
+    }
+    return el('li', {}, el('div', { class: 'r' },
+      el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: o.nome }),
+        el('span', { class: 'r-sub', text: emUso ? `Em ${emUso} ${emUso === 1 ? 'veículo' : 'veículos'} em serviço` : 'Nenhum veículo em serviço' })),
+      el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px;flex:none', 'aria-expanded': String(aberto), onclick: () => { S.opcAberto = aberto ? null : o.id; redraw(); } }, aberto ? 'Fechar' : 'Editar')), form);
+  }));
+  const novoOpc = el('input', { type: 'text', maxlength: '60', placeholder: 'Ex.: Carpete', autocomplete: 'off', 'aria-label': 'Novo opcional' });
+  const addOpc = () => {
+    const nome = novoOpc.value.trim().replace(/\s+/g, ' ');
+    if (!nome) { toast('Digite o nome.', true); return; }
+    if ((DB.opcionais || []).some(x => x.nome.toLowerCase() === nome.toLowerCase())) { toast('Já existe um opcional com esse nome.', true); return; }
+    if (commit(() => { DB.opcionais = [...(DB.opcionais || []), { id: uid(), nome }]; })) { toast(`${nome} adicionado.`); redraw(); }
+  };
+  novoOpc.addEventListener('keydown', e => { if (e.key === 'Enter') addOpc(); });
+
   const dias = el('select', { 'aria-label': 'Dias até apagar as fotos', style: 'width:auto' },
     Array.from({ length: 11 }, (_, i) => 30 + i).map(n => el('option', { value: n, selected: n === DB.ajustes.limpezaDias }, `${n} dias`)));
   dias.addEventListener('change', () => {
@@ -3121,6 +3199,11 @@ function renderSettings() {
           const tid = uid();
           if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [], livres: [] }))) { S.tipoAberto = tid; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
         } }, 'Criar')))),
+    el('section', { class: 'stack' },
+      el('h2', { text: 'Opcionais' }),
+      (DB.opcionais || []).length ? opcLista : el('p', { class: 'hint', text: 'Itens extras que vão em um veículo, como um carpete. Marcados na entrada do veículo e nas Opções do Controle.' }),
+      el('div', { class: 'card' }, el('h3', { text: 'Novo opcional' }),
+        el('div', { class: 'row' }, novoOpc, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: addOpc }, 'Adicionar')))),
     el('section', { class: 'stack' },
       el('h2', { text: 'Equipe' }),
       equipe,
