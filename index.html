@@ -311,6 +311,32 @@ textarea { resize: vertical; min-height: 76px; }
 .kv dt { font-size: 12px; font-weight: 600; color: var(--muted); }
 .kv dd { margin: 0; white-space: pre-wrap; }
 
+/* Histórico do veículo */
+.hv { display: grid; gap: 12px; }
+.hv-filtros { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 0 2px; }
+.hv-filtros::-webkit-scrollbar { display: none; }
+.hv-filtros button { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font: 600 13px var(--body); }
+.hv-filtros button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.hv-qtd { font-size: 11px; opacity: .65; font-variant-numeric: tabular-nums; }
+.hv-dia h3 { margin: 4px 0 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hv-dia ol { list-style: none; margin: 0; padding: 0; }
+.hv-item { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding: 8px 0; position: relative; }
+.hv-item:not(:last-child)::before { content: ""; position: absolute; left: 15px; top: 40px; bottom: -8px; width: 2px; background: var(--line); }
+.hv-ico { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--ink-2); border: 1px solid var(--line); font: 800 11px var(--body); position: relative; z-index: 1; }
+.hv-ico svg { width: 15px; height: 15px; }
+.hv-main { display: grid; gap: 1px; min-width: 0; }
+.hv-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hv-txt { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.hv-meta { font-size: 12px; color: var(--muted); }
+.hv-item.is-entrada .hv-ico { background: #fff; border: 2px solid var(--ink); color: var(--ink); }
+.hv-item.is-etapa .hv-ico { background: var(--ink); border-color: var(--ink); color: #fff; }
+.hv-item.is-concluido .hv-ico { background: #1F9D55; border-color: #1F9D55; color: #fff; }
+.hv-item.is-concluido .hv-tag { color: #1F9D55; }
+.hv-item.is-concluido .hv-txt { font-weight: 700; }
+.hv-item.is-controle .hv-ico { background: #fff; border: 2px dashed var(--ink-2); color: var(--ink); }
+.hv-item.is-valor .hv-ico { background: #E8F5EC; border-color: #BFE3CB; color: #1F7A45; }
+.hv-item.is-foto .hv-ico { background: #EEF1F6; border-color: #D5DCE6; color: #3B4A60; }
+.hv-item.is-edicao .hv-ico { background: #FBF3E4; border-color: #EBD9B4; color: #8A5A0B; }
 .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
 .log li { display: flex; justify-content: space-between; gap: 12px; }
 .log li span:last-child { color: var(--muted); text-align: right; white-space: nowrap; }
@@ -1828,6 +1854,72 @@ function navBar(current) {
 // Lista longa (histórico, movimentos): mostra as 3 mais recentes; "Mostrar mais" abre de 10 em 10.
 // Guarda quantas estão abertas em S.abertos[chave], para não fechar quando a tela se atualiza sozinha.
 const RECOLHIDO = 3, PASSO = 10;
+/* Histórico do veículo (Controle): agrupado por dia, cada tipo de movimentação com ícone, cor e etiqueta
+   próprios, e filtro por grupo (Etapas, Fotos, Alterações). O tipo vem do texto da linha (tipoHist). */
+const HIST_TIPOS = {
+  entrada: { rot: 'Entrada', ico: 'car' },
+  etapa: { rot: 'Etapa', ico: 'check' },
+  concluido: { rot: '', ico: 'check' },
+  controle: { rot: 'Ajuste do Controle', ico: 'shield' },
+  foto: { rot: 'Foto', ico: 'camera' },
+  valor: { rot: 'Valor', txt: 'R$' },
+  edicao: { rot: 'Alteração', ico: 'edit' },
+  tipo: { rot: 'Etapas do serviço', ico: 'gear' },
+  outro: { rot: 'Registro', ico: 'file' },
+};
+const HIST_FILTROS = [['todos', 'Todos', null], ['etapas', 'Etapas', ['entrada', 'etapa', 'concluido', 'controle', 'tipo']], ['fotos', 'Fotos', ['foto']], ['alteracoes', 'Alterações', ['edicao', 'valor', 'outro']]];
+function tipoHist(t) {
+  if (/^Entrada do veículo/.test(t)) return 'entrada';
+  if (t === 'Serviço concluído') return 'concluido';
+  if (/^Etapas? ajustadas?|marcada como concluída/.test(t)) return 'controle';
+  if (/ concluída$/.test(t)) return 'etapa';
+  if (/^Foto|^Tipo da foto/.test(t)) return 'foto';
+  if (/^Valor/.test(t)) return 'valor';
+  if (/^Etapas atualizadas|^Etapa renomeada/.test(t)) return 'tipo';
+  if (/^Placa corrigida|^Cliente:|editados$|^Descrição/.test(t)) return 'edicao';
+  return 'outro';
+}
+// Texto mais curto onde a etiqueta já diz o tipo.
+const textoHist = h => h.k === 'controle' && /^Etapas ajustadas pelo Controle \(sem foto\): /.test(h.texto)
+  ? `${h.texto.replace(/^Etapas ajustadas pelo Controle \(sem foto\): /, '')} (sem foto)` : h.texto;
+function historicoVeiculo(at) {
+  const chave = `hist:${at.id}`;
+  const todos = (at.historico || []).slice().reverse().map(h => ({ ...h, k: tipoHist(h.texto) }));
+  const box = el('div', { class: 'hv' });
+  const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const rotDia = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); const dif = Math.round((hoje - d) / 864e5);
+    return dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : `${DIAS_SEMANA[d.getDay()]}, ${fmtData(ts)}`; };
+  const draw = () => {
+    const f = HIST_FILTROS.find(x => x[0] === ((S.histFiltro || {})[at.id] || 'todos')) || HIST_FILTROS[0];
+    const lista = f[2] ? todos.filter(h => f[2].includes(h.k)) : todos;
+    const n = Math.min(lista.length, S.abertos[chave] || 8);
+    const dias = [];
+    for (const h of lista.slice(0, n)) { const r = h.em ? rotDia(h.em) : 'Sem data'; if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(h); }
+    const item = h => { const t = HIST_TIPOS[h.k];
+      return el('li', { class: `hv-item is-${h.k}` },
+        el('span', { class: 'hv-ico', 'aria-hidden': 'true' }, t.ico ? icon(t.ico) : t.txt),
+        el('div', { class: 'hv-main' },
+          t.rot ? el('span', { class: 'hv-tag', text: t.rot }) : null,
+          el('span', { class: 'hv-txt', text: textoHist(h) }),
+          el('span', { class: 'hv-meta', text: [h.em ? hora(h.em) : '', h.porNome].filter(Boolean).join(' · ') }))); };
+    const falta = lista.length - n;
+    preencher(box,
+      el('div', { class: 'card-head' }, el('h2', { text: 'Histórico' }), el('span', { class: 'count', text: String(todos.length) })),
+      todos.length > 3 ? el('div', { class: 'hv-filtros', role: 'group', 'aria-label': 'Filtrar histórico' }, HIST_FILTROS.map(([k, rot, ks]) => {
+        const qtd = ks ? todos.filter(h => ks.includes(h.k)).length : todos.length;
+        return k !== 'todos' && !qtd ? null : el('button', { type: 'button', 'aria-pressed': String(k === f[0]), onclick: () => { S.histFiltro = { ...(S.histFiltro || {}), [at.id]: k }; delete S.abertos[chave]; draw(); } },
+          rot, el('span', { class: 'hv-qtd', text: String(qtd) }));
+      })) : null,
+      lista.length ? dias.map(d => el('section', { class: 'hv-dia' }, el('h3', { text: d.r }), el('ol', {}, d.itens.map(item))))
+        : el('p', { class: 'hint', text: 'Nada registrado ainda.' }),
+      falta > 0 || n > 8 ? el('div', { class: 'actions', style: 'gap:14px' },
+        falta > 0 ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.abertos[chave] = n + 20; draw(); } }, `Mostrar mais (${falta})`) : null,
+        n > 8 ? el('button', { class: 'link-btn', type: 'button', onclick: () => { delete S.abertos[chave]; draw(); } }, 'Mostrar menos') : null) : null);
+  };
+  draw();
+  return el('div', { class: 'card' }, box);
+}
 function listaRecolhivel(chave, itens, desenhar) {
   const ul = el('ul', { class: 'log' });
   const barra = el('div', { class: 'actions', style: 'gap:14px' });
@@ -2717,8 +2809,7 @@ function renderVehicle(id) {
     entrada,
     ctrlCard,
     // Histórico só para o Controle (tem os valores lançados).
-    isCtrl() ? el('div', { class: 'card' }, el('h2', { text: 'Histórico' }),
-      listaRecolhivel(`hist:${at.id}`, at.historico.slice().reverse(), h => el('li', {}, el('span', { text: h.texto }), el('span', { text: [h.porNome, ago(h.em)].filter(Boolean).join(' · ') })))) : null);
+    isCtrl() ? historicoVeiculo(at) : null);
   shell(body, { current: at.concluido ? 'relatorios' : 'inicio' });
 }
 
