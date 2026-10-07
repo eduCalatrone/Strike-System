@@ -25,7 +25,7 @@ async function carregar(c, eu) {
   const limiteRecentes = new Date(Date.now() - RECENTES_MS).toISOString();
   const filtroAts = ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})`
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
-  const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
+  const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
   const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres&ativo=eq.true&order=criado_em,id'),
@@ -61,7 +61,7 @@ async function carregar(c, eu) {
   for (const f of fotos) {
     if (f.apagada_em) { apagadasPorAt.set(f.atendimento_id, (apagadasPorAt.get(f.atendimento_id) || 0) + 1); continue; }
     if (!fotosPorAt.has(f.atendimento_id)) fotosPorAt.set(f.atendimento_id, []);
-    fotosPorAt.get(f.atendimento_id).push({ id: f.id, rotulo: f.rotulo, em: ms(f.criado_em), caminho: f.caminho, miniatura: f.miniatura || null, ...(f.etapa == null ? {} : { etapa: f.etapa }) });
+    fotosPorAt.get(f.atendimento_id).push({ id: f.id, rotulo: f.rotulo, em: ms(f.criado_em), caminho: f.caminho, miniatura: f.miniatura || null, ...(f.etapa == null ? {} : { etapa: f.etapa }), ...(f.opcional ? { opcional: f.opcional } : {}) });
   }
   const atendimentos = todosAts.filter(a => !a.excluido_em);
   const lixeira = todosAts.filter(a => a.excluido_em).sort((a, b) => ms(b.excluido_em) - ms(a.excluido_em));
@@ -84,7 +84,7 @@ async function carregar(c, eu) {
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
-      opcionais: listaOpcionais(a.opcionais),
+      opcionais: listaOpcionais(a.opcionais), opcionaisFeitos: opcFeitos(a.opcionais_feitos, a.opcionais),
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
@@ -110,7 +110,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -133,6 +133,12 @@ function listaOpcionais(v) {
   if (!Array.isArray(v)) return [];
   const out = [];
   for (const x of v.slice(0, 30)) { const n = txt(x, 60); if (n && !out.includes(n)) out.push(n); }
+  return out;
+}
+// Opcional concluído: { nome: data em ms } (só dos opcionais que o atendimento tem).
+function opcFeitos(v, lista) {
+  const nomes = listaOpcionais(lista), out = {};
+  if (v && typeof v === 'object') for (const [k, t] of Object.entries(v)) if (nomes.includes(k) && Number.isFinite(Number(t))) out[k] = Number(t);
   return out;
 }
 function historico(v) {
@@ -266,6 +272,7 @@ async function aplicar(c, op, eu, versoes) {
       if (livresAt) linha.etapas_livres = livresAt;
       // Opcionais: também só quando vieram (site antigo não manda e não apaga).
       if (Array.isArray(it.opcionais)) linha.opcionais = listaOpcionais(it.opcionais);
+      if (Array.isArray(it.opcionais) && it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos(it.opcionaisFeitos, it.opcionais);
       // Valor só o Controle define. O Funcionário não recebe o valor, então não mexe nele.
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
       const atId = id(it.id);
@@ -321,6 +328,7 @@ async function aplicar(c, op, eu, versoes) {
         id: id(it.id), atendimento_id: id(it.atendimentoId, 'atendimentoId'), rotulo: txt(it.rotulo, 40) || 'Outra',
         caminho, miniatura, criado_em: quando(it.em, 'em') || agora(),
         etapa: Number.isInteger(it.etapa) && it.etapa >= 0 && it.etapa < 1000 ? it.etapa : null,
+        opcional: txt(it.opcional, 60) || null, // foto da etapa de um opcional (ex.: carpete instalado)
       });
     }
     case 'fotos:remover':
@@ -331,6 +339,9 @@ async function aplicar(c, op, eu, versoes) {
       const rotulo = txt(op.rotulo, 40); if (!rotulo) throw invalido('rotulo');
       return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}&removida_em=is.null`, { rotulo });
     }
+    // Opcional renomeado em Ajustes ou tirado do veículo (null = vira foto comum).
+    case 'fotos:opcional':
+      return marcar(c, 'sd_fotos', `id=eq.${q(id(op.id))}`, { opcional: txt(op.opcional, 60) || null });
     // Etapas do tipo atualizadas em Ajustes: a foto acompanha a etapa na lista nova (null = virou foto comum).
     case 'fotos:etapa': {
       const etapa = op.etapa == null ? null : Number(op.etapa);

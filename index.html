@@ -281,6 +281,15 @@ textarea { resize: vertical; min-height: 76px; }
 .step-concluir { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: #fff; font: 600 13px/1 var(--body); }
 .step-concluir svg { width: 16px; height: 16px; }
 .step-concluir:disabled { opacity: .6; }
+.step--opc { padding: 7px 0; }
+.step--opc .step-dot { width: 20px; height: 20px; margin: 3px; border-color: #B9A6E0; }
+.step--opc .step-dot svg { width: 11px; height: 11px; }
+.step--opc.is-done .step-dot { background: #6B4FB0; border-color: #6B4FB0; }
+.step--opc.is-current .step-dot { border-color: #6B4FB0; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 8px #6B4FB0; }
+.step--opc .step-name { font-size: 14px; color: #5B3F99; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.step-opc-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; background: #F1ECFA; border: 1px solid #DCD0F0; color: #5B3F99; }
+.step--opc .step-fotos .step-foto { width: 40px; height: 40px; }
+.step--opc .step-concluir { background: #6B4FB0; border-color: #6B4FB0; min-height: 34px; padding: 0 10px; font-size: 12px; }
 .step-fotos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .step-fotos .step-foto { width: 48px; height: 48px; }
 .step-fotos-grandes.is-varias { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
@@ -289,6 +298,8 @@ textarea { resize: vertical; min-height: 76px; }
 .etapas-check { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
 .etapa-check { display: flex; align-items: center; gap: 12px; padding: 12px 14px; font-weight: 500; cursor: pointer; }
 .etapa-check + .etapa-check { border-top: 1px solid var(--line); }
+.etapa-check.is-opc { color: #5B3F99; gap: 10px; }
+.btn--opc { background: #6B4FB0 !important; border-color: #6B4FB0 !important; }
 .etapa-check input { width: 20px; height: 20px; accent-color: var(--ink); flex: none; margin: 0; }
 .etapa-foto { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--soft); border: 1px solid var(--line); }
 .etapa-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1033,7 +1044,7 @@ async function buscarDados({ forcar = false } = {}) {
   FOTO_BASE = d.fotoBase || '';
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
-  const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [] }; });
+  const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
   const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
@@ -1071,8 +1082,9 @@ function diffOps(a, b) {
     const o = fa.get(f.id); if (!o) continue;
     if (o.etapa !== f.etapa) ops.push({ col: 'fotos', acao: 'etapa', id: f.id, etapa: Number.isInteger(f.etapa) ? f.etapa : null });
     if (o.rotulo !== f.rotulo) ops.push({ col: 'fotos', acao: 'rotulo', id: f.id, rotulo: f.rotulo });
+    if ((o.opcional || null) !== (f.opcional || null)) ops.push({ col: 'fotos', acao: 'opcional', id: f.id, opcional: f.opcional || null });
   }
-  lista('fotos', [...fa.values()], fotosDepois.map(f => { const o = fa.get(f.id); return o ? { ...f, etapa: o.etapa, rotulo: o.rotulo } : f; }), 'id', f => atsDepois.has(f.atendimentoId));
+  lista('fotos', [...fa.values()], fotosDepois.map(f => { const o = fa.get(f.id); if (!o) return f; const r = { ...f, etapa: o.etapa, rotulo: o.rotulo }; if (o.opcional) r.opcional = o.opcional; else delete r.opcional; return r; }), 'id', f => atsDepois.has(f.atendimentoId));
   return ops;
 }
 
@@ -1296,13 +1308,28 @@ function passagensDaPlaca(p) {
 const NOME_PENDENTE = 'NOME PENDENTE';
 // Opcionais (ex.: carpete): lista de Ajustes (DB.opcionais) marcada em cada atendimento (at.opcionais, nomes).
 const opcionaisDe = at => Array.isArray(at.opcionais) ? at.opcionais : [];
+// Opcional também é etapa: concluído com foto (at.opcionaisFeitos = { nome: data }), aparece no fim da lista de etapas
+// (pequeno, roxo) e o serviço só termina com as etapas e os opcionais feitos. Pode ser feito a qualquer hora.
+const opcFeitos = at => at.opcionaisFeitos && typeof at.opcionaisFeitos === 'object' ? at.opcionaisFeitos : {};
+const opcPendentes = at => opcionaisDe(at).filter(n => opcFeitos(at)[n] == null);
+const etapasCompletas = at => at.etapas.every((_, i) => etapaFeita(at, i));
+function talvezConcluir(at) {
+  if (at.concluido || !etapasCompletas(at) || opcPendentes(at).length) return;
+  at.concluido = true; at.concluidoEm = Date.now(); registrar(at, 'Serviço concluído');
+}
+function concluirOpcional(at, nome, texto) {
+  at.opcionaisFeitos = { ...opcFeitos(at), [nome]: Date.now() };
+  registrar(at, texto || `Opcional concluído: ${nome}`);
+  talvezConcluir(at);
+}
 // Botões de marcar/desmarcar. Mostra também o que o veículo tem e saiu da lista de Ajustes.
 function chipsOpcionais(marcados, aoTrocar) {
   const nomes = [...(DB.opcionais || []).map(o => o.nome), ...marcados.filter(n => !(DB.opcionais || []).some(o => o.nome === n))];
   return el('div', { class: 'sheet-tags', role: 'group', 'aria-label': 'Opcionais' }, nomes.map(n =>
     el('button', { class: 'sheet-tag', type: 'button', 'aria-pressed': String(marcados.includes(n)), onclick: () => aoTrocar(n, !marcados.includes(n)) }, n)));
 } // atendimento sem nome do cliente (o nome é opcional na entrada)
-const etapaAtual = at => at.concluido ? 'Concluído' : at.etapas[at.etapaIndex];
+// Etapas todas feitas e opcional pendente: a "etapa atual" é o opcional.
+const etapaAtual = at => at.concluido ? 'Concluído' : etapasCompletas(at) && opcPendentes(at).length ? (opcPendentes(at).length === 1 ? opcPendentes(at)[0] : `${opcPendentes(at).length} opcionais`) : at.etapas[at.etapaIndex];
 // Etapa feita: antes da atual ou com data. Etapa nova colocada no meio da lista (Ajustes) fica pendente
 // mesmo com as seguintes já feitas.
 const etapaFeita = (at, i) => at.concluido || i < at.etapaIndex || at.feitas[i] != null;
@@ -1321,11 +1348,13 @@ const liberadas = at => at.etapas.map((_, i) => i).filter(i => etapaLiberada(at,
 // liberadas: só a quantidade que falta, para não juntar todos os nomes.
 function textoEtapa(at) {
   if (at.concluido) return 'Concluído';
+  const pend = opcPendentes(at);
+  if (pend.length && etapasCompletas(at)) return pend.length === 1 ? `Em ${pend[0].toLowerCase()}` : `Faltam ${pend.length} opcionais`;
   const l = liberadas(at);
   if (l.length > 1) { const n = at.etapas.filter((_, i) => !etapaFeita(at, i)).length; return `Faltam ${n} etapas`; }
   return `Em ${at.etapas[l.length ? l[0] : at.etapaIndex].toLowerCase()}`;
 }
-const progresso = at => at.concluido ? 1 : at.etapas.filter((_, i) => etapaFeita(at, i)).length / at.etapas.length;
+const progresso = at => at.concluido ? 1 : (at.etapas.filter((_, i) => etapaFeita(at, i)).length + opcionaisDe(at).length - opcPendentes(at).length) / ((at.etapas.length + opcionaisDe(at).length) || 1);
 function capaDe(at) {
   return at.fotos.find(x => x.rotulo === 'Frente') || at.fotos.find(x => x.rotulo !== 'Placa') || at.fotos[0] || null;
 }
@@ -1342,23 +1371,28 @@ function concluirEtapa(at, idx = at.etapaIndex, texto) {
   if (idx !== at.etapaIndex) return;
   at.etapaIndex++;
   while (at.etapaIndex < at.etapas.length && at.feitas[at.etapaIndex] != null) at.etapaIndex++; // pula as que já estavam feitas
-  if (at.etapaIndex >= at.etapas.length) { at.concluido = true; at.concluidoEm = Date.now(); at.etapaIndex = at.etapas.length - 1; registrar(at, 'Serviço concluído'); }
+  if (at.etapaIndex >= at.etapas.length) { at.etapaIndex = at.etapas.length - 1; talvezConcluir(at); } // com opcional pendente, ainda não termina
 }
 // Controle marca e desmarca quais etapas estão feitas, em qualquer ordem e sem foto. Marcada continua com a data
 // que já tinha (ou agora); desmarcada perde a data (as fotos ficam). Todas marcadas: serviço concluído; alguma
 // desmarcada num concluído: reabre. A atual passa a ser a primeira não marcada.
-function ajustarEtapas(at, marcadas) {
-  const now = Date.now(), feitas = {}, mudou = [];
+function ajustarEtapas(at, marcadas, opcMarcados = new Set(opcionaisDe(at).filter(n => opcFeitos(at)[n] != null))) {
+  const now = Date.now(), feitas = {}, mudou = [], of = {};
   at.etapas.forEach((nome, i) => {
     const era = etapaFeita(at, i), fica = marcadas.has(i);
     if (fica) feitas[i] = at.feitas[i] != null ? at.feitas[i] : (era ? at.criadoEm : now);
     if (fica !== era) mudou.push(`${nome} ${fica ? 'concluída' : 'desmarcada'}`);
   });
+  opcionaisDe(at).forEach(nome => {
+    const era = opcFeitos(at)[nome] != null || !!at.concluido, fica = opcMarcados.has(nome);
+    if (fica) of[nome] = opcFeitos(at)[nome] != null ? opcFeitos(at)[nome] : now;
+    if (fica !== era) mudou.push(`${nome} ${fica ? 'concluído' : 'desmarcado'}`);
+  });
   if (!mudou.length) return false;
   const idx = at.etapas.findIndex((_, i) => !marcadas.has(i));
-  at.feitas = feitas;
-  if (idx < 0) { at.concluido = true; at.concluidoEm = at.concluidoEm || now; at.etapaIndex = at.etapas.length - 1; }
-  else { at.concluido = false; at.concluidoEm = null; at.etapaIndex = idx; }
+  at.feitas = feitas; at.opcionaisFeitos = of;
+  if (idx < 0 && opcionaisDe(at).every(n => opcMarcados.has(n))) { at.concluido = true; at.concluidoEm = at.concluidoEm || now; at.etapaIndex = at.etapas.length - 1; }
+  else { at.concluido = false; at.concluidoEm = null; at.etapaIndex = idx < 0 ? at.etapas.length - 1 : idx; }
   registrar(at, `Etapas ajustadas pelo Controle (sem foto): ${mudou.join(', ')}`);
   if (at.concluido) registrar(at, 'Serviço concluído');
   return true;
@@ -1673,7 +1707,7 @@ function renderFuncionario(fid) {
     return dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : `${DIAS_SEMANA[d.getDay()]}, ${fmtData(ts)}`; };
   const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
   // Filtro do histórico (mesmos grupos do histórico do veículo, mais Estoque e Sistema).
-  const grupo = x => x.at ? ({ entrada: 'etapas', etapa: 'etapas', concluido: 'etapas', controle: 'etapas', tipo: 'etapas', foto: 'fotos' }[tipoHist(x.texto)] || 'alteracoes')
+  const grupo = x => x.at ? ({ entrada: 'etapas', etapa: 'etapas', opcional: 'etapas', concluido: 'etapas', controle: 'etapas', tipo: 'etapas', foto: 'fotos' }[tipoHist(x.texto)] || 'alteracoes')
     : x.tipo === 'entrou' || x.tipo === 'saiu' ? 'sistema' : 'estoque';
   const FILTROS = [['todos', 'Todos'], ['etapas', 'Etapas'], ['fotos', 'Fotos'], ['estoque', 'Estoque'], ['alteracoes', 'Alterações'], ['sistema', 'Entrou e saiu']];
   const filtro = (S.funcFiltro || {})[fid] || 'todos';
@@ -1892,7 +1926,7 @@ const HIST_TIPOS = {
   tipo: { rot: 'Etapas do serviço', ico: 'gear' },
   outro: { rot: 'Registro', ico: 'file' },
 };
-const HIST_FILTROS = [['todos', 'Todos', null], ['etapas', 'Etapas', ['entrada', 'etapa', 'concluido', 'controle', 'tipo']], ['fotos', 'Fotos', ['foto']], ['alteracoes', 'Alterações', ['edicao', 'opcional', 'valor', 'outro']]];
+const HIST_FILTROS = [['todos', 'Todos', null], ['etapas', 'Etapas', ['entrada', 'etapa', 'opcional', 'concluido', 'controle', 'tipo']], ['fotos', 'Fotos', ['foto']], ['alteracoes', 'Alterações', ['edicao', 'valor', 'outro']]];
 function tipoHist(t) {
   if (/^Entrada do veículo/.test(t)) return 'entrada';
   if (t === 'Serviço concluído') return 'concluido';
@@ -2447,7 +2481,7 @@ function renderNew(placaRaw) {
     const at = {
       id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, livres: livresDe(tipo), // etapas livres vêm do tipo (Ajustes)
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
-      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [], opcionais: [...opcSel],
+      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [], opcionais: [...opcSel], opcionaisFeitos: {},
     };
     registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
     if (opcSel.length) registrar(at, `Opcionais na entrada: ${opcSel.join(', ')}`);
@@ -2539,8 +2573,30 @@ function fotosDaEtapa(nome, primeira) {
 // Etapas com as fotos de cada uma (pode ter várias). Equipe: miniaturas embaixo do nome (tocar abre a foto
 // com acoes) e, na etapa feita, um espaço com câmera para mais uma foto. Cliente (fotoGrande): fotos grandes,
 // lado a lado com rolagem quando são várias.
-function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, fotoGrande }) {
-  return el('ol', { class: 'steps' }, at.etapas.map((nome, i) => {
+function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, concluirOpc, fotoGrande }) {
+  // Opcionais: depois das etapas, menores e roxos. Concluir com foto a qualquer hora (concluirOpc).
+  const opcs = opcionaisDe(at).map(nome => {
+    const feito = at.concluido || opcFeitos(at)[nome] != null;
+    const fotos = at.fotos.filter(f => f.opcional === nome), alvo = { opc: nome };
+    const quando = opcFeitos(at)[nome] ? fmt(opcFeitos(at)[nome]) : '';
+    const maisFoto = feito && semFoto ? el('button', { class: 'step-foto is-vazia', type: 'button', 'aria-label': `Adicionar foto: ${nome}`, onclick: () => semFoto(alvo) }, icon('camera')) : null;
+    const galeria = !fotos.length ? null : fotoGrande
+      ? el('div', { class: 'step-fotos-grandes' + (fotos.length > 1 ? ' is-varias' : '') }, fotos.map((foto, k) =>
+        el('button', { class: 'step-foto-grande', type: 'button', 'aria-label': `Ver foto ${k + 1}: ${nome}`, onclick: () => openViewer(foto) },
+          el('img', { src: foto.url, srcset: foto.mini ? `${foto.mini} 480w, ${foto.url} 1600w` : null, sizes: '(max-width: 560px) 70vw, 300px', alt: `Foto: ${nome}`, loading: 'lazy' }))))
+      : el('div', { class: 'step-fotos' }, fotos.map((foto, k) =>
+        el('button', { class: 'step-foto', type: 'button', 'aria-label': `Ver foto ${k + 1}: ${nome}`, onclick: () => openViewer(foto, acoes ? acoes(foto, alvo) : []) },
+          el('img', { src: src(foto), alt: '', loading: 'lazy' }))), maisFoto);
+    let lado = el('span');
+    if (!feito && concluirOpc) { const b = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); b.addEventListener('click', () => concluirOpc(nome, b)); lado = b; }
+    else if (!fotos.length && maisFoto) lado = maisFoto;
+    return el('li', { class: 'step step--opc ' + (feito ? 'is-done' : 'is-current') },
+      el('span', { class: 'step-dot' }, feito ? icon('check') : null),
+      el('span', { class: 'step-main' }, el('span', { class: 'step-name' }, el('span', { class: 'step-opc-tag', text: 'Opcional' }), nome),
+        quando ? el('span', { class: 'step-when', text: quando }) : null, galeria),
+      lado);
+  });
+  return el('ol', { class: 'steps' }, ...at.etapas.map((nome, i) => {
     const cur = etapaLiberada(at, i), done = !cur && etapaFeita(at, i);
     const fotos = at.fotos.filter(f => f.etapa === i);
     const quando = at.feitas[i] ? fmt(at.feitas[i]) : cur ? atual : '';
@@ -2562,9 +2618,10 @@ function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, 
       el('span', { class: 'step-dot' }, done ? icon('check') : null),
       el('span', { class: 'step-main' }, el('span', { class: 'step-name', text: nome }), quando ? el('span', { class: 'step-when', text: quando }) : null, galeria),
       lado);
-  }));
+  }), ...opcs);
 }
 const eFotoDeEtapa = f => Number.isInteger(f.etapa);
+const eFotoDeServico = f => eFotoDeEtapa(f) || !!f.opcional; // etapa ou opcional (não é foto da entrada)
 // Topo do veículo no padrão do card do Início: foto da frente de fundo, modelo, mini placa e cliente;
 // embaixo, serviço, entrada e a descrição completa. Sem foto, fundo escuro. Tocar na foto abre ela grande.
 function topoVeiculo(at, v) {
@@ -2592,9 +2649,12 @@ function renderVehicle(id) {
   const ctrl = isCtrl();
   const redraw = () => renderVehicle(id);
 
-  // Foto de etapa: trocar (qualquer pessoa da equipe) ou remover (Controle). Etapa concluída sem foto: adicionar.
+  // Etapa (número) ou opcional ({ opc: nome }): nome e marca da foto.
+  const nomeAlvo = a => typeof a === 'object' ? a.opc : at.etapas[a];
+  const marcaFoto = a => typeof a === 'object' ? { opcional: a.opc } : { etapa: a };
+  // Foto de etapa ou opcional: trocar (qualquer pessoa da equipe) ou remover (Controle). Concluída sem foto: adicionar.
   const fotoEtapa = async (i, antiga) => {
-    const nome = at.etapas[i];
+    const nome = nomeAlvo(i);
     const file = await pickPhoto(); if (!file) return;
     toast('Enviando foto…');
     S.ocupado = true;
@@ -2606,7 +2666,7 @@ function renderVehicle(id) {
     if (!atual) { toast('Este atendimento não está mais na lista.', true); return; }
     commit(() => {
       if (antiga) atual.fotos = atual.fotos.filter(x => x.id !== antiga.id);
-      atual.fotos.push({ ...m, rotulo: nome, etapa: i, em: Date.now() });
+      atual.fotos.push({ ...m, rotulo: nome, ...marcaFoto(i), em: Date.now() });
       registrar(atual, antiga ? `Foto trocada: ${nome}` : `Foto adicionada: ${nome}`);
     });
     toast('Foto salva.');
@@ -2618,18 +2678,19 @@ function renderVehicle(id) {
     acoes: (foto, i) => [
       { texto: 'Trocar foto', fn: () => fotoEtapa(i, foto) },
       ctrl ? { texto: 'Remover', perigo: true, fn: () => {
-        if (!window.confirm(`Remover a foto da etapa "${at.etapas[i]}"?`)) return;
-        if (commit(() => { at.fotos = at.fotos.filter(x => x.id !== foto.id); registrar(at, `Foto removida: ${at.etapas[i]}`); })) { toast('Foto removida.'); redraw(); }
+        if (!window.confirm(`Remover a foto de "${nomeAlvo(i)}"?`)) return;
+        if (commit(() => { at.fotos = at.fotos.filter(x => x.id !== foto.id); registrar(at, `Foto removida: ${nomeAlvo(i)}`); })) { toast('Foto removida.'); redraw(); }
       } } : null,
     ].filter(Boolean),
     semFoto: i => fotoEtapa(i, null),
     concluir: bloco ? (i, b) => concluirComFoto(i, b) : null,
+    concluirOpc: at.concluido ? null : (nome, b) => concluirComFoto({ opc: nome }, b),
   });
 
   // Concluir etapa: abre a câmera; a foto é obrigatória e aparece para o cliente no andamento.
   // Uma etapa liberada: botão grande. Bloco de etapas livres: botão "Concluir" em cada uma delas.
   const concluirComFoto = async (idx, concluirBtn) => {
-    const nome = at.etapas[idx];
+    const nome = nomeAlvo(idx), opc = typeof idx === 'object';
     const file = await pickPhoto();
     if (!file) { toast('Tire a foto da etapa para concluir.'); return; }
     const arquivos = await fotosDaEtapa(nome, file); // pode juntar mais fotos antes de concluir
@@ -2650,17 +2711,21 @@ function renderVehicle(id) {
     }
     S.ocupado = false;
     const atual = DB.atendimentos.find(a => a.id === at.id);
-    if (!atual || !etapaLiberada(atual, idx) || atual.etapas[idx] !== nome) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
-    commit(() => { const em = Date.now(); ms.forEach(m => atual.fotos.push({ ...m, rotulo: nome, etapa: idx, em })); concluirEtapa(atual, idx); });
-    toast(atual.concluido ? 'Serviço concluído.' : `${nome} concluída.`);
+    const pode = atual && !atual.concluido && (opc ? opcionaisDe(atual).includes(nome) && opcFeitos(atual)[nome] == null : etapaLiberada(atual, idx) && atual.etapas[idx] === nome);
+    if (!pode) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
+    commit(() => { const em = Date.now(); ms.forEach(m => atual.fotos.push({ ...m, rotulo: nome, ...marcaFoto(idx), em })); if (opc) concluirOpcional(atual, nome); else concluirEtapa(atual, idx); });
+    toast(atual.concluido ? 'Serviço concluído.' : `${nome} ${opc ? 'concluído' : 'concluída'}.`);
     if (parts()[1] === id) redraw();
   };
-  const concluirBtn = at.concluido || bloco ? null : el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, icon('camera'), `Concluir: ${at.etapas[at.etapaIndex]}`);
-  if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(at.etapaIndex, concluirBtn));
+  // Botão grande: a etapa atual; com as etapas todas feitas, o primeiro opcional que falta.
+  const alvoGrande = at.concluido || bloco ? null : etapaLiberada(at, at.etapaIndex) ? at.etapaIndex
+    : etapasCompletas(at) && opcPendentes(at).length ? { opc: opcPendentes(at)[0] } : null;
+  const concluirBtn = alvoGrande == null ? null : el('button', { class: 'btn btn--primary btn--lg btn--block' + (typeof alvoGrande === 'object' ? ' btn--opc' : ''), type: 'button' }, icon('camera'), `Concluir: ${nomeAlvo(alvoGrande)}`);
+  if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(alvoGrande, concluirBtn));
 
   const fotosBox = el('div');
   fotosBox.append(photoGrid({
-    items: at.fotos.filter(f => !eFotoDeEtapa(f)),
+    items: at.fotos.filter(f => !eFotoDeServico(f)),
     onAdd: at.concluido && !ctrl ? null : async (rotulo, origem) => {
       const file = await pickPhoto(origem); if (!file) return;
       try {
@@ -2726,27 +2791,37 @@ function renderVehicle(id) {
   if (ctrl) {
     // Etapas: marca ou desmarca qualquer etapa (sem foto, em qualquer ordem) e salva de uma vez.
     const marcas = at.etapas.map((nome, i) => el('input', { type: 'checkbox', checked: etapaFeita(at, i), 'aria-label': nome }));
+    const opcFeitoNaTela = n => !!at.concluido || opcFeitos(at)[n] != null;
+    const marcasOpc = opcionaisDe(at).map(n => el('input', { type: 'checkbox', checked: opcFeitoNaTela(n), 'aria-label': n }));
     const salvarEt = el('button', { class: 'btn btn--block', type: 'button', disabled: true }, 'Salvar etapas');
-    const conferir = () => { salvarEt.disabled = marcas.every((c, i) => c.checked === etapaFeita(at, i)); };
-    marcas.forEach(c => c.addEventListener('change', conferir));
+    const conferir = () => { salvarEt.disabled = marcas.every((c, i) => c.checked === etapaFeita(at, i)) && marcasOpc.every((c, k) => c.checked === opcFeitoNaTela(opcionaisDe(at)[k])); };
+    [...marcas, ...marcasOpc].forEach(c => c.addEventListener('change', conferir));
     salvarEt.addEventListener('click', () => {
       const atual = DB.atendimentos.find(a => a.id === at.id);
-      if (!atual || atual.etapas.length !== marcas.length) { toast('As etapas mudaram em outro aparelho. Confira e faça de novo.', true); return redraw(); }
+      if (!atual || atual.etapas.length !== marcas.length || opcionaisDe(atual).join('|') !== opcionaisDe(at).join('|')) { toast('As etapas mudaram em outro aparelho. Confira e faça de novo.', true); return redraw(); }
       const marcadas = new Set(marcas.map((c, i) => c.checked ? i : -1).filter(i => i >= 0));
+      const opcMarcados = new Set(opcionaisDe(at).filter((n, k) => marcasOpc[k].checked));
       let ok = false;
-      if (commit(() => { ok = ajustarEtapas(atual, marcadas); }) && ok) { toast(atual.concluido ? 'Serviço concluído.' : 'Etapas ajustadas.'); redraw(); }
+      if (commit(() => { ok = ajustarEtapas(atual, marcadas, opcMarcados); }) && ok) { toast(atual.concluido ? 'Serviço concluído.' : 'Etapas ajustadas.'); redraw(); }
     });
     // Opcionais do veículo: tocar marca ou desmarca na hora (fica no histórico).
     const opcCampo = (DB.opcionais || []).length || opcionaisDe(at).length ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Opcionais' }),
       chipsOpcionais(opcionaisDe(at), (n, on) => {
         const atual = DB.atendimentos.find(a => a.id === at.id); if (!atual) return redraw();
+        if (!on && opcFeitos(atual)[n] != null && !window.confirm(`${n} já foi concluído. Tirar do veículo mesmo assim? As fotos dele ficam nas fotos da entrada.`)) return;
         if (commit(() => {
           const l = opcionaisDe(atual).filter(x => x !== n); if (on) l.push(n);
           atual.opcionais = l; registrar(atual, `${on ? 'Opcional adicionado' : 'Opcional removido'}: ${n}`);
+          if (!on) {
+            const of = { ...opcFeitos(atual) }; delete of[n]; atual.opcionaisFeitos = of;
+            for (const f of atual.fotos) if (f.opcional === n) delete f.opcional; // vira foto comum
+            talvezConcluir(atual);
+          } else if (atual.concluido) { atual.concluido = false; atual.concluidoEm = null; registrar(atual, `Serviço reaberto: falta o opcional ${n}`); }
         })) { toast(on ? `${n} adicionado.` : `${n} removido.`); redraw(); }
       })) : null;
     const etapasCampo = el('div', { class: 'field' }, el('span', { class: 'label', text: 'Etapas concluídas (sem foto)' }),
-      el('div', { class: 'etapas-check' }, at.etapas.map((nome, i) => el('label', { class: 'etapa-check' }, marcas[i], el('span', { text: nome })))),
+      el('div', { class: 'etapas-check' }, at.etapas.map((nome, i) => el('label', { class: 'etapa-check' }, marcas[i], el('span', { text: nome }))),
+        opcionaisDe(at).map((nome, k) => el('label', { class: 'etapa-check is-opc' }, marcasOpc[k], el('span', { class: 'step-opc-tag', text: 'Opcional' }), el('span', { text: nome })))),
       salvarEt);
     const excluir = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
       if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele fica 48 horas na lixeira (Ajustes > Lixeira) e pode ser restaurado nesse tempo.`)) return;
@@ -2847,7 +2922,7 @@ function renderVehicle(id) {
       el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
       steps, concluirBtn),
     valorCard,
-    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeEtapa(f)).length}` })),
+    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeServico(f)).length}` })),
       at.fotosApagadas ? el('p', { class: 'hint', text: `${at.fotosApagadas} ${at.fotosApagadas === 1 ? 'foto foi apagada' : 'fotos foram apagadas'} pela limpeza automática (serviço concluído há mais de ${DB.ajustes.limpezaDias} dias).` }) : null,
       fotosBox),
     entrada,
@@ -3154,6 +3229,8 @@ function renderSettings() {
               const x = DB.opcionais.find(y => y.id === o.id); if (x) x.nome = nome;
               for (const at of DB.atendimentos.filter(a => !a.concluido && opcionaisDe(a).includes(antigo))) {
                 at.opcionais = opcionaisDe(at).map(n => n === antigo ? nome : n);
+                if (opcFeitos(at)[antigo] != null) { const of = { ...opcFeitos(at), [nome]: opcFeitos(at)[antigo] }; delete of[antigo]; at.opcionaisFeitos = of; }
+                for (const f of at.fotos) if (f.opcional === antigo) { f.opcional = nome; if (f.rotulo === antigo) f.rotulo = nome; }
                 registrar(at, `Opcional renomeado: ${antigo} para ${nome}`);
               }
             })) toast('Opcional renomeado.');
@@ -3809,7 +3886,7 @@ async function carregarCliente(placa, box) {
   const desenhar = () => {
   const pct = Math.round(progresso(at) * 100);
   // Duas abas: Andamento (etapas e fotos da entrada) e Observações (danos, objetos pessoais e fotos de Danos da entrada).
-  const fotosDanos = at.fotos.filter(f => !eFotoDeEtapa(f) && f.rotulo === 'Danos');
+  const fotosDanos = at.fotos.filter(f => !eFotoDeServico(f) && f.rotulo === 'Danos');
   const nAvarias = fotosDanos.length + (at.danos ? 1 : 0) + (at.objetos ? 1 : 0);
   const aba = S.clienteAba === 'avarias' ? 'avarias' : 'andamento';
   const trocar = a => { S.clienteAba = a; desenhar(); };
@@ -3821,7 +3898,7 @@ async function carregarCliente(placa, box) {
       fotosDanos.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos' }), photoGrid({ items: fotosDanos })) : null]
     : [el('div', { class: 'card' }, el('h2', { text: 'Andamento' }),
         listaEtapas(at, { fmt: fmtData, src: f => f.mini || f.url, atual: 'Em andamento', fotoGrande: true })),
-      (() => { const entrada = at.fotos.filter(f => !eFotoDeEtapa(f) && f.rotulo !== 'Danos');
+      (() => { const entrada = at.fotos.filter(f => !eFotoDeServico(f) && f.rotulo !== 'Danos');
         return entrada.length ? el('div', { class: 'card' }, el('h2', { text: 'Fotos da entrada' }), photoGrid({ items: entrada })) : null; })()];
   preencher(box, 
     el('div', { class: 'veh-head' },
@@ -3829,7 +3906,7 @@ async function carregarCliente(placa, box) {
       el('span', { class: 'veh-sub', text: [at.descricao, at.tipoNome].filter(Boolean).join(' · ') })),
     el('div', { class: 'status-big' },
       el('span', { class: 'k', text: at.concluido ? 'SERVIÇO CONCLUÍDO' : 'ETAPA ATUAL' }),
-      el('span', { class: 'v', text: at.concluido ? 'Pronto' : at.etapas[at.etapaIndex] }),
+      el('span', { class: 'v', text: at.concluido ? 'Pronto' : etapaAtual(at) }),
       el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` }))),
     el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Informações do veículo', style: 'display:flex;width:100%' },
       el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-pressed': String(aba === 'andamento'), 'aria-selected': String(aba === 'andamento'), onclick: () => trocar('andamento') }, 'Andamento'),
