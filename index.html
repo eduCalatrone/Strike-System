@@ -350,6 +350,7 @@ textarea { resize: vertical; min-height: 76px; }
 .hv { display: grid; gap: 12px; }
 .hv-filtros { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 0 2px; }
 .hv-filtros::-webkit-scrollbar { display: none; }
+.hv-filtros.quebra { flex-wrap: wrap; overflow: visible; }
 .hv-filtros button { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font: 600 13px var(--body); }
 .hv-filtros button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 .hv-qtd { font-size: 11px; opacity: .65; font-variant-numeric: tabular-nums; }
@@ -373,9 +374,16 @@ textarea { resize: vertical; min-height: 76px; }
 .hv-item.is-foto .hv-ico { background: #EEF1F6; border-color: #D5DCE6; color: #3B4A60; }
 .hv-item.is-opcional .hv-ico { background: #F1ECFA; border-color: #DCD0F0; color: #5B3F99; }
 .hv-item.is-edicao .hv-ico { background: #FBF3E4; border-color: #EBD9B4; color: #8A5A0B; }
-.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
-.log li { display: flex; justify-content: space-between; gap: 12px; }
-.log li span:last-child { color: var(--muted); text-align: right; white-space: nowrap; }
+.hv-obs { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.hv-mov { grid-template-columns: 32px 1fr auto; }
+.hv-mov.is-entrada .hv-ico { background: #E8F5EC; border-color: #BFE3CB; color: #1F7A45; font-size: 17px; }
+.hv-mov.is-saida .hv-ico { background: #FBF3E4; border-color: #EBD9B4; color: #8A5A0B; font-size: 17px; }
+.hv-mov.is-ajuste .hv-ico { background: #fff; border: 2px dashed var(--ink-2); color: var(--ink); }
+.mov-qtd { display: grid; gap: 1px; align-content: start; text-align: right; }
+.mov-qtd b { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hv-mov.is-entrada .mov-qtd b { color: #1F7A45; }
+.hv-mov.is-saida .mov-qtd b { color: #8A5A0B; }
+.mov-qtd small { font-size: 11.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ---------- Estoque ---------- */
 .stock { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -2077,9 +2085,6 @@ function navBar(current) {
     : [inicio, agenda, ler, estoque];
   return el('nav', { class: 'nav', 'aria-label': 'Menu' }, el('div', { class: 'nav-in' }, items));
 }
-// Lista longa (histórico, movimentos): mostra as 3 mais recentes; "Mostrar mais" abre de 10 em 10.
-// Guarda quantas estão abertas em S.abertos[chave], para não fechar quando a tela se atualiza sozinha.
-const RECOLHIDO = 3, PASSO = 10;
 /* Histórico do veículo (Controle): agrupado por dia, cada tipo de movimentação com ícone, cor e etiqueta
    próprios, e filtro por grupo (Etapas, Fotos, Alterações). O tipo vem do texto da linha (tipoHist). */
 const HIST_TIPOS = {
@@ -2147,23 +2152,6 @@ function historicoVeiculo(at) {
   };
   draw();
   return el('div', { class: 'card' }, box);
-}
-function listaRecolhivel(chave, itens, desenhar) {
-  const ul = el('ul', { class: 'log' });
-  const barra = el('div', { class: 'actions', style: 'gap:14px' });
-  const draw = () => {
-    const n = Math.min(itens.length, S.abertos[chave] || RECOLHIDO);
-    preencher(ul, ...itens.slice(0, n).map(desenhar));
-    const falta = itens.length - n;
-    preencher(barra, ...[
-      falta > 0 ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.abertos[chave] = n + PASSO; draw(); } },
-        `Mostrar mais (${falta})`) : null,
-      n > RECOLHIDO ? el('button', { class: 'link-btn', type: 'button', onclick: () => { delete S.abertos[chave]; draw(); } }, 'Mostrar menos') : null,
-    ].filter(Boolean));
-    barra.hidden = !barra.childElementCount;
-  };
-  draw();
-  return el('div', { class: 'stack', style: 'gap:6px' }, ul, barra);
 }
 const backLink = (href, label) => el('a', { class: 'back', href }, icon('back'), label);
 
@@ -3154,7 +3142,11 @@ function renderStock() {
       ctrl ? el('button', { class: 'btn grow btn--primary', type: 'button', 'aria-expanded': open === 'entrada', onclick: () => toggle('entrada') }, 'Entrada') : null);
     const ctrlLinks = ctrl ? el('div', { class: 'actions', style: 'gap:14px' },
       el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('ajuste') }, 'Contagem'),
-      el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('minimo') }, 'Estoque mínimo')) : null;
+      el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('minimo') }, 'Estoque mínimo'),
+      DB.estoque.movimentos.some(m => m.itemId === it.id) ? el('button', { class: 'link-btn', type: 'button', onclick: () => {
+        S.estFiltro = { tipo: 'todos', item: it.id }; delete S.abertos.movimentos; renderStock();
+        const c = document.getElementById('movimentacoes'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } }, 'Histórico') : null) : null;
     return el('li', { class: 'item' + (sit.k === 'low' ? ' is-low' : sit.k !== 'ok' ? ' is-out' : '') },
       el('div', { class: 'item-top' },
         el('div', { style: 'display:grid;gap:4px' },
@@ -3166,15 +3158,6 @@ function renderStock() {
       sit.k === 'neg' && ctrl ? el('span', { class: 'item-last', style: 'color:var(--danger)', text: 'Retiraram mais do que entrou. Falta registrar uma entrada ou fazer contagem.' }) : null,
       actions, ctrlLinks, form);
   });
-
-  const movs = DB.estoque.movimentos.filter(m => ctrl || m.porId === (u && u.id)).slice().reverse();
-  const tipoTxt = { entrada: 'Entrada', saida: 'Retirada', ajuste: 'Contagem' };
-  const movList = movs.length ? listaRecolhivel('movimentos', movs, m => {
-    const it = itens.find(x => x.id === m.itemId);
-    const sinal = m.delta > 0 ? '+' : '−';
-    return el('li', {}, el('span', { text: `${tipoTxt[m.tipo]} ${sinal}${fmtQ(Math.abs(m.delta))} ${it ? it.unidade : ''} ${it ? it.nome : '(removido)'}${m.obs && m.tipo !== 'ajuste' ? ` (${m.obs})` : ''}` }),
-      el('span', { text: `${ctrl ? m.porNome + ' · ' : ''}${fmtDataHora(m.em)}` }));
-  }) : el('p', { class: 'hint', text: ctrl ? 'Nenhum movimento ainda.' : 'Você ainda não registrou retiradas.' });
 
   let novo = null;
   if (ctrl) {
@@ -3194,9 +3177,71 @@ function renderStock() {
     el('div', { class: 'stack' },
       el('div', { class: 'page-head' }, el('h1', { text: 'Estoque' }), alertas.length ? el('span', { class: 'tag tag--warn', text: `${alertas.length} ${alertas.length === 1 ? 'aviso' : 'avisos'}` }) : null),
       itens.length ? el('ul', { class: 'stock' }, cards) : el('p', { class: 'empty', text: 'Nenhum material cadastrado.' })),
-    el('div', { class: 'card' }, el('h2', { text: ctrl ? 'Movimentos' : 'Suas retiradas' }), movList),
+    historicoEstoque(ctrl, u),
     novo);
   shell(body, { current: 'estoque' });
+}
+
+/* Movimentações do estoque: linha do tempo por dia, no mesmo jeito do histórico do veículo.
+   Cada linha: tipo (Entrada verde, Retirada laranja, Contagem tracejada), material, observação, hora e quem,
+   e à direita a quantidade e o saldo que ficou depois (soma dos movimentos até ali, de todos).
+   Controle filtra por tipo e por material; Funcionário vê só as próprias retiradas. */
+const MOV_TIPOS = { entrada: { rot: 'Entrada', txt: '+' }, saida: { rot: 'Retirada', txt: '−' }, ajuste: { rot: 'Contagem', ico: 'check' } };
+const MOV_FILTROS = [['todos', 'Todos'], ['entrada', 'Entradas'], ['saida', 'Retiradas'], ['ajuste', 'Contagens']];
+function historicoEstoque(ctrl, u) {
+  const chave = 'movimentos', itens = DB.estoque.itens;
+  const ordem = DB.estoque.movimentos.slice().sort((a, b) => (a.em || 0) - (b.em || 0));
+  const ficou = new Map(), acum = {};
+  for (const m of ordem) { acum[m.itemId] = round2((acum[m.itemId] || 0) + m.delta); ficou.set(m, acum[m.itemId]); }
+  const meus = ordem.filter(m => ctrl || m.porId === (u && u.id)).reverse();
+  const box = el('div', { class: 'hv' });
+  const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const rotDia = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); const dif = Math.round((hoje - d) / 864e5);
+    return dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : `${DIAS_SEMANA[d.getDay()]}, ${fmtData(ts)}`; };
+  const draw = () => {
+    const f = S.estFiltro || {};
+    const tipo = ctrl && MOV_FILTROS.some(x => x[0] === f.tipo) ? f.tipo : 'todos';
+    const doItem = ctrl && f.item && meus.some(m => m.itemId === f.item) ? f.item : '';
+    const base = doItem ? meus.filter(m => m.itemId === doItem) : meus;
+    const lista = tipo === 'todos' ? base : base.filter(m => m.tipo === tipo);
+    const n = Math.min(lista.length, S.abertos[chave] || 8);
+    const dias = [];
+    for (const m of lista.slice(0, n)) { const r = rotDia(m.em); if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(m); }
+    const item = m => {
+      const t = MOV_TIPOS[m.tipo] || MOV_TIPOS.ajuste, it = itens.find(x => x.id === m.itemId), un = it ? it.unidade : '';
+      const obs = m.obs && !(m.tipo === 'ajuste' && m.obs === 'Contagem') ? m.obs : '';
+      return el('li', { class: `hv-item hv-mov is-${m.tipo}` },
+        el('span', { class: 'hv-ico', 'aria-hidden': 'true' }, t.ico ? icon(t.ico) : t.txt),
+        el('div', { class: 'hv-main' },
+          el('span', { class: 'hv-tag', text: t.rot }),
+          el('span', { class: 'hv-txt', text: it ? it.nome : '(material removido)' }),
+          obs ? el('span', { class: 'hv-obs', text: obs }) : null,
+          el('span', { class: 'hv-meta', text: [hora(m.em), ctrl ? (m.porId === (u && u.id) ? 'Você' : m.porNome) : ''].filter(Boolean).join(' · ') })),
+        el('div', { class: 'mov-qtd' },
+          el('b', { text: `${m.delta > 0 ? '+' : '−'}${fmtQ(Math.abs(m.delta))} ${un}`.trim() }),
+          el('small', { text: `ficou ${fmtQ(ficou.get(m))}` })));
+    };
+    const falta = lista.length - n;
+    const comMov = itens.filter(it => meus.some(m => m.itemId === it.id));
+    preencher(box,
+      el('div', { class: 'card-head' }, el('h2', { text: ctrl ? 'Movimentações' : 'Suas retiradas' }), meus.length ? el('span', { class: 'count', text: String(meus.length) }) : null),
+      ctrl && comMov.length > 1 ? el('select', { 'aria-label': 'Material', onchange: e => { S.estFiltro = { ...f, item: e.target.value }; delete S.abertos[chave]; draw(); } },
+        el('option', { value: '', selected: !doItem }, 'Todos os materiais'),
+        comMov.map(it => el('option', { value: it.id, selected: it.id === doItem }, it.nome))) : null,
+      ctrl && meus.length > 3 ? el('div', { class: 'hv-filtros quebra', role: 'group', 'aria-label': 'Filtrar movimentações' }, MOV_FILTROS.map(([k, rot]) => {
+        const qtd = k === 'todos' ? base.length : base.filter(m => m.tipo === k).length;
+        return k !== 'todos' && !qtd && k !== tipo ? null : el('button', { type: 'button', 'aria-pressed': String(k === tipo), onclick: () => { S.estFiltro = { ...f, tipo: k }; delete S.abertos[chave]; draw(); } },
+          rot, el('span', { class: 'hv-qtd', text: String(qtd) }));
+      })) : null,
+      lista.length ? dias.map(d => el('section', { class: 'hv-dia' }, el('h3', { text: d.r }), el('ol', {}, d.itens.map(item))))
+        : el('p', { class: 'hint', text: !meus.length ? (ctrl ? 'Nenhuma movimentação ainda.' : 'Você ainda não registrou retiradas.') : 'Nenhuma movimentação com esse filtro.' }),
+      falta > 0 || n > 8 ? el('div', { class: 'actions', style: 'gap:14px' },
+        falta > 0 ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.abertos[chave] = n + 20; draw(); } }, `Mostrar mais (${falta})`) : null,
+        n > 8 ? el('button', { class: 'link-btn', type: 'button', onclick: () => { delete S.abertos[chave]; draw(); } }, 'Mostrar menos') : null) : null);
+  };
+  draw();
+  return el('div', { class: 'card', id: 'movimentacoes' }, box);
 }
 
 /* =====================================================================
