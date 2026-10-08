@@ -731,10 +731,46 @@ body::before {
 main { padding-bottom: calc(var(--nav-h) + 44px + env(safe-area-inset-bottom, 0px)); }
 main.no-nav { padding-bottom: 48px; }
 .toast { bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom, 0px)); }
+
+/* ---------- Fluidez: animações leves (só transform e opacity, que o celular desenha sem esforço) ---------- */
+:root { --suave: cubic-bezier(.2, .8, .2, 1); }
+/* Tela de carregamento: logo, barrinha correndo e o texto. Aparece com um pequeno atraso,
+   então quem abre rápido nem chega a ver piscar. */
+.carregar { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 32px 16px; text-align: center;
+  animation: aparecer .35s var(--suave) .12s both; }
+.carregar .wordmark-txt { height: 22px; }
+.carregar-barra { width: 148px; height: 3px; border-radius: 3px; background: rgba(18, 18, 18, .1); overflow: hidden; position: relative; }
+.carregar-barra::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: 3px; background: var(--ink);
+  animation: correr 1.1s var(--suave) infinite; }
+.carregar .hint { font-size: 12.5px; letter-spacing: .02em; }
+@keyframes correr { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes subir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* Troca de tela: o conteúdo entra subindo de leve (só quando muda de tela, não nas atualizações automáticas). */
+main.entra { animation: subir .26s var(--suave) both; }
+/* Toque: botões, cartões e linhas afundam um pouco ao pressionar. */
+.btn, .car, .r, .top-ico, .nav a .ico, .nav a .pill, .link-btn, .hv-filtros button, .sheet-tag { transition: transform .12s var(--suave), background-color .15s, opacity .15s; }
+.btn:not(:disabled):active, .top-ico:active, .hv-filtros button:active, .sheet-tag:active { transform: scale(.96); }
+.car:active, .r:active { transform: scale(.985); }
+.nav a:active .ico, .nav a:active .pill { transform: scale(.9); }
+/* Janelas de baixo (sheet) sobem; o fundo escurece aos poucos. */
+dialog.sheet[open] { animation: folha .28s var(--suave); }
+dialog.sheet[open]::backdrop { animation: aparecer .2s ease-out; }
+@keyframes folha { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+/* Aviso (toast) entra subindo. */
+.toast:not([hidden]) { animation: aviso .24s var(--suave); }
+@keyframes aviso { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translateX(-50%); } }
+/* Foto que demorou a chegar aparece suave, em vez de "estourar" na tela. */
+img.chegando { animation: aparecer .3s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .carregar, main.entra, dialog.sheet[open], dialog.sheet[open]::backdrop, .toast:not([hidden]), img.chegando { animation: none; }
+  .carregar-barra::after { animation-duration: 2.4s; }
+  .btn, .car, .r, .top-ico, .nav a .ico, .nav a .pill, .link-btn, .hv-filtros button, .sheet-tag { transition: none; }
+}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div class="carregar" role="status"><img src="/logo-letras.png" alt="Strike Details" class="wordmark-txt"><span class="carregar-barra" aria-hidden="true"></span><p class="hint">Carregando…</p></div></div>
 <input id="file-cam" type="file" accept="image/*" capture="environment" hidden>
 <input id="file-photo" type="file" accept="image/*" hidden>
 <input id="file-plate" type="file" accept="image/*" hidden>
@@ -1207,8 +1243,9 @@ setInterval(() => atualizarSeVelho(), 60e3);
 const fotoId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
 const fotoSrc = (f, mini = false) => f && f.caminho && FOTO_BASE ? FOTO_BASE + (mini && f.miniatura ? f.miniatura : f.caminho) : '';
 function photoImg(f, alt, mini = true) {
-  const src = fotoSrc(f, mini);
-  return el('img', { alt: alt || '', decoding: 'async', loading: 'lazy', src: src || null });
+  const src = fotoSrc(f, mini), t0 = Date.now();
+  // Foto que já estava guardada no aparelho aparece na hora; só a que demorou entra com fade.
+  return el('img', { alt: alt || '', decoding: 'async', loading: 'lazy', src: src || null, onload: e => { if (Date.now() - t0 > 150) e.currentTarget.classList.add('chegando'); } });
 }
 // Envia a foto (e uma miniatura para as listas). Devolve { id, caminho, miniatura }.
 async function enviarFoto(blob) {
@@ -1966,14 +2003,21 @@ function route(opts) {
   }
 }
 
+// Tela de carregamento (a mesma que já vem no HTML). Se ela já está na tela, só troca o texto, sem piscar.
+function telaCarregando(texto) {
+  const atual = $('app').querySelector(':scope > .carregar');
+  if (atual) { atual.querySelector('.hint').textContent = texto; return; }
+  preencher($('app'), el('div', { class: 'carregar', role: 'status' },
+    el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' }),
+    el('span', { class: 'carregar-barra', 'aria-hidden': 'true' }),
+    el('p', { class: 'hint', text: texto })));
+}
 // Primeira abertura: busca os dados no banco antes de mostrar a tela.
 let abrindo = null;
 function abrirComDados() {
   if (abrindo) return abrindo;
   document.body.classList.add('no-nav');
-  preencher($('app'), el('div', { class: 'login' }, el('div', { class: 'login-box' },
-    el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
-    el('p', { class: 'hint', text: 'Carregando os dados…' }))));
+  telaCarregando('Carregando os dados…');
   abrindo = buscarDados({ forcar: true })
     .then(() => { abrindo = null; route(); })
     .catch(e => { abrindo = null; if (e && e.code === 'sessao') return; renderFalha(e); });
@@ -2057,6 +2101,7 @@ async function recarregar(e) {
 }
 
 // Monta a tela: barra do topo, conteúdo e (para a equipe) navegação inferior.
+let ultimaTela = null;
 function shell(body, { nav = true, current = '' } = {}) {
   const u = me();
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
@@ -2068,7 +2113,9 @@ function shell(body, { nav = true, current = '' } = {}) {
       appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
       u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
       el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Sair', title: 'Sair', onclick: sair }, icon('logout'))) : null));
-  const main = el('main', { class: nav ? '' : 'no-nav' }, body);
+  // Entra com animação só quando trocou de tela (as atualizações automáticas redesenham sem mexer).
+  const tela = location.hash || '#/', trocou = tela !== ultimaTela; ultimaTela = tela;
+  const main = el('main', { class: [nav ? '' : 'no-nav', trocou ? 'entra' : ''].filter(Boolean).join(' ') }, body);
   const kids = [top, main];
   if (nav && u) kids.push(navBar(current));
   document.body.classList.toggle('no-nav', !(nav && u));

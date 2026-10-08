@@ -16,6 +16,7 @@ Sistema interno da **Strike Details Estética Automotiva** (matriz em Jaru/RO) p
 - O nome é sempre **"Strike Details"** (ou "Strike Details Estética Automotiva"). Nunca "Strike" sozinho: é outra empresa.
 - Nunca usar travessão longo (em dash) em textos da interface ou documentos.
 - Visual: branco, cinza e preto. Fontes: Archivo Black (marca), Barlow Condensed (títulos e placas), Inter (texto).
+- **Animações leves** (bloco "Fluidez" no fim do CSS; só `transform` e `opacity`, desligadas com "reduzir movimento"): tela de carregamento `.carregar` (logo, barrinha correndo e texto; já vem no HTML do `#app` e `telaCarregando()` só troca o texto), troca de tela com o conteúdo subindo de leve (`main.entra`, só quando o hash muda, nunca nas atualizações automáticas; controlado por `ultimaTela` em `shell`), botões e cartões afundam ao tocar, janelas de baixo (`dialog.sheet`) sobem, o aviso (toast) entra subindo e foto que demorou mais de 150 ms aparece com fade (`img.chegando`, em `photoImg`). Nada de bibliotecas.
 - Interface pensada para celular primeiro (os funcionários usam Android e iPhone). Por isso é site, não app de loja, mas o acesso interno pode ser instalado na tela inicial (PWA): cartão "Usar como app" no login e no Início (este com "Agora não", salvo em `localStorage` `sd:instalar:fechado`). Android usa o pedido de instalação do navegador; iPhone mostra o passo a passo do Safari. O manifest só é ligado fora de `/cliente`, então a página do cliente continua como site comum.
 
 ## Arquivos
