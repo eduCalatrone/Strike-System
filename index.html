@@ -745,9 +745,18 @@ main.no-nav { padding-bottom: 48px; }
 .carregar .hint { font-size: 12.5px; letter-spacing: .02em; }
 @keyframes correr { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
-@keyframes subir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 /* Troca de tela: o conteúdo entra subindo de leve (só quando muda de tela, não nas atualizações automáticas). */
-main.entra { animation: subir .26s var(--suave) both; }
+main.entra { animation: entrar .2s ease-out both; }
+@keyframes entrar { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+/* Foto aberta: aviso embaixo enquanto a versão em alta qualidade baixa. Só aparece se demorar
+   (atraso de 150 ms), então a foto que já está no aparelho não pisca o aviso. */
+.viewer-carga { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-radius: 999px; background: rgba(0, 0, 0, .62); color: rgba(255, 255, 255, .88); font-size: 12.5px; font-weight: 500;
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .2s ease-out;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.viewer-carga.is-on { opacity: 1; transition-delay: .15s; }
+.viewer-carga .carregar-barra { width: 56px; background: rgba(255, 255, 255, .22); }
+.viewer-carga .carregar-barra::after { background: #fff; }
 /* Toque: botões, cartões e linhas afundam um pouco ao pressionar. */
 .btn, .car, .r, .top-ico, .nav a .ico, .nav a .pill, .link-btn, .hv-filtros button, .sheet-tag { transition: transform .12s var(--suave), background-color .15s, opacity .15s; }
 .btn:not(:disabled):active, .top-ico:active, .hv-filtros button:active, .sheet-tag:active { transform: scale(.96); }
@@ -777,7 +786,7 @@ img.chegando { animation: aparecer .3s ease-out; }
 <dialog id="viewer" class="viewer" aria-label="Foto">
   <div class="viewer-in">
     <div class="viewer-bar"><span id="viewer-cap"></span><button id="viewer-close" type="button">Fechar</button></div>
-    <div class="viewer-img"><img id="viewer-img" alt=""></div>
+    <div class="viewer-img"><img id="viewer-img" alt=""><div id="viewer-carga" class="viewer-carga" role="status"><span class="carregar-barra" aria-hidden="true"></span><span>Carregando em alta qualidade</span></div></div>
     <div id="viewer-acoes" class="viewer-acoes"></div>
   </div>
 </dialog>
@@ -2586,11 +2595,17 @@ async function openViewer(f, acoes = []) {
   const antiga = $('viewer-img');
   const img = el('img', { id: 'viewer-img', alt: f.rotulo || '', src: mini || url });
   antiga.replaceWith(img);
+  // Aviso "Carregando em alta qualidade" embaixo da foto até a foto inteira chegar.
+  const carga = $('viewer-carga');
+  const pronto = () => { if (vez === viewerVez) carga.classList.remove('is-on'); };
+  carga.classList.add('is-on');
   if (mini && mini !== url) {
     const cheia = new Image();
-    cheia.onload = () => { if (vez === viewerVez && $('viewer-img') === img) img.src = url; };
+    cheia.onload = () => { if (vez === viewerVez && $('viewer-img') === img) img.src = url; pronto(); };
+    cheia.onerror = pronto;
     cheia.src = url;
-  }
+  } else if (img.complete) pronto();
+  else { img.addEventListener('load', pronto, { once: true }); img.addEventListener('error', pronto, { once: true }); }
   $('viewer-cap').textContent = f.rotulo;
   preencher($('viewer-acoes'), ...acoes.map(a => el('button', { class: 'btn' + (a.perigo ? ' btn--danger' : ''), type: 'button',
     onclick: () => { if (!a.manter) fecharViewer(); a.fn(); } }, a.texto)));
