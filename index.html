@@ -419,6 +419,12 @@ textarea { resize: vertical; min-height: 76px; }
 .r-sub { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .r-side { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
 .r-plate { font: 700 18px var(--cond); letter-spacing: .08em; }
+/* Histórico de serviços agrupado por dia */
+.hist-dias { display: grid; gap: 18px; }
+.hist-dia { display: grid; gap: 8px; }
+.hist-dia-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px; }
+.hist-dia-head h3 { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hist-dia-head span { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .etapas li { display: flex; align-items: center; gap: 6px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 10px; }
@@ -3249,17 +3255,31 @@ function historicoEstoque(ctrl, u) {
    ===================================================================== */
 function renderHistory() {
   const all = DB.atendimentos.filter(a => a.concluido).sort((a, b) => (b.concluidoEm || 0) - (a.concluidoEm || 0));
-  const list = el('ul', { class: 'rows' });
+  const list = el('div', { class: 'hist-dias' });
   const empty = el('p', { class: 'empty' });
+  // Agrupado pelo dia da conclusão (Hoje, Ontem, data), como as movimentações do estoque.
+  const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const rotDia = ts => { if (!ts) return 'Sem data'; const d = new Date(ts); d.setHours(0, 0, 0, 0); const dif = Math.round((hoje - d) / 864e5);
+    return dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : `${DIAS_SEMANA[d.getDay()]}, ${fmtData(ts)}`; };
   const draw = () => {
     const q = S.histQuery.trim().toLowerCase(), q2 = norm(q);
     const items = !q ? all : all.filter(a => (q2 && a.placa.includes(q2)) || [a.clienteNome, (DB.veiculos[a.placa] || {}).descricao, a.tipoNome].join(' ').toLowerCase().includes(q));
-    preencher(list, ...items.map(a => {
+    const dias = [];
+    for (const a of items) { const r = rotDia(a.concluidoEm); if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(a); }
+    const linha = a => {
       const capa = capaDe(a), v = DB.veiculos[a.placa] || {};
       return el('li', {}, el('a', { class: 'r', href: `#/veiculo/${esc(a.id)}`, style: 'color:inherit;text-decoration:none' },
         el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
         el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(a.placa) }), el('span', { class: 'r-sub', text: [a.clienteNome, v.descricao, a.tipoNome].filter(Boolean).join(' · ') })),
-        el('span', { class: 'r-side' }, el('div', { text: a.concluidoEm ? fmtData(a.concluidoEm) : '' }), a.valor != null ? el('div', { style: 'color:var(--ink);font-weight:600', text: fmtBRL(a.valor) }) : null)));
+        el('span', { class: 'r-side' }, el('div', { text: a.concluidoEm ? hora(a.concluidoEm) : '' }), a.valor != null ? el('div', { style: 'color:var(--ink);font-weight:600', text: fmtBRL(a.valor) }) : null)));
+    };
+    preencher(list, ...dias.map(d => {
+      const total = d.itens.reduce((s, a) => s + (a.valor != null ? Number(a.valor) || 0 : 0), 0);
+      const resumo = [d.itens.length === 1 ? '1 serviço' : `${d.itens.length} serviços`, total ? fmtBRL(total) : ''].filter(Boolean).join(' · ');
+      return el('section', { class: 'hist-dia' },
+        el('div', { class: 'hist-dia-head' }, el('h3', { text: d.r }), el('span', { text: resumo })),
+        el('ul', { class: 'rows' }, d.itens.map(linha)));
     }));
     list.hidden = !items.length; empty.hidden = !!items.length;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum serviço concluído ainda.';
