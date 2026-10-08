@@ -1675,6 +1675,45 @@ function janelaNotificacoes() {
     isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes/notificacoes', style: 'justify-self:start', onclick: () => d.close() }, 'Configurar notificações da equipe') : null));
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
+/* Lembrete de notificações: toda vez que a pessoa abre o sistema (uma vez por abertura, por pessoa),
+   se este aparelho não recebe avisos, aparece a janela pedindo para ativar. "Agora não" só fecha:
+   na próxima abertura pergunta de novo. Não aparece no Adicionar nem na entrada de veículo, nem por
+   cima de outra janela (tenta de novo na próxima troca de tela). */
+let notifLembradaPara = null;
+async function lembrarNotificacoes() {
+  const u = me();
+  if (MODO_CLIENTE || !u || notifLembradaPara === u.id || document.querySelector('dialog[open]')) return;
+  const [r] = parts();
+  if (r === 'placa' || r === 'novo') return;
+  const sit = await situacaoNotif();
+  if (sit === 'ativo' || sit === 'sem') { notifLembradaPara = u.id; return; }
+  if ((me() || {}).id !== u.id || document.querySelector('dialog[open]')) return; // mudou algo enquanto conferia
+  notifLembradaPara = u.id;
+  const d = el('dialog', { id: 'pop-lembrete-notif', class: 'sheet', 'aria-label': 'Notificações' });
+  const fechar = () => { d.close(); d.remove(); };
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.addEventListener('click', e => { if (e.target === d) fechar(); });
+  const texto = {
+    inativo: 'Os avisos da equipe e do estoque chegam neste celular mesmo com o app fechado. Ative para não perder nada.',
+    iphone: 'No iPhone, os avisos só chegam pelo app. Abra este endereço no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra pelo ícone e ative aqui.',
+    bloqueado: 'As notificações estão bloqueadas neste navegador. Libere em Configurações > Notificações do navegador para receber os avisos da equipe e do estoque.',
+  }[sit];
+  d.append(el('div', { class: 'sheet-in versao-in' },
+    el('span', { class: 'versao-ico', 'aria-hidden': 'true', html: ICON.bell }),
+    el('h2', { text: sit === 'inativo' ? 'Ative as notificações' : 'Receber avisos no celular' }),
+    el('p', { class: 'hint', text: texto }),
+    sit === 'inativo'
+      ? el('div', { class: 'actions' },
+          el('button', { class: 'btn btn--primary btn--lg grow', type: 'button', onclick: async e => {
+            const b = e.currentTarget; b.disabled = true;
+            if (await ativarNotificacoes()) { fechar(); toast('Notificações ativadas.'); testarNotificacao(); document.querySelectorAll('.notif-card').forEach(n => n.remove()); }
+            else b.disabled = false;
+          } }, icon('bell'), 'Ativar'),
+          el('button', { class: 'btn btn--lg', type: 'button', onclick: fechar }, 'Agora não'))
+      : el('div', { class: 'actions' }, el('button', { class: 'btn btn--primary btn--lg grow', type: 'button', onclick: fechar }, 'Entendi'))));
+  document.body.append(d);
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
 // Cartão do Início: aparece até a pessoa ativar ou tocar em "Agora não".
 function cartaoNotificacoes() {
   if (!pushSuportado()) return null;
@@ -1994,7 +2033,7 @@ function route(opts) {
   if (r !== 'veiculo' || a !== S.entradaEdit) S.entradaEdit = null; // edição aberta não fica presa ao sair do veículo
   if (r !== 'veiculo' || a !== S.valorAberto) S.valorAberto = null;
   if (r !== 'veiculo' || a !== S.marcandoEtapas) S.marcandoEtapas = null;
-  if (r !== 'placa' && r !== 'novo') setTimeout(avisoNovidades, 700);
+  if (r !== 'placa' && r !== 'novo') { setTimeout(avisoNovidades, 700); setTimeout(lembrarNotificacoes, 1400); }
   conferirNotificacoes();
   atualizarSeVelho();
   setTimeout(() => avisarPresenca(), 0); // tela nova: avisa (no máximo a cada 10 s)
