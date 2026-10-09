@@ -29,7 +29,7 @@ async function carregar(c, eu) {
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
   const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
-    restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres&ativo=eq.true&order=criado_em,id'),
+    restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
     restAll(c, `sd_atendimentos?select=*&${filtroAts}&order=criado_em,id`),
     ctrl ? restAll(c, fotosQ) : Promise.resolve(null),
@@ -79,7 +79,7 @@ async function carregar(c, eu) {
     // Controle vê o usuário de cada pessoa e se já tem senha; a senha nunca sai daqui.
     funcionarios: funcionarios.map(f => ctrl ? { id: f.id, nome: f.nome, nivel: f.nivel, usuario: f.usuario || '', temSenha: !!f.senha_hash } : { id: f.id, nome: f.nome, nivel: f.nivel }),
     opcionais: opcionais.map(o => ({ id: o.id, nome: o.nome })),
-    tipos: tipos.map(t => { const e = Array.isArray(t.etapas) ? t.etapas : []; return { id: t.id, nome: t.nome, etapas: e, livres: livresDe(e, t.etapas_livres) }; }),
+    tipos: tipos.map(t => { const e = Array.isArray(t.etapas) ? t.etapas : []; return { id: t.id, nome: t.nome, etapas: e, livres: livresDe(e, t.etapas_livres), semFoto: livresDe(e, t.etapas_sem_foto) }; }),
     veiculos: Object.fromEntries(veiculos.map(v => [v.placa, { placa: v.placa, descricao: v.descricao || '', criadoEm: ms(v.criado_em) }])),
     atendimentos: atendimentos.map(a => ({
       id: a.id, placa: a.placa, tipoId: a.tipo_id, tipoNome: a.tipo_nome, etapas: a.etapas || [], etapaIndex: a.etapa_index,
@@ -224,6 +224,8 @@ async function aplicar(c, op, eu, versoes) {
       const linhaTipo = { id: id(it.id), nome, etapas: etapas(it.etapas), ativo: true, atualizado_em: agora() };
       const livresTipo = livresAlinhadas(it.etapas, it.livres); // Ajustes: etapas com ordem livre
       if (livresTipo) linhaTipo.etapas_livres = livresTipo;
+      const semFotoTipo = livresAlinhadas(it.etapas, it.semFoto); // Ajustes: etapas com foto opcional
+      if (semFotoTipo) linhaTipo.etapas_sem_foto = semFotoTipo;
       return upsert(c, 'sd_tipos_servico', linhaTipo);
     }
     case 'opcionais:salvar': {

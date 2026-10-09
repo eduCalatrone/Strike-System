@@ -429,7 +429,8 @@ textarea { resize: vertical; min-height: 76px; }
 .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .etapas li { display: flex; align-items: center; gap: 6px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 10px; }
 .etapas li .n { font: 700 14px var(--cond); color: var(--muted); width: 1.4em; }
-.etapas li .t { flex: 1; font-size: 14px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.etapas li .t { flex: 1; font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.tag-livre.tag-semfoto { background: #fff; color: var(--ink-2); border: 1px solid var(--line-2); }
 .etapas li.is-livre { border-left: 3px solid var(--ink); }
 .troca-tipo { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
 .troca-grupo { display: grid; gap: 6px; }
@@ -1429,6 +1430,15 @@ const etapaFeita = (at, i) => at.concluido || i < at.etapaIndex || at.feitas[i] 
 // Ordem livre por etapa (livres[i]). Etapas livres vizinhas formam um bloco: dentro dele, qualquer ordem;
 // a etapa seguinte (não livre) só libera quando o bloco inteiro estiver feito.
 const livresDe = x => x.etapas.map((_, i) => !!(x.livres || [])[i]);
+// Foto por etapa (Ajustes): true = foto opcional ao concluir. Padrão: obrigatória.
+const semFotoDe = x => x.etapas.map((_, i) => !!(x.semFoto || [])[i]);
+// A etapa i do veículo exige foto? Vale o que está no tipo de serviço agora (ligado pelo nome da etapa).
+function fotoObrigatoria(at, i) {
+  const t = DB && DB.tipos.find(x => x.id === at.tipoId);
+  if (!t) return true;
+  const k = t.etapas.findIndex(n => nomeEtapa(n) === nomeEtapa(at.etapas[i]));
+  return k < 0 || !semFotoDe(t)[k];
+}
 function etapaLiberada(at, i) {
   if (at.concluido || etapaFeita(at, i)) return false;
   const k = at.etapaIndex; if (i === k) return true;
@@ -2251,7 +2261,7 @@ function tipoHist(t) {
   if (/^Entrada do veículo/.test(t)) return 'entrada';
   if (t === 'Serviço concluído') return 'concluido';
   if (/^Etapas? ajustadas?|marcada como concluída/.test(t)) return 'controle';
-  if (/ concluída$/.test(t)) return 'etapa';
+  if (/ concluída( \(sem foto\))?$/.test(t)) return 'etapa';
   if (/^Foto|^Tipo da foto/.test(t)) return 'foto';
   if (/^Valor/.test(t)) return 'valor';
   if (/^Etapas atualizadas|^Etapa renomeada|^Tipo de serviço/.test(t)) return 'tipo';
@@ -2855,9 +2865,10 @@ function renderNew(placaRaw) {
 // acoes(foto, i): botões ao abrir a foto da etapa. semFoto(i): toque no espaço vazio de etapa concluída sem foto.
 // Concluir etapa: depois da primeira foto, janela com as fotos tiradas para juntar mais (câmera ou galeria,
 // várias de uma vez) ou tirar alguma. Devolve a lista de fotos ou null (cancelou).
-function fotosDaEtapa(nome, primeira) {
+// semFotoOk: etapa com foto opcional (Ajustes): a janela abre sem foto e deixa concluir sem nenhuma.
+function fotosDaEtapa(nome, primeira, { semFotoOk = false } = {}) {
   return new Promise(resolve => {
-    const lista = [{ blob: primeira, url: URL.createObjectURL(primeira) }];
+    const lista = primeira ? [{ blob: primeira, url: URL.createObjectURL(primeira) }] : [];
     const d = el('dialog', { class: 'sheet', 'aria-label': `Fotos: ${nome}` });
     let fim = false;
     const fechar = r => { if (fim) return; fim = true; lista.forEach(x => URL.revokeObjectURL(x.url)); if (d.open) d.close(); d.remove(); resolve(r); };
@@ -2869,15 +2880,19 @@ function fotosDaEtapa(nome, primeira) {
     const desenhar = () => {
       preencher(grade, ...lista.map((x, k) => el('div', { class: 'etapa-foto' }, el('img', { src: x.url, alt: `Foto ${k + 1}` }),
         el('button', { class: 'etapa-foto-x', type: 'button', 'aria-label': `Tirar a foto ${k + 1}`, onclick: () => { URL.revokeObjectURL(x.url); lista.splice(k, 1); desenhar(); } }, '×'))));
-      ok.disabled = !lista.length;
-      ok.textContent = lista.length > 1 ? `Concluir etapa (${lista.length} fotos)` : lista.length ? 'Concluir etapa' : 'Tire uma foto para concluir';
+      ok.disabled = !lista.length && !semFotoOk;
+      ok.textContent = lista.length > 1 ? `Concluir etapa (${lista.length} fotos)` : lista.length ? 'Concluir etapa' : semFotoOk ? 'Concluir sem foto' : 'Tire uma foto para concluir';
+      maisUma.lastChild.textContent = lista.length ? 'Mais uma foto' : 'Tirar foto';
+      aviso.hidden = !semFotoOk || lista.length > 0;
     };
     d.addEventListener('cancel', e => { e.preventDefault(); fechar(null); });
+    const maisUma = el('button', { class: 'btn btn--lg grow', type: 'button', onclick: async () => { add(await pickPhoto()); desenhar(); } }, icon('camera'), el('span', { text: 'Mais uma foto' }));
+    const aviso = el('p', { class: 'hint', text: 'Nesta etapa a foto é opcional. Se puder, tire uma: ela aparece para o cliente no andamento.' });
     preencher(d, el('div', { class: 'sheet-in' },
       el('div', { class: 'card-head' }, el('h2', { text: nome }), el('button', { class: 'link-btn', type: 'button', onclick: () => fechar(null) }, 'Cancelar')),
-      grade,
+      aviso, grade,
       el('div', { class: 'actions' },
-        el('button', { class: 'btn btn--lg grow', type: 'button', onclick: async () => { add(await pickPhoto()); desenhar(); } }, icon('camera'), 'Mais uma foto'),
+        maisUma,
         el('button', { class: 'btn btn--lg grow', type: 'button', onclick: () => inp.click() }, icon('image'), 'Galeria')),
       ok, inp));
     desenhar();
@@ -2927,7 +2942,7 @@ function listaEtapas(at, { fmt, src, atual = 'Agora', acoes, semFoto, concluir, 
           el('img', { src: src(foto), alt: '', loading: 'lazy' }))), maisFoto);
     }
     let lado = el('span');
-    if (cur && concluir) { lado = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon('camera'), 'Concluir'); const b = lado; b.addEventListener('click', () => concluir(i, b)); }
+    if (cur && concluir) { lado = el('button', { class: 'step-concluir', type: 'button', 'aria-label': `Concluir: ${nome}` }, icon(fotoObrigatoria(at, i) ? 'camera' : 'check'), 'Concluir'); const b = lado; b.addEventListener('click', () => concluir(i, b)); }
     else if (!fotos.length && maisFoto) lado = maisFoto;
     return el('li', { class: 'step ' + (done ? 'is-done' : cur ? 'is-current' : 'is-todo') },
       el('span', { class: 'step-dot' }, done ? icon('check') : null),
@@ -3042,9 +3057,11 @@ function renderVehicle(id) {
   const concluirComFoto = async (idx, concluirBtn) => {
     if (camAberta) return; // toque duplo
     const nome = nomeAlvo(idx), opc = typeof idx === 'object';
-    const file = await pickPhoto();
-    if (!file) { toast('Tire a foto da etapa para concluir.'); return; }
-    const arquivos = await fotosDaEtapa(nome, file); // pode juntar mais fotos antes de concluir
+    // Foto opcional (Ajustes): abre direto a janela da etapa, que deixa concluir sem foto.
+    const semFotoOk = !opc && !fotoObrigatoria(at, idx);
+    const file = semFotoOk ? null : await pickPhoto();
+    if (!file && !semFotoOk) { toast('Tire a foto da etapa para concluir.'); return; }
+    const arquivos = await fotosDaEtapa(nome, file, { semFotoOk }); // pode juntar mais fotos antes de concluir
     if (!arquivos) return;
     concluirBtn.disabled = true; concluirBtn.textContent = 'Enviando…';
     S.ocupado = true;
@@ -3064,14 +3081,14 @@ function renderVehicle(id) {
     const atual = DB.atendimentos.find(a => a.id === at.id);
     const pode = atual && !atual.concluido && (opc ? opcionaisDe(atual).includes(nome) && opcFeitos(atual)[nome] == null : etapaLiberada(atual, idx) && atual.etapas[idx] === nome);
     if (!pode) { toast('Esta etapa já foi concluída em outro aparelho.', true); if (parts()[1] === id) redraw(); return; }
-    commit(() => { const em = Date.now(); ms.forEach(m => atual.fotos.push({ ...m, rotulo: nome, ...marcaFoto(idx), em })); if (opc) concluirOpcional(atual, nome); else concluirEtapa(atual, idx); });
+    commit(() => { const em = Date.now(); ms.forEach(m => atual.fotos.push({ ...m, rotulo: nome, ...marcaFoto(idx), em })); if (opc) concluirOpcional(atual, nome); else concluirEtapa(atual, idx, ms.length ? undefined : `${nome} concluída (sem foto)`); });
     toast(atual.concluido ? 'Serviço concluído.' : `${nome} ${opc ? 'concluído' : 'concluída'}.`);
     if (parts()[1] === id) redraw();
   };
   // Botão grande: a etapa atual; com as etapas todas feitas, o primeiro opcional que falta.
   const alvoGrande = at.concluido || bloco ? null : etapaLiberada(at, at.etapaIndex) ? at.etapaIndex
     : etapasCompletas(at) && opcPendentes(at).length ? { opc: opcPendentes(at)[0] } : null;
-  const concluirBtn = alvoGrande == null ? null : el('button', { class: 'btn btn--primary btn--lg btn--block' + (typeof alvoGrande === 'object' ? ' btn--opc' : ''), type: 'button' }, icon('camera'), `Concluir: ${nomeAlvo(alvoGrande)}`);
+  const concluirBtn = alvoGrande == null ? null : el('button', { class: 'btn btn--primary btn--lg btn--block' + (typeof alvoGrande === 'object' ? ' btn--opc' : ''), type: 'button' }, icon(typeof alvoGrande === 'number' && !fotoObrigatoria(at, alvoGrande) ? 'check' : 'camera'), `Concluir: ${nomeAlvo(alvoGrande)}`);
   if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(alvoGrande, concluirBtn));
 
   const fotosBox = el('div');
@@ -3496,7 +3513,7 @@ function renderSettings() {
     const fora = foraDoTipo(t).length;
     // Toda mudança nas etapas vale também para os veículos em andamento deste tipo (o que já foi feito continua).
     const mudarEtapas = fn => {
-      commit(() => { t.livres = livresDe(t); fn(); sincronizarEtapas(t); });
+      commit(() => { t.livres = livresDe(t); t.semFoto = semFotoDe(t); fn(); sincronizarEtapas(t); });
       if (emUso && t.etapas.length) toast(emUso === 1 ? 'Salvo, também no veículo em serviço.' : `Salvo, também nos ${emUso} veículos em serviço.`);
       redraw();
     };
@@ -3504,16 +3521,16 @@ function renderSettings() {
     const addEtapa = () => {
       const v = add.value.trim(); if (!v) return;
       if (t.etapas.some(n => nomeEtapa(n) === nomeEtapa(v))) { toast('Já existe uma etapa com esse nome.', true); return; }
-      mudarEtapas(() => { t.etapas.push(v); t.livres.push(false); });
+      mudarEtapas(() => { t.etapas.push(v); t.livres.push(false); t.semFoto.push(false); });
     };
     add.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addEtapa(); } });
-    const move = (i, d) => mudarEtapas(() => { for (const l of [t.etapas, t.livres]) { const [x] = l.splice(i, 1); l.splice(i + d, 0, x); } });
-    const lv = livresDe(t);
+    const move = (i, d) => mudarEtapas(() => { for (const l of [t.etapas, t.livres, t.semFoto]) { const [x] = l.splice(i, 1); l.splice(i + d, 0, x); } });
+    const lv = livresDe(t), sf = semFotoDe(t);
     // Editar uma etapa: nome e ordem livre. Renomear mantém o que já foi feito nos veículos em serviço.
     const linhaEtapa = (nome, i) => {
       if (S.etapaEdit !== `${t.id}:${i}`) return el('li', { class: lv[i] ? 'is-livre' : null },
         el('span', { class: 'n', text: String(i + 1) }),
-        el('span', { class: 't' }, nome, lv[i] ? el('span', { class: 'tag-livre', text: 'Livre' }) : null),
+        el('span', { class: 't' }, nome, lv[i] ? el('span', { class: 'tag-livre', text: 'Livre' }) : null, sf[i] ? el('span', { class: 'tag-livre tag-semfoto', text: 'Foto opcional' }) : null),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Subir ${nome}`, disabled: i === 0, onclick: () => move(i, -1) }, icon('up')),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Descer ${nome}`, disabled: i === t.etapas.length - 1, onclick: () => move(i, 1) }, icon('down')),
         el('button', { class: 'icon-btn', type: 'button', 'aria-label': `Editar ${nome}`, onclick: () => { S.etapaEdit = `${t.id}:${i}`; redraw(); } }, icon('edit')));
@@ -3523,16 +3540,22 @@ function renderSettings() {
       const desenharSeg = () => preencher(seg, ...[[false, 'Seguir a ordem'], [true, 'Ordem livre']].map(([v, txt]) =>
         el('button', { type: 'button', 'aria-pressed': String(livre === v), onclick: () => { livre = v; desenharSeg(); } }, txt)));
       desenharSeg();
+      // Foto ao concluir: obrigatória (padrão) ou opcional.
+      let semFoto = sf[i];
+      const segFoto = el('div', { class: 'seg', role: 'group', 'aria-label': 'Foto ao concluir' });
+      const desenharFoto = () => preencher(segFoto, ...[[false, 'Obrigatória'], [true, 'Opcional']].map(([v, txt]) =>
+        el('button', { type: 'button', 'aria-pressed': String(semFoto === v), onclick: () => { semFoto = v; desenharFoto(); } }, txt)));
+      desenharFoto();
       const fechar = () => { S.etapaEdit = null; redraw(); };
       const salvarEtapa = () => {
         const novo = fNome.value.trim().replace(/\s+/g, ' ');
         if (!novo) { toast('Digite o nome da etapa.', true); fNome.focus(); return; }
         if (t.etapas.some((n, j) => j !== i && nomeEtapa(n) === nomeEtapa(novo))) { toast('Já existe uma etapa com esse nome.', true); return; }
         S.etapaEdit = null;
-        if (novo === nome && livre === lv[i]) { redraw(); return; }
+        if (novo === nome && livre === lv[i] && semFoto === sf[i]) { redraw(); return; }
         mudarEtapas(() => {
           if (novo !== nome) { renomearEtapaNosVeiculos(t, nome, novo); t.etapas[i] = novo; }
-          t.livres[i] = livre;
+          t.livres[i] = livre; t.semFoto[i] = semFoto;
         });
       };
       fNome.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvarEtapa(); } });
@@ -3540,6 +3563,7 @@ function renderSettings() {
       return el('li', { class: 'is-editando' },
         el('div', { class: 'field' }, el('span', { class: 'label', text: `Etapa ${i + 1}` }), fNome),
         el('div', { class: 'field' }, el('span', { class: 'label', text: 'Ordem' }), seg),
+        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Foto ao concluir' }), segFoto),
         el('div', { class: 'actions' },
           el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvarEtapa }, 'Salvar'),
           el('button', { class: 'btn', type: 'button', onclick: fechar }, 'Cancelar')),
@@ -3547,7 +3571,7 @@ function renderSettings() {
           if (t.etapas.length === 1 && emUso) { toast('O tipo precisa de pelo menos uma etapa enquanto tiver veículo em serviço.', true); return; }
           if (!window.confirm(`Remover a etapa "${nome}"?`)) return;
           S.etapaEdit = null;
-          mudarEtapas(() => { t.etapas.splice(i, 1); t.livres.splice(i, 1); });
+          mudarEtapas(() => { t.etapas.splice(i, 1); t.livres.splice(i, 1); t.semFoto.splice(i, 1); });
         } }, 'Remover etapa'));
     };
     return el('details', { class: 'card fold', open: S.tipoAberto === t.id || null, ontoggle: e => { if (e.target.open) S.tipoAberto = t.id; else if (S.tipoAberto === t.id) S.tipoAberto = null; } },
