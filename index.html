@@ -2887,7 +2887,7 @@ function fotosDaEtapa(nome, primeira, { semFotoOk = false } = {}) {
     };
     d.addEventListener('cancel', e => { e.preventDefault(); fechar(null); });
     const maisUma = el('button', { class: 'btn btn--lg grow', type: 'button', onclick: async () => { add(await pickPhoto()); desenhar(); } }, icon('camera'), el('span', { text: 'Mais uma foto' }));
-    const aviso = el('p', { class: 'hint', text: 'Nesta etapa a foto é opcional. Se puder, tire uma: ela aparece para o cliente no andamento.' });
+    const aviso = el('p', { class: 'hint', text: 'Nesta etapa a foto é opcional.' });
     preencher(d, el('div', { class: 'sheet-in' },
       el('div', { class: 'card-head' }, el('h2', { text: nome }), el('button', { class: 'link-btn', type: 'button', onclick: () => fechar(null) }, 'Cancelar')),
       aviso, grade,
