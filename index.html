@@ -672,7 +672,8 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, .45); }
 .cf-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2);
   border-radius: 999px; padding: 8px 12px; font: 600 13px/1.15 var(--body); text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
 .cf-btn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
-.cf-ok { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #1F9D55; color: #fff; font-size: 10px; flex: none; }
+.cf-ok { flex: none; color: var(--muted); font-size: 12px; font-weight: 700; line-height: 1; }
+.cf-btn[aria-pressed="true"] .cf-ok { color: rgba(255, 255, 255, .7); }
 .cf-frente { grid-column: 2; grid-row: 1; justify-self: center; }
 .cf-tras { grid-column: 2; grid-row: 3; justify-self: center; }
 .cf-esq { grid-column: 1; grid-row: 2; justify-self: end; }
@@ -682,8 +683,8 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, .45); }
 .cf-carro .cf-btn { position: absolute; left: 50%; transform: translate(-50%, -50%); white-space: nowrap; }
 .cf-interior { top: 56.5%; }
 .cf-carro .cf-btn:active { transform: translate(-50%, -50%) scale(.96); }
-.sheet-tag.tem::before { content: "✓"; display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 6px; border-radius: 50%; background: #1F9D55; color: #fff; font-size: 9.5px; vertical-align: 1px; }
-.sheet-tag[aria-pressed="true"].tem::before { background: #fff; color: var(--ink); }
+.sheet-tag.tem::before { content: "✓"; margin-right: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.sheet-tag[aria-pressed="true"].tem::before { color: rgba(255, 255, 255, .7); }
 .sheet-in .actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .sheet-in .actions .btn:disabled { opacity: .45; }
 dialog.cam { border: 0; padding: 0; background: #000; max-width: 100vw; max-height: 100dvh; width: 100vw; height: 100dvh; }
