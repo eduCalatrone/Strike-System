@@ -431,6 +431,10 @@ textarea { resize: vertical; min-height: 76px; }
 .etapas li .n { font: 700 14px var(--cond); color: var(--muted); width: 1.4em; }
 .etapas li .t { flex: 1; font-size: 14px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .etapas li.is-livre { border-left: 3px solid var(--ink); }
+.troca-tipo { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+.troca-grupo { display: grid; gap: 6px; }
+.troca-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag--risco { text-decoration: line-through; color: var(--muted); }
 .tag-livre { flex: none; padding: 2px 7px; border-radius: 999px; background: var(--ink); color: #fff; font: 600 11px/1.3 var(--body); letter-spacing: .02em; }
 .etapas li.is-editando { display: grid; gap: 12px; padding: 12px; background: var(--surface); border-color: var(--ink-2); }
 .icon-btn { width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); display: grid; place-items: center; font-size: 18px; line-height: 1; }
@@ -1490,7 +1494,53 @@ function ajustarEtapas(at, marcadas, opcMarcados = new Set(opcionaisDe(at).filte
 // O que já foi feito continua feito (ligado pelo nome da etapa), com a data e a foto de cada etapa.
 // Foto de etapa que saiu da lista vira foto comum (continua no veículo). Concluídos não mudam.
 const nomeEtapa = s => String(s).trim().toLowerCase();
-const foraDoTipo = t => DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido && t.etapas.length && (JSON.stringify(a.etapas) !== JSON.stringify(t.etapas) || JSON.stringify(livresDe(a)) !== JSON.stringify(livresDe(t))));
+/* Põe o veículo na lista de etapas do tipo t. O que já foi feito continua feito:
+   - etapa com o mesmo nome (ex.: Inspeção nos dois tipos) vira uma só, com a data e as fotos;
+   - etapa feita que o tipo não tem (veio de outro tipo de serviço, ou saiu do tipo depois de feita) continua no
+     veículo como feita, logo depois da etapa que vinha antes dela (marcada como livre, para nunca segurar as outras);
+   - etapa que não tinha sido feita e não existe no tipo sai.
+   Devolve true se a lista mudou. */
+function aplicarTipo(at, t) {
+  const usadas = new Set(), lista = t.etapas.map((nome, j) => {
+    const i = at.etapas.findIndex((n, k) => !usadas.has(k) && nomeEtapa(n) === nomeEtapa(nome));
+    if (i >= 0) usadas.add(i);
+    return { nome, de: i, livre: livresDe(t)[j], extra: false };
+  });
+  // Feitas que o tipo não tem: entram depois da anterior na lista velha (ou no começo, se não houver).
+  at.etapas.forEach((nome, i) => {
+    if (usadas.has(i) || !etapaFeita(at, i)) return;
+    let pos = 0;
+    for (let k = i - 1; k >= 0; k--) { const p = lista.findIndex(x => x.de === k); if (p >= 0) { pos = p + 1; break; } }
+    lista.splice(pos, 0, { nome, de: i, livre: true, extra: true });
+  });
+  const novas = lista.map(x => x.nome), feitas = {}, mapa = new Map();
+  lista.forEach((x, j) => { if (x.de < 0) return; mapa.set(x.de, j); if (etapaFeita(at, x.de)) feitas[j] = at.feitas[x.de] != null ? at.feitas[x.de] : at.criadoEm; });
+  let idx = novas.findIndex((_, j) => feitas[j] == null);
+  if (idx < 0) { // tudo feito: a última etapa do tipo fica como atual (o Controle conclui)
+    for (idx = lista.length - 1; idx > 0 && lista[idx].extra; idx--);
+    delete feitas[idx];
+  }
+  for (const f of at.fotos) if (eFotoDeEtapa(f)) f.etapa = mapa.has(f.etapa) ? mapa.get(f.etapa) : null;
+  at.fotos.forEach(f => { if (f.etapa === null) delete f.etapa; });
+  const mudouLista = JSON.stringify(at.etapas) !== JSON.stringify(novas);
+  at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx; at.livres = lista.map(x => x.livre);
+  return mudouLista;
+}
+// Veículo em andamento que não está igual ao que o tipo daria (aplicarTipo numa cópia mudaria algo).
+function foraDoTipo(t) {
+  return DB.atendimentos.filter(a => {
+    if (a.tipoId !== t.id || a.concluido || !t.etapas.length) return false;
+    const c = JSON.parse(JSON.stringify(a)); aplicarTipo(c, t);
+    return JSON.stringify([c.etapas, c.livres]) !== JSON.stringify([a.etapas, livresDe(a)]);
+  });
+}
+// Controle troca o tipo de serviço de um veículo em andamento (ex.: Limpeza Geral para Restauração completa).
+function trocarTipo(at, t) {
+  const antigo = at.tipoNome || 'sem tipo';
+  aplicarTipo(at, t);
+  at.tipoId = t.id; at.tipoNome = t.nome;
+  registrar(at, `Tipo de serviço trocado: ${antigo} para ${t.nome}`);
+}
 function renomearEtapaNosVeiculos(t, antigo, novo) {
   for (const at of DB.atendimentos.filter(a => a.tipoId === t.id && !a.concluido)) {
     const k = at.etapas.findIndex(n => nomeEtapa(n) === nomeEtapa(antigo));
@@ -1501,22 +1551,18 @@ function renomearEtapaNosVeiculos(t, antigo, novo) {
   }
 }
 function sincronizarEtapas(t) {
-  for (const at of foraDoTipo(t)) {
-    const novas = [...t.etapas], usadas = new Set(), feitas = {}, mapa = new Map();
-    novas.forEach((nome, j) => {
-      const i = at.etapas.findIndex((n, k) => !usadas.has(k) && nomeEtapa(n) === nomeEtapa(nome));
-      if (i < 0) return;
-      usadas.add(i); mapa.set(i, j);
-      if (etapaFeita(at, i)) feitas[j] = at.feitas[i] != null ? at.feitas[i] : at.criadoEm;
-    });
-    let idx = novas.findIndex((_, j) => feitas[j] == null);
-    if (idx < 0) { idx = novas.length - 1; delete feitas[idx]; } // tudo feito: a última fica como atual (o Controle conclui)
-    for (const f of at.fotos) if (eFotoDeEtapa(f)) f.etapa = mapa.has(f.etapa) ? mapa.get(f.etapa) : null;
-    at.fotos.forEach(f => { if (f.etapa === null) delete f.etapa; });
-    const mudouLista = JSON.stringify(at.etapas) !== JSON.stringify(novas);
-    at.etapas = novas; at.feitas = feitas; at.etapaIndex = idx; at.livres = livresDe(t);
-    if (mudouLista) registrar(at, `Etapas atualizadas pelo tipo de serviço (${t.nome})`);
+  for (const at of foraDoTipo(t)) if (aplicarTipo(at, t)) registrar(at, `Etapas atualizadas pelo tipo de serviço (${t.nome})`);
+}
+// Renomear o tipo de serviço: troca o nome em todos os veículos desse tipo (em serviço e concluídos, para os
+// relatórios não separarem o mesmo serviço em dois) e nos agendamentos ainda "agendado" com o nome antigo.
+function renomearTipo(t, novo) {
+  const antigo = t.nome;
+  t.nome = novo;
+  for (const at of DB.atendimentos.filter(a => a.tipoId === t.id && a.tipoNome !== novo)) {
+    at.tipoNome = novo;
+    if (!at.concluido) registrar(at, `Tipo de serviço renomeado: ${antigo} para ${novo}`);
   }
+  for (const ag of DB.agenda || []) if (ag.status === 'agendado' && nomeEtapa(ag.servico || '') === nomeEtapa(antigo)) ag.servico = novo;
 }
 
 /* ---------- Estoque: o saldo é sempre a soma dos movimentos ---------- */
@@ -2208,7 +2254,7 @@ function tipoHist(t) {
   if (/ concluída$/.test(t)) return 'etapa';
   if (/^Foto|^Tipo da foto/.test(t)) return 'foto';
   if (/^Valor/.test(t)) return 'valor';
-  if (/^Etapas atualizadas|^Etapa renomeada/.test(t)) return 'tipo';
+  if (/^Etapas atualizadas|^Etapa renomeada|^Tipo de serviço/.test(t)) return 'tipo';
   if (/^Placa corrigida|^Cliente:|editados$|^Descrição/.test(t)) return 'edicao';
   if (/^Opciona/.test(t)) return 'opcional';
   return 'outro';
@@ -2911,6 +2957,41 @@ function topoVeiculo(at, v) {
       ...opcionaisDe(at).map(n => el('span', { class: 'tag tag--opc', text: `+ ${n}` })),
       completo ? el('span', { class: 'veh-info-desc', text: completo }) : null));
 }
+/* Opções do Controle > Tipo de serviço: troca o tipo de um veículo em andamento sem perder o que já foi feito.
+   Antes de confirmar mostra o que continua feito, o que entra e o que sai (aplicarTipo numa cópia). */
+function campoTrocarTipo(at, redraw) {
+  if (at.concluido || DB.tipos.length < 2) return null;
+  const sel = el('select', { 'aria-label': 'Tipo de serviço' },
+    DB.tipos.some(t => t.id === at.tipoId) ? null : el('option', { value: '', selected: true }, at.tipoNome || 'Sem tipo'),
+    DB.tipos.map(t => el('option', { value: t.id, selected: t.id === at.tipoId }, t.nome)));
+  const previa = el('div', { class: 'troca-tipo', hidden: true });
+  const btn = el('button', { class: 'btn', type: 'button', style: 'flex:none', disabled: true }, 'Trocar');
+  const escolhido = () => DB.tipos.find(t => t.id === sel.value && t.id !== at.tipoId && t.etapas.length);
+  const desenhar = () => {
+    const t = escolhido(); btn.disabled = !t; previa.hidden = !t;
+    if (!t) return;
+    const copia = JSON.parse(JSON.stringify(at)); aplicarTipo(copia, t);
+    const tem = (lista, n) => lista.some(x => nomeEtapa(x) === nomeEtapa(n));
+    const ficam = copia.etapas.filter((_, j) => etapaFeita(copia, j));
+    const entram = copia.etapas.filter((n, j) => !etapaFeita(copia, j));
+    const saem = at.etapas.filter((n, i) => !etapaFeita(at, i) && !tem(copia.etapas, n));
+    const grupo = (tit, nomes, cls) => nomes.length ? el('div', { class: 'troca-grupo' }, el('span', { class: 'label', text: tit }),
+      el('div', { class: 'troca-tags' }, nomes.map(n => el('span', { class: 'tag ' + cls, text: n })))) : null;
+    preencher(previa,
+      grupo('Continuam feitas', ficam, 'tag--ok'),
+      grupo('Etapas a fazer', entram, ''),
+      grupo('Saem (não tinham sido feitas)', saem, 'tag--risco'),
+      el('p', { class: 'hint', text: 'Fotos, datas, valor e opcionais do veículo continuam. Etapa com o mesmo nome nos dois serviços (como Inspeção) aparece uma vez só.' }));
+  };
+  sel.addEventListener('change', desenhar);
+  btn.addEventListener('click', () => {
+    const t = escolhido(); if (!t) return;
+    if (!window.confirm(`Trocar o serviço de ${at.tipoNome || 'sem tipo'} para ${t.nome}?`)) return;
+    if (commit(() => trocarTipo(at, t))) { toast(`Serviço trocado para ${t.nome}.`); redraw(); }
+  });
+  return el('div', { class: 'field' }, el('span', { class: 'label', text: 'Tipo de serviço' }),
+    el('div', { class: 'row' }, sel, btn), previa);
+}
 function renderVehicle(id) {
   const at = DB.atendimentos.find(a => a.id === id);
   if (!at) { toast('Atendimento não encontrado.', true); return go('#/inicio'); }
@@ -3105,6 +3186,7 @@ function renderVehicle(id) {
     } }, 'Excluir atendimento');
     ctrlCard = el('details', { class: 'card fold', open: S.ctrlAberto || null, ontoggle: e => { S.ctrlAberto = e.target.open; } },
       el('summary', {}, el('h2', { text: 'Opções do Controle' }), el('span', { class: 'fold-ico', html: ICON.down, 'aria-hidden': 'true' })),
+      campoTrocarTipo(at, redraw),
       etapasCampo,
       opcCampo,
       // Link de acompanhamento para mandar ao cliente (página /cliente já com a placa deste veículo).
@@ -3475,6 +3557,20 @@ function renderSettings() {
       fora ? el('div', { class: 'alert' },
         el('span', { text: `${fora} ${fora === 1 ? 'veículo desatualizado' : 'veículos desatualizados'}` }),
         el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none', onclick: () => mudarEtapas(() => {}) }, 'Atualizar')) : null,
+      // Nome do serviço: renomear troca também nos veículos desse tipo e nos agendamentos com o nome antigo.
+      (() => {
+        const fTipo = el('input', { type: 'text', maxlength: '60', value: t.nome, 'aria-label': 'Nome do serviço' });
+        const renomear = () => {
+          const novo = fTipo.value.trim().replace(/\s+/g, ' ');
+          if (!novo) { toast('Digite o nome do serviço.', true); fTipo.focus(); return; }
+          if (novo === t.nome) return;
+          if (DB.tipos.some(x => x.id !== t.id && nomeEtapa(x.nome) === nomeEtapa(novo))) { toast('Já existe um tipo de serviço com esse nome.', true); return; }
+          if (commit(() => renomearTipo(t, novo))) { toast('Nome do serviço salvo.'); redraw(); }
+        };
+        fTipo.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); renomear(); } });
+        return el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nome do serviço' }),
+          el('div', { class: 'row' }, fTipo, el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: renomear }, 'Renomear')));
+      })(),
       el('ol', { class: 'etapas' }, t.etapas.map(linhaEtapa)),
       el('div', { class: 'row' }, add, el('button', { class: 'btn', type: 'button', style: 'flex:none', onclick: addEtapa }, 'Adicionar')),
       el('div', {}, el('button', { class: 'btn btn--sm btn--danger', type: 'button', onclick: () => {
