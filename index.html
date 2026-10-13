@@ -89,6 +89,12 @@ button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; fo
 .notif-equipe .r-sub { white-space: normal; overflow: visible; text-overflow: clip; }
 .notif-envios li { display: grid; gap: 2px; justify-items: start; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .notif-envios li:last-child { border-bottom: 0; padding-bottom: 0; }
+/* Notificações (13/10/2026) */
+.notif-off { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--danger-bg); color: var(--danger); font-size: 14px; font-weight: 600; }
+.notif-recebem { display: flex; flex-wrap: wrap; gap: 6px; }
+.notif-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.notif-chip .pres-av { width: 24px; height: 24px; font-size: 11px; }
+.notif-envio-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .notif-card { gap: 12px; }
 /* Nome no topo: nome em cima e, para o Controle, o modo embaixo (não corta mais o nome no celular). */
 button.who-name { display: grid; gap: 1px; min-width: 0; line-height: 1.15; padding: 2px 0; }
@@ -595,7 +601,7 @@ textarea { resize: vertical; min-height: 76px; }
 .ag-period em { font-style: normal; color: var(--muted); font-weight: 600; }
 .ag-dow, .ag-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .ag-dow span { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); }
-.ag-cell { position: relative; aspect-ratio: 1; border: 1px solid transparent; border-radius: 10px; background: var(--surface); display: grid; place-items: center; align-content: center; gap: 3px; padding: 0 0 6px; }
+.ag-cell { position: relative; height: 46px; border: 1px solid transparent; border-radius: 10px; background: var(--surface); display: grid; place-items: center; align-content: center; gap: 3px; padding: 0 0 6px; }
 .ag-cell.out { background: none; visibility: hidden; }
 @media (min-width: 720px) { .ag-cell { aspect-ratio: 16 / 10; } }
 .ag-cell .n { font-size: 14px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -618,7 +624,15 @@ textarea { resize: vertical; min-height: 76px; }
 .ag-cell.sel .ag-dot { background: #4ADE80; box-shadow: none; }
 .ag-cell.sel .ag-dot.concluido { background: #CFCFCC; }
 .ag-mais { font-size: 9px; color: var(--muted); line-height: 1; }
-.ag-legenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+.ag-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 11px; color: var(--muted); }
+.ag-legenda .ag-total { margin-left: auto; color: var(--ink-2); font-weight: 600; }
+/* Agenda mais direta (13/10/2026): topo sem estourar a largura, dias mais baixos e o dia escolhido logo abaixo. */
+.ag-head { align-items: center; }
+.ag-head .seg button { padding: 7px 14px; }
+.ag-nav .ag-hoje { flex: none; margin-left: 4px; }
+.ag-nav .ag-hoje:disabled { opacity: .4; }
+.ag-dia .card-head h2 { font-size: 20px; }
+.ag-dia-data { font-weight: 500; color: var(--muted); }
 .ag-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .ag-legenda b { display: block; width: 8px; height: 8px; border-radius: 50%; }
 .ag-resumo { display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
@@ -650,6 +664,36 @@ textarea { resize: vertical; min-height: 76px; }
 input[type="date"], input[type="tel"], input[type="number"] { width: 100%; border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-size: 16px; min-height: 46px; }
 
 /* ---------- Relatórios ---------- */
+/* Relatórios (13/10/2026): três atalhos lado a lado, período numa barra e o faturado em destaque. */
+.rel-atalhos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rel-tile { position: relative; display: grid; align-content: start; gap: 2px; min-width: 0; padding: 12px 11px; border-radius: 14px; text-decoration: none;
+  background: var(--primary-grad); color: #fff; box-shadow: 0 8px 20px rgba(0, 0, 0, .14); }
+.rel-tile.claro { background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+.rt-ico { width: 34px; height: 34px; margin-bottom: 8px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14); }
+.rel-tile.claro .rt-ico { background: var(--soft); border-color: var(--line); }
+.rt-ico svg { width: 18px; height: 18px; }
+.rt-tit { display: flex; align-items: center; gap: 6px; min-width: 0; font: 700 clamp(13px, 4vw, 16px)/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+.rt-sub { font-size: 12px; color: rgba(255, 255, 255, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rel-tile.claro .rt-sub { color: var(--muted); }
+.rt-vivo { width: 7px; height: 7px; border-radius: 50%; background: #2FBF6B; animation: pulso-verde 1.6s ease-out infinite; }
+.rt-badge { position: absolute; top: 10px; right: 10px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #E5484D; color: #fff; font: 700 11px/20px var(--body); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .rt-vivo { animation: none; } }
+.seg.seg-linha { display: flex; width: 100%; flex-wrap: nowrap; }
+.seg.seg-linha button { flex: 1; padding: 10px 4px; white-space: nowrap; }
+.rel-fat { gap: 4px; }
+.rel-fat-num { font: 700 38px/1.05 var(--cond); letter-spacing: .01em; }
+.rel-aviso { margin: 4px 0 0; font-size: 13px; color: var(--warn); }
+.rel-fat-and { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.rel-fat-and > div { display: grid; gap: 1px; }
+.rel-fat-and b { font: 700 22px/1.1 var(--cond); }
+/* Ajustes (13/10/2026): cabeçalho de seção com quantidade e "+ Novo"; formulários só abrem quando pedidos. */
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; }
+.sec-head h2 { display: flex; align-items: baseline; gap: 8px; }
+.sec-qtd { font: 600 14px var(--body); color: var(--muted); }
+.sec-head .btn svg { width: 16px; height: 16px; }
+.add-card { border-color: var(--ink); }
+.dados-rows .r { align-items: center; }
+.dados-rows select { width: auto; flex: none; }
 .rel-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .rel-kpi { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 2px; }
 .rel-kpi b { font: 700 24px/1.1 var(--cond); }
@@ -2204,16 +2248,13 @@ function desenharCtaEquipe(a) {
   const u = me();
   const lista = (S.equipe || []).filter(f => !u || f.id !== u.id).map(f => ({ f, e: estadoPresenca(f) }));
   const n = k => lista.filter(x => x.e.k === k).length;
-  const ativos = lista.filter(x => x.e.k === 'online' || x.e.k === 'parado').sort((x, y) => x.e.ordem - y.e.ordem);
   const resumo = !S.equipe ? 'Buscando…' : [`${n('online')} online`, n('parado') ? `${n('parado')} ${n('parado') === 1 ? 'parado' : 'parados'}` : '', `${n('fora') + n('nunca')} fora`].filter(Boolean).join(' · ');
+  // Atalho compacto em Relatórios (um dos três da linha do topo).
+  a.setAttribute('aria-label', `Status da equipe, ao vivo: ${resumo}`);
   preencher(a,
-    el('span', { class: 'cta-ico', 'aria-hidden': 'true', html: ICON.users }),
-    el('span', { class: 'cta-txt' },
-      el('span', { class: 'cta-tit' }, 'Status da equipe', el('span', { class: 'cta-vivo' }, el('i', { 'aria-hidden': 'true' }), 'Ao vivo')),
-      el('span', { class: 'cta-sub', text: resumo })),
-    ativos.length ? el('span', { class: 'cta-avs', 'aria-hidden': 'true' }, ativos.slice(0, 3).map(({ f, e }) => el('span', { class: 'cta-av' }, iniciais(f.nome), el('i', { class: `pres-dot is-${e.k}` }))),
-      ativos.length > 3 ? el('span', { class: 'cta-av is-mais', text: `+${ativos.length - 3}` }) : null) : null,
-    el('span', { class: 'cta-chev', 'aria-hidden': 'true', html: ICON.chev }));
+    el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.users }),
+    el('span', { class: 'rt-tit' }, 'Equipe', el('i', { class: 'rt-vivo', 'aria-hidden': 'true' })),
+    el('span', { class: 'rt-sub', text: !S.equipe ? 'Buscando…' : `${n('online')} online${n('parado') ? `, ${n('parado')} ${n('parado') === 1 ? 'parado' : 'parados'}` : ''}` }));
 }
 // Relatórios > Status da equipe. Mostra na hora o último dado já buscado e atualiza sozinha.
 function renderEquipe() {
@@ -4056,7 +4097,7 @@ function renderSettings() {
     const id = uid();
     const feito = await salvarPessoa(() => DB.funcionarios.push({ id, nome, nivel: nNivel.value, usuario, temSenha: true }), { id, senha });
     S.ocupado = false;
-    if (feito) toast(`${nome} adicionado. Entra com o usuário "${usuario}".`);
+    if (feito) { toast(`${nome} adicionado. Entra com o usuário "${usuario}".`); S.addAberto = null; }
     redraw();
   } }, 'Adicionar');
 
@@ -4096,7 +4137,7 @@ function renderSettings() {
     }
     return el('li', {}, el('div', { class: 'r' },
       el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: o.nome }),
-        el('span', { class: 'r-sub', text: emUso ? `Em ${emUso} ${emUso === 1 ? 'veículo' : 'veículos'} em serviço` : 'Nenhum veículo em serviço' })),
+        emUso ? el('span', { class: 'r-sub', text: `Em ${emUso} ${emUso === 1 ? 'veículo' : 'veículos'} em serviço` }) : null),
       el('button', { class: 'link-btn', type: 'button', style: 'font-size:13px;flex:none', 'aria-expanded': String(aberto), onclick: () => { S.opcAberto = aberto ? null : o.id; redraw(); } }, aberto ? 'Fechar' : 'Editar')), form);
   }));
   const novoOpc = el('input', { type: 'text', maxlength: '60', placeholder: 'Ex.: Carpete', autocomplete: 'off', 'aria-label': 'Novo opcional' });
@@ -4104,7 +4145,7 @@ function renderSettings() {
     const nome = novoOpc.value.trim().replace(/\s+/g, ' ');
     if (!nome) { toast('Digite o nome.', true); return; }
     if ((DB.opcionais || []).some(x => x.nome.toLowerCase() === nome.toLowerCase())) { toast('Já existe um opcional com esse nome.', true); return; }
-    if (commit(() => { DB.opcionais = [...(DB.opcionais || []), { id: uid(), nome }]; })) { toast(`${nome} adicionado.`); redraw(); }
+    if (commit(() => { DB.opcionais = [...(DB.opcionais || []), { id: uid(), nome }]; })) { toast(`${nome} adicionado.`); S.addAberto = null; redraw(); }
   };
   novoOpc.addEventListener('keydown', e => { if (e.key === 'Enter') addOpc(); });
 
@@ -4116,42 +4157,56 @@ function renderSettings() {
     enviar([{ col: 'ajustes', acao: 'salvar', item: { chave: 'limpeza_fotos_dias', valor: n } }]).then(ok => ok && toast(`As fotos serão apagadas ${n} dias depois da conclusão.`));
   });
 
+  // Cabeçalho de cada seção: título, quantidade e "+ Novo" (o formulário só abre quando a pessoa pede).
+  const secHead = (titulo, qtd, chave, rotulo) => el('div', { class: 'sec-head' },
+    el('h2', {}, titulo, qtd != null ? el('span', { class: 'sec-qtd', text: String(qtd) }) : null),
+    chave ? el('button', { class: 'btn btn--sm', type: 'button', 'aria-expanded': String(S.addAberto === chave),
+      onclick: () => { S.addAberto = S.addAberto === chave ? null : chave; redraw(); } }, S.addAberto === chave ? 'Fechar' : [icon('plus'), rotulo]) : null);
+  const focar = (chave, campo) => { if (S.addAberto === chave) setTimeout(() => campo.focus(), 30); };
+  focar('tipo', novoTipo); focar('opc', novoOpc); focar('pessoa', nNome);
+  const criarTipo = () => {
+    const nome = novoTipo.value.trim(); if (!nome) { toast('Digite o nome.', true); return; }
+    const tid = uid();
+    if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [], livres: [] }))) { S.tipoAberto = tid; S.addAberto = null; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
+  };
+  novoTipo.addEventListener('keydown', e => { if (e.key === 'Enter') criarTipo(); });
+  const backup = () => {
+    const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+    const a = el('a', { href: URL.createObjectURL(blob), download: `strike-details-backup-${new Date().toISOString().slice(0, 10)}.json` });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+
   const body = el('div', { class: 'stack-lg', style: 'max-width:720px' },
     el('h1', { text: 'Ajustes' }),
     abasAjustes('geral'),
     el('section', { class: 'stack' },
-      el('h2', { text: 'Tipos de serviço e etapas' }),
-      ...tipos,
-      el('div', { class: 'card' }, el('h3', { text: 'Novo tipo de serviço' }),
-        el('div', { class: 'row' }, novoTipo, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: () => {
-          const nome = novoTipo.value.trim(); if (!nome) { toast('Digite o nome.', true); return; }
-          const tid = uid();
-          if (commit(() => DB.tipos.push({ id: tid, nome, etapas: [], livres: [] }))) { S.tipoAberto = tid; toast('Tipo criado. Agora adicione as etapas.'); redraw(); }
-        } }, 'Criar')))),
+      secHead('Tipos de serviço', DB.tipos.length, 'tipo', 'Novo'),
+      S.addAberto === 'tipo' ? el('div', { class: 'card add-card' },
+        el('div', { class: 'row' }, novoTipo, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: criarTipo }, 'Criar'))) : null,
+      ...tipos),
     el('section', { class: 'stack' },
-      el('h2', { text: 'Opcionais' }),
-      (DB.opcionais || []).length ? opcLista : el('p', { class: 'hint', text: 'Itens extras que vão em um veículo, como um carpete. Marcados na entrada do veículo e nas Opções do Controle.' }),
-      el('div', { class: 'card' }, el('h3', { text: 'Novo opcional' }),
-        el('div', { class: 'row' }, novoOpc, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: addOpc }, 'Adicionar')))),
+      secHead('Opcionais', (DB.opcionais || []).length, 'opc', 'Novo'),
+      S.addAberto === 'opc' ? el('div', { class: 'card add-card' },
+        el('div', { class: 'row' }, novoOpc, el('button', { class: 'btn btn--primary', type: 'button', style: 'flex:none', onclick: addOpc }, 'Adicionar'))) : null,
+      (DB.opcionais || []).length ? opcLista : el('p', { class: 'hint', text: 'Itens extras que vão em um veículo, como um carpete.' })),
     el('section', { class: 'stack' },
-      el('h2', { text: 'Equipe' }),
-      equipe,
-      el('div', { class: 'card' }, el('h3', { text: 'Adicionar pessoa' }),
+      secHead('Equipe', DB.funcionarios.length, 'pessoa', 'Pessoa'),
+      S.addAberto === 'pessoa' ? el('div', { class: 'card add-card' },
         el('div', { class: 'row' }, nNome, el('div', { style: 'flex:.7' }, nNivel)),
         el('div', { class: 'row' }, nUsuario, nSenha),
-        el('div', {}, addPessoa))),
+        el('div', {}, addPessoa)) : null,
+      equipe),
     cartaoLixeira(redraw),
     el('section', { class: 'stack' },
-      el('h2', { text: 'Dados' }),
-      el('div', { class: 'card' }, el('h3', { text: 'Limpeza automática das fotos' }),
-                el('div', { class: 'row', style: 'align-items:center' }, el('span', { class: 'label', style: 'flex:none', text: 'Apagar fotos de concluídos após' }), el('div', {}, dias))),
-      cartaoDadosAntigos(redraw),
-      el('div', { class: 'card' },
-                el('div', {}, el('button', { class: 'btn', type: 'button', onclick: () => {
-          const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
-          const a = el('a', { href: URL.createObjectURL(blob), download: `strike-details-backup-${new Date().toISOString().slice(0, 10)}.json` });
-          document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-        } }, 'Baixar backup (JSON)')))));
+      secHead('Dados'),
+      el('ul', { class: 'rows dados-rows' },
+        el('li', {}, el('div', { class: 'r' },
+          el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: 'Apagar fotos de concluídos' }), el('span', { class: 'r-sub', text: 'Libera espaço no banco' })), dias)),
+        el('li', {}, el('div', { class: 'r' },
+          el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: 'Backup' }), el('span', { class: 'r-sub', text: 'Todos os dados num arquivo' })),
+          el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none', onclick: backup }, icon('file'), 'Baixar'))),
+        linhaZerarEstoque(redraw)),
+      cartaoDadosAntigos(redraw)));
   shell(body, { current: 'ajustes' });
 }
 
@@ -4210,30 +4265,41 @@ function secaoNotificacoes(redraw) {
     } catch (e) { toast(e && e.code === 'desligadas' ? 'As notificações estão desligadas.' : 'Não deu para enviar agora.', true); }
     recarregar();
   } }, icon('bell'), 'Enviar aviso');
-  const ativos = d.equipe.filter(p => p.aparelhos.length).length;
+  // Ordem pelo uso (13/10/2026): enviar aviso primeiro; quem recebe (destacando quem falta e por quê);
+  // envio automático; últimos avisos; este aparelho no fim.
+  const recebem = d.equipe.filter(p => p.aparelhos.length), faltam = d.equipe.filter(p => !p.aparelhos.length);
+  const envios = S.notifTodos ? d.envios : d.envios.slice(0, 3);
   return el('section', { class: 'stack', id: 'notif' },
-    el('div', { class: 'card' }, el('h3', { text: 'Este aparelho' }), blocoEsteAparelho(recarregar)),
-    el('div', { class: 'card' }, el('h3', { text: 'Envio' }),
-      chave('Notificações ligadas', cfg.ativo ? 'Desligue para não enviar nenhum aviso.' : 'Desligadas: nada é enviado (só o teste de cada aparelho).', cfg.ativo, v => salvarCfg({ ...cfg, ativo: v })),
-      chave('Aviso automático: estoque baixo', 'Quando um material chega no mínimo ou acaba.', cfg.ativo && cfg.estoque.ativo, v => salvarCfg({ ...cfg, estoque: { ...cfg.estoque, ativo: v } }), !cfg.ativo),
-      cfg.ativo && cfg.estoque.ativo ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Quem recebe o aviso de estoque' }),
-        el('div', { class: 'seg', role: 'group', 'aria-label': 'Quem recebe o aviso de estoque', style: 'display:flex;width:100%' },
-          [['controle', 'Só o Controle'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(cfg.estoque.para === k),
-            onclick: () => { if (cfg.estoque.para !== k) salvarCfg({ ...cfg, estoque: { ...cfg.estoque, para: k } }); } }, t)))) : null),
+    cfg.ativo ? null : el('div', { class: 'notif-off' },
+      el('span', { text: 'Notificações desligadas: nenhum aviso é enviado.' }),
+      el('button', { class: 'btn btn--sm btn--primary', type: 'button', style: 'flex:none', onclick: () => salvarCfg({ ...cfg, ativo: true }) }, 'Ligar')),
     el('div', { class: 'card' + (cfg.ativo ? '' : ' is-off') }, el('h3', { text: 'Enviar aviso' }),
       fTit, fTxt,
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Para' }), segPara), pessoas,
       btnEnviar),
-    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h3', { text: 'Quem recebe' }), el('span', { class: 'count', text: `${ativos} de ${d.equipe.length}` })),
-      el('ul', { class: 'notif-equipe' }, d.equipe.map(p => el('li', {},
-        el('span', { class: 'pres-av' + (p.nivel === 'controle' ? ' is-ctrl' : ''), 'aria-hidden': 'true', text: iniciais(p.nome) }),
-        el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: p.nome }),
-          el('span', { class: 'r-sub' + (p.aparelhos.length ? '' : ' is-sem'), text: p.aparelhos.length ? p.aparelhos.join(', ') : motivoSemAparelho(p) })))))),
+    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h3', { text: 'Quem recebe' }), el('span', { class: 'count', text: `${recebem.length} de ${d.equipe.length}` })),
+      recebem.length ? el('div', { class: 'notif-recebem' }, recebem.map(p => el('span', { class: 'notif-chip', title: p.aparelhos.join(', ') },
+        el('span', { class: 'pres-av' + (p.nivel === 'controle' ? ' is-ctrl' : ''), 'aria-hidden': 'true', text: iniciais(p.nome) }), p.nome))) : null,
+      faltam.length ? el('div', { class: 'stack', style: 'gap:6px' },
+        el('span', { class: 'label', text: faltam.length === 1 ? 'Não recebe' : `Não recebem (${faltam.length})` }),
+        el('ul', { class: 'notif-equipe' }, faltam.map(p => el('li', {},
+          el('span', { class: 'pres-av' + (p.nivel === 'controle' ? ' is-ctrl' : ''), 'aria-hidden': 'true', text: iniciais(p.nome) }),
+          el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: p.nome }), el('span', { class: 'r-sub is-sem', text: motivoSemAparelho(p) })))))) : null),
+    el('div', { class: 'card' }, el('h3', { text: 'Envio automático' }),
+      chave('Notificações ligadas', null, cfg.ativo, v => salvarCfg({ ...cfg, ativo: v })),
+      chave('Estoque baixo', 'Quando um material chega no mínimo ou acaba.', cfg.ativo && cfg.estoque.ativo, v => salvarCfg({ ...cfg, estoque: { ...cfg.estoque, ativo: v } }), !cfg.ativo),
+      cfg.ativo && cfg.estoque.ativo ? el('div', { class: 'seg', role: 'group', 'aria-label': 'Quem recebe o aviso de estoque', style: 'display:flex;width:100%' },
+        [['controle', 'Só o Controle'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(cfg.estoque.para === k),
+          onclick: () => { if (cfg.estoque.para !== k) salvarCfg({ ...cfg, estoque: { ...cfg.estoque, para: k } }); } }, t))) : null),
     d.envios.length ? el('div', { class: 'card' }, el('h3', { text: 'Últimos avisos' }),
-      el('ul', { class: 'notif-envios' }, d.envios.map(e => el('li', {},
-        el('span', { class: 'tag' + (e.tipo === 'estoque' ? ' tag--warn' : ''), text: TIPO_ENVIO[e.tipo] || e.tipo }),
+      el('ul', { class: 'notif-envios' }, envios.map(e => el('li', {},
+        el('span', { class: 'notif-envio-topo' },
+          el('span', { class: 'tag' + (e.tipo === 'estoque' ? ' tag--warn' : ''), text: TIPO_ENVIO[e.tipo] || e.tipo }),
+          el('span', { class: 'hint', text: ago(e.em) })),
         el('b', { text: e.titulo }), e.texto ? el('span', { text: e.texto }) : null,
-        el('span', { class: 'hint', text: [`Chegou em ${e.entregues} de ${e.aparelhos} ${e.aparelhos === 1 ? 'aparelho' : 'aparelhos'}`, e.porNome && e.tipo === 'personalizado' ? `por ${e.porNome}` : '', ago(e.em)].filter(Boolean).join(' · ') }))))) : null);
+        el('span', { class: 'hint', text: [`Chegou em ${e.entregues} de ${e.aparelhos}`, e.porNome && e.tipo === 'personalizado' ? `por ${e.porNome}` : ''].filter(Boolean).join(' · ') })))),
+      d.envios.length > envios.length ? el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: () => { S.notifTodos = true; redraw(); } }, `Mostrar mais (${d.envios.length - envios.length})`) : null) : null,
+    el('div', { class: 'card' }, el('h3', { text: 'Este aparelho' }), blocoEsteAparelho(recarregar)));
 }
 
 // Lixeira (Controle): atendimentos excluídos ficam 48 h aqui e podem voltar. Depois somem da lista
@@ -4250,8 +4316,9 @@ function cartaoLixeira(redraw) {
     if (ok) { try { await buscarDados({ forcar: true }); } catch {} toast(`Atendimento da placa ${fmtPlaca(x.placa)} restaurado.`); }
     redraw();
   };
+  if (!itens.length) return null; // vazia: não ocupa espaço em Ajustes
   return el('section', { class: 'stack' },
-    el('h2', { text: `Lixeira (${LIXEIRA_H} h)` }),
+    el('div', { class: 'sec-head' }, el('h2', { text: 'Lixeira' }), el('span', { class: 'count', text: `volta em até ${LIXEIRA_H} h` })),
     el('div', { class: 'card' },
             itens.length ? el('ul', { class: 'rows' }, itens.map(x => {
         const capa = x.fotos.find(f => f.rotulo === 'Frente') || x.fotos[0];
@@ -4339,18 +4406,20 @@ function renderAgenda() {
   const redraw = () => { const y = window.scrollY; renderAgenda(); window.scrollTo(0, y); };
   const mover = d => { if (A.modo === 'ano') A.y += d; else { A.m += d; if (A.m < 0) { A.m = 11; A.y--; } if (A.m > 11) { A.m = 0; A.y++; } } redraw(); };
   const lista = agendaAtiva();
+  // Topo: título e Mês/Ano. Logo abaixo, a navegação do período com "Hoje" na mesma linha.
+  const t0 = new Date(), noAtual = A.modo === 'ano' ? A.y === t0.getFullYear() : A.y === t0.getFullYear() && A.m === t0.getMonth();
   const nav = el('div', { class: 'ag-nav' },
     el('button', { class: 'arrow', type: 'button', 'aria-label': A.modo === 'ano' ? 'Ano anterior' : 'Mês anterior', onclick: () => mover(-1) }, icon('back')),
     el('button', { class: 'ag-period', type: 'button', 'aria-label': 'Trocar entre mês e ano', onclick: () => { A.modo = A.modo === 'mes' ? 'ano' : 'mes'; redraw(); } },
       A.modo === 'ano' ? String(A.y) : MESES[A.m] + ' ', A.modo === 'ano' ? null : el('em', { text: String(A.y) })),
-    el('button', { class: 'arrow', type: 'button', 'aria-label': A.modo === 'ano' ? 'Próximo ano' : 'Próximo mês', onclick: () => mover(1) }, icon('chev')));
-  const topo = el('div', { class: 'page-head' },
+    el('button', { class: 'arrow', type: 'button', 'aria-label': A.modo === 'ano' ? 'Próximo ano' : 'Próximo mês', onclick: () => mover(1) }, icon('chev')),
+    el('button', { class: 'btn btn--sm ag-hoje', type: 'button', disabled: noAtual && A.sel === hoje,
+      onclick: () => { Object.assign(A, { y: t0.getFullYear(), m: t0.getMonth(), sel: hoje }); redraw(); } }, 'Hoje'));
+  const topo = el('div', { class: 'page-head ag-head' },
     el('h1', { text: 'Agenda' }),
-    el('div', { class: 'actions', style: 'gap:8px' },
-      el('div', { class: 'seg', role: 'group', 'aria-label': 'Visualização' },
-        el('button', { type: 'button', 'aria-pressed': String(A.modo === 'mes'), onclick: () => { A.modo = 'mes'; redraw(); } }, 'Mês'),
-        el('button', { type: 'button', 'aria-pressed': String(A.modo === 'ano'), onclick: () => { A.modo = 'ano'; redraw(); } }, 'Ano')),
-      el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { const t = new Date(); Object.assign(A, { y: t.getFullYear(), m: t.getMonth(), sel: hoje, modo: 'mes' }); redraw(); } }, 'Hoje')));
+    el('div', { class: 'seg', role: 'group', 'aria-label': 'Visualização' },
+      el('button', { type: 'button', 'aria-pressed': String(A.modo === 'mes'), onclick: () => { A.modo = 'mes'; redraw(); } }, 'Mês'),
+      el('button', { type: 'button', 'aria-pressed': String(A.modo === 'ano'), onclick: () => { A.modo = 'ano'; redraw(); } }, 'Ano')));
 
   if (A.modo === 'ano') {
     const fer = feriados(A.y);
@@ -4398,14 +4467,15 @@ function renderAgenda() {
   const selDt = dataDe(A.sel), selFer = feriados(selDt.getFullYear())[A.sel];
   const doDia = (porDia[A.sel] || []).slice().sort((a, b) => a.cliente.localeCompare(b.cliente));
   const entregas = lista.filter(a => a.prazo && a.status !== 'cancelado' && entregaDe(a) === A.sel);
-  const dia = el('div', { class: 'card' },
-    el('div', { class: 'card-head' }, el('h2', { text: `${DIAS_SEMANA[selDt.getDay()]}, ${selDt.getDate()} de ${MESES[selDt.getMonth()].toLowerCase()}` }),
-      el('span', { class: 'count', text: doDia.length ? `${doDia.length} ${doDia.length === 1 ? 'agendamento' : 'agendamentos'}` : '' })),
+  const nomeDia = A.sel === hoje ? 'Hoje' : A.sel === somaDias(hoje, 1) ? 'Amanhã' : A.sel === somaDias(hoje, -1) ? 'Ontem' : DIAS_SEMANA[selDt.getDay()].replace('-feira', '');
+  const dia = el('div', { class: 'card ag-dia' },
+    el('div', { class: 'card-head' },
+      el('h2', {}, nomeDia, el('span', { class: 'ag-dia-data', text: ` ${selDt.getDate()} de ${MESES[selDt.getMonth()].toLowerCase()}` })),
+      ctrl ? el('a', { class: 'btn btn--sm btn--primary', href: `#/agenda/novo` }, icon('plus'), 'Agendar') : null),
     selFer ? el('span', {}, el('span', { class: 'tag tag--danger', text: selFer })) : null,
     entregas.length ? el('div', { class: 'stack', style: 'gap:8px' }, entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null,
     doDia.length ? el('div', { class: 'stack', style: 'gap:8px' }, doDia.map(a => linhaAgendamento(a)))
-      : el('p', { class: 'hint', text: entregas.length ? 'Nenhuma entrada neste dia.' : 'Nenhum cliente neste dia.' }),
-    ctrl ? el('a', { class: 'btn btn--primary btn--block', href: `#/agenda/novo` }, icon('plus'), 'Agendar neste dia') : null);
+      : el('p', { class: 'hint', text: entregas.length ? 'Nenhuma entrada neste dia.' : 'Nenhum cliente neste dia.' }));
 
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     topo, nav,
@@ -4416,11 +4486,8 @@ function renderAgenda() {
       el('span', {}, el('b', { style: 'background:var(--ink)' }), 'em serviço'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
       el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
-      el('span', {}, el('b', { style: 'width:16px;height:3px;border-radius:2px;background:var(--line-2)' }), 'até a entrega')),
-    el('div', { class: 'ag-resumo' },
-      el('span', {}, el('b', { text: String(doMes.length) }), ' no mês'),
-      el('span', {}, el('b', { text: String(doMes.filter(a => a.status === 'agendado').length) }), ' agendados'),
-      el('span', {}, el('b', { text: String(doMes.filter(a => a.status === 'concluido').length) }), ' concluídos')),
+      el('span', {}, el('b', { style: 'width:14px;height:3px;border-radius:2px;background:var(--line-2)' }), 'prazo'),
+      el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` })),
     dia), { current: 'agenda' });
 }
 
@@ -4566,50 +4633,52 @@ function renderRelatorios() {
   const fDe = el('input', { type: 'date', value: R.de, 'aria-label': 'De' }), fAte = el('input', { type: 'date', value: R.ate, 'aria-label': 'Até' });
   const aplicar = () => { if (fDe.value && fAte.value) { R.preset = 'custom'; R.de = fDe.value; R.ate = fAte.value; redraw(); } };
   fDe.addEventListener('change', aplicar); fAte.addEventListener('change', aplicar);
-  const pdfBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button' }, icon('file'), 'Baixar PDF');
+  const pdfBtn = el('button', { class: 'btn btn--sm', type: 'button', 'aria-label': 'Baixar o relatório do período em PDF' }, icon('file'), 'PDF');
   pdfBtn.addEventListener('click', async () => {
-    pdfBtn.disabled = true; pdfBtn.textContent = 'Gerando PDF…';
+    pdfBtn.disabled = true; pdfBtn.textContent = 'Gerando…';
     try { await baixarRelatorioPDF(r); toast('PDF baixado.'); }
     catch { toast('Não foi possível gerar o PDF. Confira a internet e tente de novo.', true); }
-    finally { pdfBtn.disabled = false; preencher(pdfBtn, icon('file'), 'Baixar PDF'); }
+    finally { pdfBtn.disabled = false; preencher(pdfBtn, icon('file'), 'PDF'); }
   });
+  // A receber dos serviços em andamento (valor menos a entrada paga).
+  const emServ = DB.atendimentos.filter(a => !a.concluido && a.valor != null);
+  const aReceber = round2(emServ.reduce((t, a) => t + aReceberDe(a), 0));
+  const nConc = DB.atendimentos.filter(a => a.concluido).length, nCham = chamadosAbertos().length;
   const verTodos = S.rel.todos;
   const linhasServ = r.concluidos.map(a => [fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']);
 
   shell(el('div', { class: 'stack-lg', style: 'max-width:720px' },
     el('div', { class: 'stack' },
-      el('h1', { text: 'Relatórios' }),
-      (() => { const n = DB.atendimentos.filter(a => a.concluido).length;
-        return el('a', { class: 'hist-cta', href: '#/historico' },
-          el('span', { class: 'cta-ico', 'aria-hidden': 'true', html: ICON.clock }),
-          el('span', { class: 'cta-txt' }, el('span', { class: 'cta-tit', text: 'Histórico de serviços' }),
-            el('span', { class: 'cta-sub', text: `${n} ${n === 1 ? 'concluído' : 'concluídos'} · com busca` })),
-          el('span', { class: 'cta-chev', 'aria-hidden': 'true', html: ICON.chev })); })(),
-      (() => { const a = el('a', { class: 'equipe-cta', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
-      (() => { const n = chamadosAbertos().length;
-        return el('a', { class: 'equipe-cta', href: '#/chamados' },
-          el('span', { class: 'cta-ico', 'aria-hidden': 'true', html: ICON.warn }),
-          el('span', { class: 'cta-txt' },
-            el('span', { class: 'cta-tit' }, 'Chamados', n ? el('span', { class: 'cta-alerta', text: `${n} ${n === 1 ? 'aberto' : 'abertos'}` }) : null),
-            el('span', { class: 'cta-sub', text: n ? 'Problemas relatados pela equipe' : 'Nenhum problema em aberto' })),
-          el('span', { class: 'cta-chev', 'aria-hidden': 'true', html: ICON.chev })); })()),
-    el('div', { class: 'card' },
-      el('h2', { text: 'Período' }),
-      el('div', { class: 'seg seg-grade', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),
+      el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Relatórios' }), pdfBtn),
+      // Atalhos: Histórico, Equipe (ao vivo) e Chamados, lado a lado.
+      el('div', { class: 'rel-atalhos' },
+        el('a', { class: 'rel-tile claro', href: '#/historico', 'aria-label': `Histórico de serviços, ${nConc} concluídos` },
+          el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.clock }),
+          el('span', { class: 'rt-tit', text: 'Histórico' }),
+          el('span', { class: 'rt-sub', text: `${nConc} ${nConc === 1 ? 'concluído' : 'concluídos'}` })),
+        (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
+        el('a', { class: 'rel-tile', href: '#/chamados', 'aria-label': nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' },
+          el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.warn }),
+          nCham ? el('span', { class: 'rt-badge', 'aria-hidden': 'true', text: String(nCham) }) : null,
+          el('span', { class: 'rt-tit', text: 'Chamados' }),
+          el('span', { class: 'rt-sub', text: nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto' }))),
+      // Período numa barra só
+      el('div', { class: 'seg seg-linha', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),
       R.preset === 'custom' ? el('div', { class: 'row' }, el('div', { class: 'field' }, el('span', { class: 'label', text: 'De' }), fDe), el('div', { class: 'field' }, el('span', { class: 'label', text: 'Até' }), fAte))
-        : el('p', { class: 'hint', text: `De ${brData(R.de)} a ${brData(R.ate)}` }),
-      pdfBtn),
+        : el('p', { class: 'hint', style: 'margin-top:-6px', text: `De ${brData(R.de)} a ${brData(R.ate)}` })),
     el('section', { class: 'stack' },
-      el('h2', { text: 'Faturamento' }),
-      el('div', { class: 'rel-kpis' },
-        el('div', { class: 'rel-kpi' }, el('span', { text: 'Faturado no período' }), el('b', { text: fmtBRL(r.faturamento) })),
-        el('div', { class: 'rel-kpi' }, el('span', { text: 'Serviços concluídos' }), el('b', { text: String(r.concluidos.length) })),
-        el('div', { class: 'rel-kpi' }, el('span', { text: 'Ticket médio' }), el('b', { text: fmtBRL(r.ticket) })),
-        el('div', { class: 'rel-kpi' }, el('span', { text: `Em andamento (${r.andamento})` }), el('b', { text: fmtBRL(r.previsto) }))),
-      r.semValor ? el('p', { class: 'hint', style: 'color:var(--warn)', text: `${r.semValor} ${r.semValor === 1 ? 'serviço concluído está' : 'serviços concluídos estão'} sem valor lançado e não ${r.semValor === 1 ? 'entra' : 'entram'} no faturamento.` }) : null,
+      el('h2', { text: 'Serviços' }),
+      el('div', { class: 'card rel-fat' },
+        el('span', { class: 'label', text: 'Faturado no período' }),
+        el('b', { class: 'rel-fat-num', text: fmtBRL(r.faturamento) }),
+        el('span', { class: 'hint', text: `${r.concluidos.length} ${r.concluidos.length === 1 ? 'serviço concluído' : 'serviços concluídos'} · ticket médio ${fmtBRL(r.ticket)}` }),
+        r.semValor ? el('p', { class: 'rel-aviso', text: `${r.semValor} ${r.semValor === 1 ? 'concluído sem valor lançado (fica fora do faturado)' : 'concluídos sem valor lançado (ficam fora do faturado)'}` }) : null,
+        el('div', { class: 'rel-fat-and' },
+          el('div', {}, el('span', { class: 'label', text: `Em serviço (${r.andamento})` }), el('b', { text: fmtBRL(r.previsto) }), el('span', { class: 'hint', text: 'valor previsto' })),
+          el('div', {}, el('span', { class: 'label', text: 'A receber' }), el('b', { text: fmtBRL(aReceber) }), el('span', { class: 'hint', text: 'dos em serviço' })))),
       r.porTipo.length ? el('div', { class: 'card' }, el('h3', { text: 'Por tipo de serviço' }),
         tabela(['Tipo', 'Qtd.', 'Total'], r.porTipo.map(t => [t.tipo, String(t.qtd), fmtBRL(t.total)]), [1, 2])) : null,
-      el('div', { class: 'card' }, el('h3', { text: 'Serviços concluídos' }),
+      el('div', { class: 'card' }, el('h3', { text: 'Concluídos no período' }),
         linhasServ.length ? tabela(['Conclusão', 'Placa', 'Cliente', 'Valor'], verTodos ? linhasServ : linhasServ.slice(0, 10), [3]) : el('p', { class: 'hint', text: 'Nenhum serviço concluído no período.' }),
         linhasServ.length > 10 ? el('div', {}, el('button', { class: 'link-btn', type: 'button', onclick: () => { S.rel.todos = !verTodos; redraw(); } },
           verTodos ? 'Mostrar menos' : `Mostrar todos (${linhasServ.length})`)) : null)),
@@ -4620,12 +4689,20 @@ function renderRelatorios() {
           : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
       el('div', { class: 'card' }, el('h3', { text: 'Retiradas por pessoa' }),
         r.retiradas.length ? tabela(['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), [2])
-          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' })),
-      cartaoZerarEstoque(redraw))), { current: 'relatorios' });
+          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' })))), { current: 'relatorios' });
 }
 
 // Zerar o estoque (Controle): descarta todos os movimentos (entradas, retiradas e contagens), sem apagar do banco.
 // Serve para limpar testes. Pede para digitar ZERAR, para não acontecer sem querer.
+function linhaZerarEstoque(redraw) {
+  const total = DB.estoque.movimentos.length;
+  const card = cartaoZerarEstoque(redraw), btn = card.querySelector('button');
+  btn.className = 'btn btn--sm btn--danger'; btn.textContent = 'Zerar'; btn.style.flex = 'none';
+  return el('li', {}, el('div', { class: 'r' },
+    el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: 'Zerar estoque' }),
+      el('span', { class: 'r-sub', style: 'white-space:normal', text: total ? `Tira as ${total} movimentações das contas (saldo volta a 0). Para limpar testes.` : 'Sem movimentações de estoque.' })),
+    btn));
+}
 function cartaoZerarEstoque(redraw) {
   const total = DB.estoque.movimentos.length;
   const btn = el('button', { class: 'btn btn--danger', type: 'button', disabled: !total }, 'Zerar movimentações de estoque');
