@@ -41,8 +41,8 @@ async function carregar(c, eu) {
     // Chamados (problemas relatados): o Controle recebe os abertos e os resolvidos dos últimos 60 dias;
     // o Funcionário só os dele dos últimos 30 dias.
     restAll(c, ctrl
-      ? `sd_chamados?select=*&or=(resolvido_em.is.null,criado_em.gte.${encodeURIComponent(`"${new Date(Date.now() - 60 * 864e5).toISOString()}"`)})&order=criado_em.desc`
-      : `sd_chamados?select=*&por_id=eq.${encodeURIComponent(eu.id)}&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
+      ? `sd_chamados?select=*&excluido_em=is.null&or=(resolvido_em.is.null,criado_em.gte.${encodeURIComponent(`"${new Date(Date.now() - 60 * 864e5).toISOString()}"`)})&order=criado_em.desc`
+      : `sd_chamados?select=*&excluido_em=is.null&por_id=eq.${encodeURIComponent(eu.id)}&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -120,7 +120,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -432,6 +432,9 @@ async function aplicar(c, op, eu, versoes, depois = []) {
         mensagem: { titulo: 'Problema resolvido', texto: resposta || `O problema que você relatou foi resolvido: ${x.texto.slice(0, 100)}`, url: '/#/problema', tag: `chamado-${op.id}` } }));
       return;
     }
+    // Excluir (Controle): só marca, o registro continua no banco.
+    case 'chamados:excluir':
+      return marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
     case 'chamados:reabrir':
       return marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}`, { resolvido_em: null, resolvido_por: null, resposta: null, atualizado_em: agora() });
 

@@ -1744,13 +1744,22 @@ function cartaoChamado(x, { controle = false, redraw } = {}) {
         catch { toast('Não deu para salvar agora.', true); }
         await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
       } }, icon('check'), 'Marcar como resolvido');
-      li.append(fResp, el('div', { class: 'actions' }, btn, ctx.endereco ? el('a', { class: 'btn', href: ctx.endereco }, 'Abrir a tela') : null));
+      li.append(fResp, el('div', { class: 'actions' }, btn));
     } else {
       li.append(el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: async () => {
         try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'reabrir', id: x.id }] } }); } catch { toast('Não deu para salvar agora.', true); }
         await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
       } }, 'Reabrir'));
     }
+    // Excluir: some da lista (no banco só fica marcado). Pede confirmação com um segundo toque.
+    const excluir = el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start;color:var(--danger)', onclick: async () => {
+      if (!excluir.dataset.conf) { excluir.dataset.conf = '1'; excluir.textContent = 'Tocar de novo para excluir'; setTimeout(() => { if (excluir.isConnected) { delete excluir.dataset.conf; excluir.textContent = 'Excluir'; } }, 4000); return; }
+      excluir.disabled = true;
+      try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'excluir', id: x.id }] } }); toast('Chamado excluído.'); }
+      catch { toast('Não deu para excluir agora.', true); }
+      await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
+    } }, 'Excluir');
+    li.append(excluir);
   }
   return li;
 }
