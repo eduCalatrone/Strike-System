@@ -16,6 +16,8 @@
   if (!/^\/cliente\/?$/.test(location.pathname)) {
     var mf = document.createElement('link'); mf.rel = 'manifest'; mf.href = '/manifest.webmanifest';
     document.head.appendChild(mf);
+  } else {
+    document.title = 'Strike Details | Cliente';
   }
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
