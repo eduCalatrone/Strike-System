@@ -1737,10 +1737,10 @@ function cartaoChamado(x, { controle = false, redraw } = {}) {
     !aberto ? el('div', { class: 'chamado-resp' }, el('b', { text: `Resolvido${x.resolvidoPor ? ` por ${x.resolvidoPor}` : ''} em ${dataHoraCurta(x.resolvidoEm)}` }), x.resposta ? el('div', { text: x.resposta }) : null) : null);
   if (controle) {
     if (aberto) {
-      const fResp = el('textarea', { rows: '2', maxlength: '600', placeholder: 'Resposta para quem relatou (opcional)', 'aria-label': 'Resposta' });
+      const fResp = el('textarea', { rows: '2', maxlength: '600', placeholder: 'Resposta (opcional)', 'aria-label': 'Resposta' });
       const btn = el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async () => {
         btn.disabled = true;
-        try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'resolver', id: x.id, resposta: fResp.value.trim() }] } }); toast(`Resolvido. ${x.porNome || 'A pessoa'} recebe o aviso.`); }
+        try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'resolver', id: x.id, resposta: fResp.value.trim() }] } }); toast('Resolvido.'); }
         catch { toast('Não deu para salvar agora.', true); }
         await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
       } }, icon('check'), 'Marcar como resolvido');
@@ -1761,7 +1761,7 @@ function secaoChamados(redraw) {
   return el('section', { class: 'stack' },
     el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h3', { text: 'Problemas em aberto' }), el('span', { class: 'count', text: String(abertos.length) })),
       abertos.length ? el('ul', { class: 'chamados' }, abertos.map(x => cartaoChamado(x, { controle: true, redraw })))
-        : el('p', { class: 'hint', text: 'Nenhum problema em aberto. Quando alguém da equipe relatar pelo botão "Problema", aparece aqui e chega o aviso no celular.' })),
+        : el('p', { class: 'hint', text: 'Nenhum problema em aberto.' })),
     feitos.length ? el('div', { class: 'card' }, el('h3', { text: 'Resolvidos (últimos 60 dias)' }),
       el('ul', { class: 'chamados' }, mostrar.map(x => cartaoChamado(x, { controle: true, redraw }))),
       feitos.length > mostrar.length ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.chamadosTodos = true; redraw(); } }, `Mostrar mais (${feitos.length - mostrar.length})`) : null) : null);
@@ -1771,7 +1771,7 @@ function renderProblema() {
   const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
   const f = S.problema = S.problema || { texto: '', fotos: [] };
   const origem = telaDoChamado || { hash: '#/inicio', nome: 'Início' };
-  const fTxt = el('textarea', { id: 'p-texto', rows: '5', maxlength: '1500', placeholder: 'Ex.: Ao concluir a etapa Montagem da placa ABC1D23, a foto não sobe e aparece "Não foi possível salvar".', oninput: e => { f.texto = e.target.value; } });
+  const fTxt = el('textarea', { id: 'p-texto', rows: '5', maxlength: '1500', placeholder: 'Descreva o problema', oninput: e => { f.texto = e.target.value; } });
   fTxt.value = f.texto;
   const fotosBox = el('div', { class: 'chamado-fotos' }, f.fotos.map((x, i) => el('button', { type: 'button', class: 'rm', 'aria-label': `Tirar foto ${i + 1}`, title: 'Tirar esta foto', onclick: () => { URL.revokeObjectURL(x.url); f.fotos.splice(i, 1); redraw(); } },
     el('img', { src: x.url, alt: `Foto ${i + 1}` }))),
@@ -1790,7 +1790,7 @@ function renderProblema() {
       const contexto = { tela: origem.nome, endereco: origem.hash, aparelho: nomeAparelho(), navegador: navigator.userAgent, versao: etagInicial ? String(etagInicial).replace(/["W\/]/g, '').slice(0, 12) : '', online: navigator.onLine, erros: [...ERROS_RECENTES] };
       await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'abrir', item: { id: uid(), texto, fotos, contexto } }] } });
       f.fotos.forEach(x => URL.revokeObjectURL(x.url)); S.problema = null;
-      toast('Problema enviado. O Controle já recebeu o aviso.');
+      toast('Problema enviado.');
       await buscarDados({ forcar: true }).catch(() => {});
       redraw();
     } catch (e) {
@@ -1802,10 +1802,8 @@ function renderProblema() {
   shell(el('div', { class: 'stack', style: 'max-width:640px' },
     el('h1', { text: 'Relatar problema' }),
     el('div', { class: 'card' },
-      el('p', { class: 'hint', text: 'Algo deu errado no sistema? Conte aqui. O Controle recebe na hora e você é avisado quando for resolvido.' }),
       el('div', { class: 'field' }, el('label', { for: 'p-texto', text: 'O que aconteceu?' }), fTxt),
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Print da tela ou foto (opcional, até 3)' }), fotosBox),
-      el('p', { class: 'hint', text: `Vai junto: a tela onde você estava (${origem.nome}), o aparelho e os últimos erros do sistema.` }),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Prints ou fotos (opcional)' }), fotosBox),
       enviarBtn),
     meus.length ? el('div', { class: 'card' }, el('h2', { text: 'Seus problemas relatados' }),
       el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: 'problema' });
