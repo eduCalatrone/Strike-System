@@ -665,6 +665,8 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 
 /* ---------- Relatórios ---------- */
 /* Relatórios (13/10/2026): três atalhos lado a lado, período numa barra e o faturado em destaque. */
+.rel-topo { display: grid; gap: 10px; }
+.rel-topo .hint { margin: -2px 0 0; }
 .rel-atalhos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .rel-tile { position: relative; display: grid; align-content: start; gap: 2px; min-width: 0; padding: 12px 11px; border-radius: 14px; text-decoration: none;
   background: var(--primary-grad); color: #fff; box-shadow: 0 8px 20px rgba(0, 0, 0, .14); }
@@ -4648,10 +4650,8 @@ function renderRelatorios() {
   const linhasServ = r.concluidos.map(a => [fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']);
 
   shell(el('div', { class: 'stack-lg', style: 'max-width:720px' },
-    el('div', { class: 'stack' },
-      el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Relatórios' }), pdfBtn),
-      // Atalhos: Histórico, Equipe (ao vivo) e Chamados, lado a lado.
-      el('div', { class: 'rel-atalhos' },
+    // Atalhos no topo: Histórico, Equipe (ao vivo) e Chamados, lado a lado.
+    el('div', { class: 'rel-atalhos' },
         el('a', { class: 'rel-tile claro', href: '#/historico', 'aria-label': `Histórico de serviços, ${nConc} concluídos` },
           el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.clock }),
           el('span', { class: 'rt-tit', text: 'Histórico' }),
@@ -4662,10 +4662,13 @@ function renderRelatorios() {
           nCham ? el('span', { class: 'rt-badge', 'aria-hidden': 'true', text: String(nCham) }) : null,
           el('span', { class: 'rt-tit', text: 'Chamados' }),
           el('span', { class: 'rt-sub', text: nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto' }))),
+    // Título (com o PDF) logo acima do período
+    el('div', { class: 'rel-topo' },
+      el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Relatórios' }), pdfBtn),
       // Período numa barra só
       el('div', { class: 'seg seg-linha', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),
       R.preset === 'custom' ? el('div', { class: 'row' }, el('div', { class: 'field' }, el('span', { class: 'label', text: 'De' }), fDe), el('div', { class: 'field' }, el('span', { class: 'label', text: 'Até' }), fAte))
-        : el('p', { class: 'hint', style: 'margin-top:-6px', text: `De ${brData(R.de)} a ${brData(R.ate)}` })),
+        : el('p', { class: 'hint', text: `De ${brData(R.de)} a ${brData(R.ate)}` })),
     el('section', { class: 'stack' },
       el('h2', { text: 'Serviços' }),
       el('div', { class: 'card rel-fat' },
