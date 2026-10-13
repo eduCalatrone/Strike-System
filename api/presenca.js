@@ -1,5 +1,7 @@
 // Presença da equipe no sistema.
-//   POST /api/presenca  { tela, mexeuEm, saiu }
+//   POST /api/presenca  { tela, mexeuEm, saiu, notif, aparelho }
+// notif: situação das notificações neste aparelho (ativo, inativo, bloqueado, iphone, sem). Fica em
+// sd_funcionarios.notif_situacao/notif_aparelho e aparece para o Controle em Ajustes > Notificações > Quem recebe.
 // O site manda a cada 20 s enquanto está aberto e na tela (3 s com a tela Status da equipe aberta),
 // e manda "saiu" quando some da tela (trocou de app, bloqueou o celular, fechou). Só registra o que
 // acontece dentro do sistema: não dá para saber o que a pessoa faz em outros apps.
@@ -32,9 +34,11 @@ module.exports = async (req, res) => {
     // Último toque: não pode ser no futuro nem muito antigo (relógio do celular errado).
     const mexeu = Math.min(agora, Math.max(agora - 864e5, Number(body.mexeuEm) || agora));
     const tela = body.saiu ? null : String(body.tela || '').trim().slice(0, 40) || 'Sistema';
+    const notif = ['ativo', 'inativo', 'bloqueado', 'iphone', 'sem'].includes(body.notif)
+      ? { notif_situacao: body.notif, notif_aparelho: String(body.aparelho || '').trim().slice(0, 60) || null } : {};
     const [, ver] = await Promise.all([
       rest(c, `sd_funcionarios?id=eq.${encodeURIComponent(eu.id)}`, {
-        method: 'PATCH', prefer: 'return=minimal', body: { visto_em: iso(agora), mexeu_em: iso(mexeu), tela },
+        method: 'PATCH', prefer: 'return=minimal', body: { visto_em: iso(agora), mexeu_em: iso(mexeu), tela, ...notif },
       }),
       rest(c, 'sd_versao?select=em&id=eq.1'),
     ]);

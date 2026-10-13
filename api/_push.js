@@ -72,7 +72,17 @@ function cifrar(texto, p256dh, authSecret) {
 }
 
 // Manda para um aparelho. Devolve 'ok', 'sumiu' (navegador cancelou: desativar) ou o erro.
+// Urgency "high": todo aviso aparece na tela. Com "normal", o Android (modo soneca) e o iPhone (prioridade 5 da Apple)
+// podem segurar o aviso por vários minutos com o celular parado.
+// Erro passageiro do serviço (429, 5xx, rede ou tempo esgotado) tenta de novo uma vez, meio segundo depois.
+const PASSAGEIRO = r => r === 'tempo esgotado' || r === 'falha de rede' || /^HTTP (429|5\d\d)\b/.test(r);
 async function enviarUm(v, insc, mensagem, sub) {
+  const r = await tentarUm(v, insc, mensagem, sub);
+  if (!PASSAGEIRO(r)) return r;
+  await new Promise(ok => setTimeout(ok, 500));
+  return tentarUm(v, insc, mensagem, sub);
+}
+async function tentarUm(v, insc, mensagem, sub) {
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 5000);
   try {
     const url = new URL(insc.endpoint);
@@ -80,15 +90,19 @@ async function enviarUm(v, insc, mensagem, sub) {
       method: 'POST', signal: ctrl.signal,
       headers: {
         Authorization: `vapid t=${jwtVapid(v.chave, url.origin, sub)}, k=${v.publica}`,
-        'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'normal',
+        'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: String(mensagem.ttl || 86400), Urgency: 'high',
+        ...(mensagem.tag ? { Topic: topico(mensagem.tag) } : {}),
       },
-      body: cifrar(JSON.stringify(mensagem), insc.p256dh, insc.auth),
+      body: cifrar(JSON.stringify({ ...mensagem, ttl: undefined }), insc.p256dh, insc.auth),
     });
     if (r.status === 404 || r.status === 410) return 'sumiu';
     return r.ok ? 'ok' : `HTTP ${r.status} ${(await r.text().catch(() => '')).slice(0, 120)}`;
   } catch (e) { return e && e.name === 'AbortError' ? 'tempo esgotado' : e instanceof TypeError && /URL/i.test(e.message) ? 'sumiu' : 'falha de rede'; }
   finally { clearTimeout(t); }
 }
+// Topic (RFC 8030): aviso com a mesma etiqueta que ainda não chegou (celular desligado) é trocado pelo novo,
+// em vez de chegarem os dois. Só letras, números, "-" e "_", até 32.
+const topico = tag => String(tag).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || 'aviso';
 
 // Quem recebe: 'todos', 'controle', 'funcionarios' ou lista de ids.
 async function idsDe(c, para) {
@@ -105,7 +119,7 @@ async function enviar(c, { para, mensagem, tipo, por, origem, registrar = true }
   const v = await chaves(c);
   const inscs = ids.length ? await restAll(c, `sd_push_inscricoes?select=id,endpoint,p256dh,auth,falhas&ativo=eq.true&funcionario_id=in.(${ids.map(encodeURIComponent).join(',')})`) : [];
   const sub = /^https:\/\//.test(origem || '') ? origem : 'https://example.com'; // "sub" do VAPID: o endereço do site
-  const corpo = { titulo: String(mensagem.titulo || '').slice(0, 80), texto: String(mensagem.texto || '').slice(0, 300), url: mensagem.url || '/#/inicio', tag: mensagem.tag || undefined };
+  const corpo = { titulo: String(mensagem.titulo || '').slice(0, 80), texto: String(mensagem.texto || '').slice(0, 300), url: mensagem.url || '/#/inicio', tag: mensagem.tag || undefined, em: Date.now(), ttl: mensagem.ttl };
   const res = await Promise.all(inscs.map(i => enviarUm(v, i, corpo, sub)));
   const agora = new Date().toISOString();
   await Promise.all(inscs.map((i, k) => {

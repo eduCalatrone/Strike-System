@@ -84,6 +84,7 @@ button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; fo
 .notif-equipe, .notif-envios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .notif-equipe li { display: flex; align-items: center; gap: 10px; }
 .notif-equipe .r-sub.is-sem { color: var(--muted); font-style: italic; }
+.notif-equipe .r-sub { white-space: normal; overflow: visible; text-overflow: clip; }
 .notif-envios li { display: grid; gap: 2px; justify-items: start; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .notif-envios li:last-child { border-bottom: 0; padding-bottom: 0; }
 .notif-card { gap: 12px; }
@@ -1674,6 +1675,11 @@ if (!MODO_CLIENTE) {
     toast('App instalado. Agora é só abrir pela tela inicial.');
   });
   if ('serviceWorker' in navigator && window.isSecureContext) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  // Toque numa notificação com o sistema já aberto: o service worker pede para trocar de tela.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+    const m = e.data || {};
+    if (m.tipo === 'abrir' && typeof m.hash === 'string' && /^#\/[\w/-]*$/.test(m.hash) && me()) go(m.hash);
+  });
 }
 /* =====================================================================
    Notificações no celular (Web Push, api/notificacoes). Cada pessoa ativa no próprio aparelho
@@ -1693,11 +1699,24 @@ async function inscricaoAtual() {
   try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch { return null; }
 }
 // Situação deste aparelho: 'ativo', 'inativo', 'bloqueado', 'iphone' (precisa instalar) ou 'sem' (navegador não tem).
+// A última situação conferida vai junto no aviso de presença (o Controle vê em Ajustes > Notificações > Quem recebe).
+let notifSit = null;
 async function situacaoNotif() {
-  if (!pushSuportado()) return eIOS() && !appInstalado() ? 'iphone' : 'sem';
-  if (Notification.permission === 'denied') return 'bloqueado';
-  return Notification.permission === 'granted' && await inscricaoAtual() ? 'ativo' : 'inativo';
+  notifSit = !pushSuportado() ? (eIOS() && !appInstalado() ? 'iphone' : 'sem')
+    : Notification.permission === 'denied' ? 'bloqueado'
+    : Notification.permission === 'granted' && await inscricaoAtual() ? 'ativo' : 'inativo';
+  return notifSit;
 }
+// Endereço da inscrição deste aparelho mandado por último ao servidor. Se o navegador trocar (renovou sozinho),
+// o servidor desativa o antigo e o aparelho não fica repetido em "Quem recebe".
+const EKEY = 'sd:notif:endereco';
+function lembrarEndereco(e) { try { if (e) localStorage.setItem(EKEY, e); else localStorage.removeItem(EKEY); } catch {} }
+function enderecoAntigo() { try { return localStorage.getItem(EKEY) || null; } catch { return null; } }
+const inscreverAqui = sub => {
+  const antigo = enderecoAntigo();
+  return apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'inscrever', inscricao: sub.toJSON(), aparelho: nomeAparelho(), ...(antigo && antigo !== sub.endpoint ? { antigo } : {}) } })
+    .then(r => { lembrarEndereco(sub.endpoint); notifSit = 'ativo'; return r; });
+};
 const TEXTO_NOTIF = {
   ativo: 'Ativadas neste aparelho.',
   inativo: 'Desativadas neste aparelho.',
@@ -1718,8 +1737,9 @@ async function ativarNotificacoes() {
       try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesB64u(chave) }); }
       catch { const velha = await reg.pushManager.getSubscription(); if (velha) await velha.unsubscribe(); sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesB64u(chave) }); }
     }
-    await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'inscrever', inscricao: sub.toJSON(), aparelho: nomeAparelho() } });
+    await inscreverAqui(sub);
     try { localStorage.setItem(NKEY, '1'); } catch {}
+    avisarPresenca({ forcar: true }); // o Controle já vê como ativo
     return true;
   } catch (e) { toast(e && e.code === 'network' ? 'Sem internet. Tente de novo.' : 'Não deu para ativar as notificações agora.', true); return false; }
 }
@@ -1729,14 +1749,17 @@ async function desativarNotificacoes({ token } = {}) {
   // keepalive: também funciona ao sair do sistema (a sessão some logo em seguida).
   try { await fetch('/api/notificacoes', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` }, body: JSON.stringify({ acao: 'sair', endpoint: sub.endpoint }) }); } catch {}
   try { await sub.unsubscribe(); } catch {}
+  lembrarEndereco(null); notifSit = 'inativo';
 }
 // Ao abrir o sistema: aparelho que já recebe confirma que é da pessoa logada (mesmo celular, outra pessoa).
 let notifConferida = false;
 async function conferirNotificacoes() {
-  if (notifConferida || !me() || !pushSuportado() || Notification.permission !== 'granted') return;
+  if (notifConferida || !me()) return;
   notifConferida = true;
+  await situacaoNotif();
+  if (!pushSuportado() || Notification.permission !== 'granted') return;
   const sub = await inscricaoAtual(); if (!sub) return;
-  apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'inscrever', inscricao: sub.toJSON(), aparelho: nomeAparelho() } }).catch(() => {});
+  inscreverAqui(sub).catch(() => { notifConferida = false; }); // falhou (sem internet): confere de novo na próxima tela
 }
 async function testarNotificacao() {
   try { const r = await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'testar' } }); toast(r.entregues ? 'Teste enviado. Deve chegar em instantes.' : 'Nenhum aparelho ativo para receber o teste.', !r.entregues); }
@@ -1877,7 +1900,8 @@ function avisarPresenca({ saiu = false, forcar = false } = {}) {
   const tela = telaDePresenca();
   if (!saiu && !forcar && tela === presTela && Date.now() - presEnviadoEm < 3e3) return;
   presTela = saiu ? '' : tela; presEnviadoEm = Date.now();
-  const body = JSON.stringify({ tela, mexeuEm: presUltimoToque, saiu, app: 2 }); // app: o service worker sabe que é o site novo
+  const body = JSON.stringify({ tela, mexeuEm: presUltimoToque, saiu, app: 2, // app: o service worker sabe que é o site novo
+    ...(notifSit && !saiu ? { notif: notifSit, aparelho: nomeAparelho() } : {}) });
   const req = fetch('/api/presenca', { method: 'POST', keepalive: saiu, cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` }, body });
   if (saiu) { req.catch(() => {}); return; }
   req.then(r => r.ok ? r.json() : null).then(d => {
@@ -3889,6 +3913,17 @@ function renderSettings() {
 /* Ajustes > aba Notificações (Controle, #/ajustes/notificacoes): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
    quem tem notificação ativa e os últimos avisos. Dados de api/notificacoes (S.notif, busca de novo a cada minuto). */
 const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque' };
+// Por que a pessoa não recebe: situação do último aparelho que ela usou (vem do aviso de presença).
+function motivoSemAparelho(p) {
+  const ap = p.ultimoAparelho ? ` (${p.ultimoAparelho})` : '';
+  return {
+    bloqueado: `Bloqueou as notificações no navegador${ap}`,
+    iphone: 'iPhone: abre pelo Safari, precisa instalar o app',
+    sem: `Navegador sem notificações${ap}. Use o Chrome ou o app`,
+    inativo: `Ainda não ativou${ap}`,
+    ativo: `Ativou, mas o aparelho não confirmou${ap}. Pedir para abrir o sistema`,
+  }[p.situacao] || (p.vistoEm ? 'Ainda não ativou' : 'Ainda não entrou no sistema');
+}
 function secaoNotificacoes(redraw) {
   const n = S.notif;
   if ((!n || Date.now() - n.em > 60e3) && !(n && n.carregando)) {
@@ -3948,7 +3983,7 @@ function secaoNotificacoes(redraw) {
       el('ul', { class: 'notif-equipe' }, d.equipe.map(p => el('li', {},
         el('span', { class: 'pres-av' + (p.nivel === 'controle' ? ' is-ctrl' : ''), 'aria-hidden': 'true', text: iniciais(p.nome) }),
         el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: p.nome }),
-          el('span', { class: 'r-sub' + (p.aparelhos.length ? '' : ' is-sem'), text: p.aparelhos.length ? p.aparelhos.join(', ') : 'Ainda não ativou' })))))),
+          el('span', { class: 'r-sub' + (p.aparelhos.length ? '' : ' is-sem'), text: p.aparelhos.length ? p.aparelhos.join(', ') : motivoSemAparelho(p) })))))),
     d.envios.length ? el('div', { class: 'card' }, el('h3', { text: 'Últimos avisos' }),
       el('ul', { class: 'notif-envios' }, d.envios.map(e => el('li', {},
         el('span', { class: 'tag' + (e.tipo === 'estoque' ? ' tag--warn' : ''), text: TIPO_ENVIO[e.tipo] || e.tipo }),

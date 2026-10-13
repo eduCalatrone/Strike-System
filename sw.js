@@ -1,7 +1,7 @@
 // Service worker do app instalado (acesso interno).
 // Só guarda a página e as imagens da marca para o app abrir mesmo com a internet ruim.
 // Os dados (/api) nunca passam pelo cache: sempre vêm do banco.
-const CACHE = 'sd-app-v4';
+const CACHE = 'sd-app-v5';
 const ARQUIVOS = ['/', '/logo-letras.png', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
 
 /* Fotos do banco (Supabase Storage, nomes aleatórios, nunca mudam): ficam guardadas no aparelho e não são
@@ -86,21 +86,46 @@ self.addEventListener('fetch', e => {
 });
 
 // Notificações (api/notificacoes): mostra o aviso e, ao tocar, abre o sistema na tela certa.
+// badge: ícone pequeno (branco) da barra de status do Android; sem ele aparece o ícone genérico do Chrome.
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { texto: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.titulo || 'Strike Details', {
-    body: d.texto || '', icon: '/icons/icon-192.png', lang: 'pt-BR',
+    body: d.texto || '', icon: '/icons/icon-192.png', badge: '/icons/badge-96.png', lang: 'pt-BR',
+    timestamp: Number(d.em) || Date.now(), vibrate: [180, 80, 180],
     tag: d.tag || undefined, renotify: !!d.tag, data: { url: d.url || '/#/inicio' },
   }));
 });
+// Toque no aviso: usa a janela do sistema que já está aberta (só troca a tela, pela mensagem "abrir",
+// que funciona mesmo quando a janela não é controlada por este service worker) ou abre uma nova.
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const alvo = new URL((e.notification.data && e.notification.data.url) || '/#/inicio', self.location.origin).href;
+  const alvo = new URL((e.notification.data && e.notification.data.url) || '/#/inicio', self.location.origin);
   e.waitUntil((async () => {
     const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const j = janelas.find(c => new URL(c.url).pathname === '/');
-    if (j) { await j.focus(); try { await j.navigate(alvo); } catch {} return; }
-    await self.clients.openWindow(alvo);
+    if (j) {
+      try { await j.focus(); } catch {}
+      j.postMessage({ tipo: 'abrir', hash: alvo.hash || '#/inicio' });
+      return;
+    }
+    await self.clients.openWindow(alvo.href);
+  })());
+});
+// O navegador renovou a inscrição sozinho (acontece no Chrome de tempos em tempos): assina de novo com a mesma
+// chave e avisa o servidor, que passa a inscrição nova para a mesma pessoa (prova: o endereço antigo).
+// Sem isso o aparelho parava de receber até a pessoa abrir o sistema de novo.
+self.addEventListener('pushsubscriptionchange', e => {
+  e.waitUntil((async () => {
+    const antiga = e.oldSubscription;
+    let nova = e.newSubscription;
+    if (!nova) {
+      const chave = antiga && antiga.options && antiga.options.applicationServerKey;
+      if (!chave) return;
+      nova = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave });
+    }
+    if (!antiga || !nova || antiga.endpoint === nova.endpoint) return;
+    await fetch('/api/notificacoes', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'trocar', antigo: antiga.endpoint, inscricao: nova.toJSON() }) }).catch(() => {});
   })());
 });
