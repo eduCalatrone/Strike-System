@@ -549,6 +549,14 @@ textarea { resize: vertical; min-height: 76px; }
 .valor-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .valor-num { font: 700 28px/1 var(--cond); letter-spacing: .01em; }
 .valor-num.vazio { font: 500 15px var(--body); color: var(--muted); }
+.valor-partes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.valor-parte { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.valor-parte b { font: 700 19px/1.1 var(--cond); letter-spacing: .01em; }
+.valor-parte.receber b { color: var(--ink); }
+.valor-parte.zerado b { color: var(--muted); }
+.valor-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.valor-total { font-size: 14px; color: var(--muted); }
+.valor-total b { color: var(--ink); }
 
 /* ---------- Agenda ---------- */
 .ag-nav { display: flex; align-items: center; gap: 6px; }
@@ -1479,6 +1487,21 @@ const progresso = at => at.concluido ? 1 : (at.etapas.filter((_, i) => etapaFeit
 function capaDe(at) {
   return at.fotos.find(x => x.rotulo === 'Frente') || at.fotos.find(x => x.rotulo !== 'Placa') || at.fotos[0] || null;
 }
+// Valor dividido em Entrada paga e A receber (o total continua em at.valor, usado nos relatórios).
+// Atendimento antigo, sem entrada: tudo a receber.
+const entradaDe = at => at.entrada == null ? 0 : at.entrada;
+const aReceberDe = at => at.valor == null ? null : round2(at.valor - entradaDe(at));
+// Lê os dois campos. Devolve { valor, entrada } ou null se algum estiver inválido (já avisa).
+function lerValorPartes(fEntrada, fReceber) {
+  const rawE = fEntrada.value.trim(), rawR = fReceber.value.trim();
+  const e = rawE ? parseNum(rawE) : null, r = rawR ? parseNum(rawR) : null;
+  if (rawE && (isNaN(e) || e < 0)) { toast('Entrada paga inválida. Use só números, como 500 ou 1.960,00.', true); fEntrada.focus(); return null; }
+  if (rawR && (isNaN(r) || r < 0)) { toast('Valor a receber inválido. Use só números, como 500 ou 1.960,00.', true); fReceber.focus(); return null; }
+  if (e == null && r == null) return { valor: null, entrada: null };
+  return { valor: round2((e || 0) + (r || 0)), entrada: e || 0 };
+}
+const textoValor = (valor, entrada) => valor == null ? 'Valor removido'
+  : `Valor definido: ${fmtBRL(valor)} (entrada paga ${fmtBRL(entrada || 0)}, a receber ${fmtBRL(round2(valor - (entrada || 0)))})`;
 function registrar(at, texto) {
   const u = me();
   at.historico.push({ texto, em: Date.now(), porId: u ? u.id : null, porNome: u ? u.nome : '' });
@@ -2650,7 +2673,8 @@ async function runRead(frame, crop, mode) {
    Fotos: grade com espaços por lado do veículo
    ===================================================================== */
 // items: [{id?, rotulo, url?}] ; onAdd(rotulo, origem) ; onRemove(item) ; openable
-function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto' }) {
+// carro: false usa a lista simples de tipos (cadastro do veículo), sem o carro visto de cima.
+function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto', carro = true }) {
   const ul = el('ul', { class: 'photos' });
   const tiles = [];
   for (const f of items) {
@@ -2661,8 +2685,8 @@ function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Ad
       onRemove ? el('button', { class: 'rm', type: 'button', 'aria-label': `Remover foto ${f.rotulo}`, onclick: () => onRemove(f) }, '×') : null));
   }
   const tem = new Set(items.map(f => f.rotulo));
-  for (const r of slots) if (!tem.has(r) && onAdd) tiles.push(el('li', {}, el('button', { class: 'slot', type: 'button', onclick: () => janelaFoto(r, onAdd, tem) }, icon('camera'), r)));
-  if (onAdd) tiles.push(el('li', {}, el('button', { class: 'slot is-extra', type: 'button', onclick: () => janelaFoto(null, onAdd, tem) }, icon('plus'), extraLabel)));
+  for (const r of slots) if (!tem.has(r) && onAdd) tiles.push(el('li', {}, el('button', { class: 'slot', type: 'button', onclick: () => janelaFoto(r, onAdd, tem, carro) }, icon('camera'), r)));
+  if (onAdd) tiles.push(el('li', {}, el('button', { class: 'slot is-extra', type: 'button', onclick: () => janelaFoto(null, onAdd, tem, carro) }, icon('plus'), extraLabel)));
   preencher(ul, ...tiles);
   return ul;
 }
@@ -2709,7 +2733,7 @@ function carroFotos(tipoAtual, escolher, feitos) {
     b('Lateral direita', 'cf-dir', 'Lateral<br>direita'),
     b('Traseira', 'cf-tras'));
 }
-function janelaFoto(tipoInicial, aoEscolher, feitos = new Set()) {
+function janelaFoto(tipoInicial, aoEscolher, feitos = new Set(), comCarro = true) {
   let d = $('pop-foto');
   if (!d) {
     d = el('dialog', { id: 'pop-foto', class: 'sheet', 'aria-label': 'Adicionar foto' });
@@ -2719,11 +2743,12 @@ function janelaFoto(tipoInicial, aoEscolher, feitos = new Set()) {
   let tipo = tipoInicial || null;
   const tags = el('div', { class: 'sheet-tags', role: 'group', 'aria-label': 'Outras fotos' });
   const carro = el('div');
-  const NO_CARRO = ['Frente', 'Traseira', 'Lateral esquerda', 'Lateral direita', 'Interior'];
+  // Sem o carro (cadastro do veículo): todos os tipos na lista, como era antes.
+  const NO_CARRO = comCarro ? ['Frente', 'Traseira', 'Lateral esquerda', 'Lateral direita', 'Interior'] : [];
   const tirar = el('button', { class: 'btn btn--primary btn--lg grow', type: 'button' }, icon('camera'), 'Tirar foto');
   const galeria = el('button', { class: 'btn btn--lg grow', type: 'button' }, icon('image'), 'Galeria');
   const desenhar = () => {
-    preencher(carro, carroFotos(tipo, r => { tipo = r; desenhar(); }, feitos));
+    if (comCarro) preencher(carro, carroFotos(tipo, r => { tipo = r; desenhar(); }, feitos));
     preencher(tags, ...[...ROTULOS, ...ROTULOS_EXTRA].filter(r => !NO_CARRO.includes(r)).map(r => el('button', { class: 'sheet-tag' + (feitos.has(r) ? ' tem' : ''), type: 'button', 'aria-pressed': String(r === tipo), onclick: () => { tipo = r; desenhar(); } }, r)));
     tirar.disabled = galeria.disabled = !tipo;
   };
@@ -2733,9 +2758,9 @@ function janelaFoto(tipoInicial, aoEscolher, feitos = new Set()) {
   desenhar();
   preencher(d, el('div', { class: 'sheet-in' },
     el('div', { class: 'card-head' }, el('h2', { text: 'Adicionar foto' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Cancelar')),
-    el('span', { class: 'label', text: 'Toque no lado do veículo' }),
-    carro,
-    el('span', { class: 'label', text: 'Outras fotos' }),
+    comCarro ? el('span', { class: 'label', text: 'Toque no lado do veículo' }) : null,
+    comCarro ? carro : null,
+    el('span', { class: 'label', text: comCarro ? 'Outras fotos' : 'Tipo da foto' }),
     tags,
     el('div', { class: 'actions' }, tirar, galeria)));
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
@@ -2814,14 +2839,16 @@ function renderNew(placaRaw) {
     tiposOk.map(t => el('option', { value: t.id, selected: tipoAg && t.id === tipoAg.id }, t.nome)));
   const fDanos = el('textarea', { id: 'f-danos', rows: '3', maxlength: '1000', placeholder: 'Riscos, amassados, peças soltas, problemas já existentes' });
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
-  const fValor = el('input', { id: 'f-valor', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
+  // Valor (só Controle): Entrada paga e A receber. O valor do agendamento entra como "A receber".
+  const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off' });
+  const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
   const opcSel = []; // opcionais marcados na entrada
   const opcBox = el('div');
   const drawOpc = () => preencher(opcBox, chipsOpcionais(opcSel, (n, on) => { if (on) opcSel.push(n); else opcSel.splice(opcSel.indexOf(n), 1); drawOpc(); }));
   drawOpc();
   const fotosBox = el('div');
   const drawFotos = () => preencher(fotosBox, photoGrid({
-    items: fotos, slots: ROTULOS,
+    items: fotos, slots: ROTULOS, carro: false, // cadastro: lista simples de tipos, sem o carro visto de cima
     onAdd: async (rotulo, origem) => {
       const file = await pickPhoto(origem); if (!file) return;
       try {
@@ -2846,8 +2873,8 @@ function renderNew(placaRaw) {
     const tipo = tipoById(fTipo.value);
     if (!tipo) { toast('Escolha o tipo de serviço.', true); fTipo.focus(); fTipo.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
     const clienteNome = fCliente.value.trim().replace(/\s+/g, ' '); // opcional: sem nome aparece "NOME PENDENTE"
-    let valor = null;
-    if (isCtrl() && fValor.value.trim()) { valor = parseNum(fValor.value); if (isNaN(valor)) { toast('Valor inválido.', true); return; } }
+    let valor = null, entrada = null;
+    if (isCtrl()) { const v = lerValorPartes(fEntrada, fReceber); if (!v) return; ({ valor, entrada } = v); }
     salvar.disabled = true; salvar.textContent = 'Salvando…';
     const voltar = () => { salvar.disabled = false; salvar.textContent = 'Iniciar serviço'; };
     let fotosMeta;
@@ -2867,7 +2894,7 @@ function renderNew(placaRaw) {
     const at = {
       id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, livres: livresDe(tipo), // etapas livres vêm do tipo (Ajustes)
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
-      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, fotos: fotosMeta, historico: [], opcionais: [...opcSel], opcionaisFeitos: {},
+      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, ...(isCtrl() ? { entrada } : {}), fotos: fotosMeta, historico: [], opcionais: [...opcSel], opcionaisFeitos: {},
     };
     registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
     if (opcSel.length) registrar(at, `Opcionais na entrada: ${opcSel.join(', ')}`);
@@ -2909,7 +2936,9 @@ function renderNew(placaRaw) {
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
       el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo (marca e modelo primeiro)' }), fDesc),
       (DB.opcionais || []).length ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Opcionais (ex.: carpete que vai no veículo)' }), opcBox) : null,
-      isCtrl() ? el('div', { class: 'field' }, el('label', { for: 'f-valor', text: 'Valor do serviço (R$)' }), fValor) : null),
+      isCtrl() ? el('div', { class: 'valor-campos' },
+        el('div', { class: 'field' }, el('label', { for: 'f-entrada', text: 'Entrada paga (R$)' }), fEntrada),
+        el('div', { class: 'field' }, el('label', { for: 'f-receber', text: 'A receber (R$)' }), fReceber)) : null),
     el('div', { class: 'card' },
       el('h2', { text: 'Fotos de entrada' }),
       fotosBox),
@@ -3315,34 +3344,50 @@ function renderVehicle(id) {
       el('div', {}, excluir));
   }
 
-  // Valor do serviço (só Controle): cartão próprio, logo abaixo das etapas.
+  // Valor do serviço (só Controle): cartão próprio, logo abaixo das etapas. Dividido em Entrada paga e A receber.
   let valorCard = null;
   if (ctrl) {
     const editando = S.valorAberto === at.id;
     const abrir = on => { S.valorAberto = on ? at.id : null; redraw(); };
     if (editando) {
-      const fValor = el('input', { type: 'text', inputmode: 'decimal', placeholder: '0,00', value: at.valor != null ? fmtQ(at.valor) : '', autocomplete: 'off', 'aria-label': 'Valor do serviço em reais' });
-      const salvar = () => {
-        const raw = fValor.value.trim(); const n = raw ? parseNum(raw) : null;
-        if (raw && isNaN(n)) { toast('Valor inválido. Use só números, como 1960 ou 1.960,00.', true); fValor.focus(); return; }
-        S.valorAberto = null;
-        if (n === (at.valor == null ? null : at.valor)) { redraw(); return; }
-        if (commit(() => { at.valor = n; registrar(at, n == null ? 'Valor removido' : `Valor definido: ${fmtBRL(n)}`); })) { toast('Valor salvo.'); redraw(); }
+      const temValor = at.valor != null;
+      const fEntrada = el('input', { id: 'v-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: temValor ? fmtQ(entradaDe(at)) : '' });
+      const fReceber = el('input', { id: 'v-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: temValor ? fmtQ(aReceberDe(at)) : '' });
+      const total = el('p', { class: 'valor-total' });
+      const somar = () => {
+        const e = parseNum(fEntrada.value.trim() || '0'), r = parseNum(fReceber.value.trim() || '0');
+        preencher(total, 'Total do serviço: ', el('b', { text: isNaN(e) || isNaN(r) ? '...' : fmtBRL(round2(e + r)) }));
       };
-      fValor.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvar(); } });
+      fEntrada.addEventListener('input', somar); fReceber.addEventListener('input', somar); somar();
+      const salvar = () => {
+        const v = lerValorPartes(fEntrada, fReceber); if (!v) return;
+        S.valorAberto = null;
+        const antes = at.valor == null ? null : at.valor, antesE = at.valor == null ? null : entradaDe(at);
+        if (v.valor === antes && v.entrada === antesE) { redraw(); return; }
+        if (commit(() => { at.valor = v.valor; at.entrada = v.entrada; registrar(at, textoValor(v.valor, v.entrada)); })) { toast('Valor salvo.'); redraw(); }
+      };
+      for (const f of [fEntrada, fReceber]) f.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvar(); } });
       valorCard = el('div', { class: 'card' },
         el('h2', { text: 'Valor do serviço' }),
-        el('div', { class: 'row', style: 'align-items:center' }, el('span', { class: 'label', style: 'flex:none', text: 'R$' }), fValor),
+        el('div', { class: 'valor-campos' },
+          el('div', { class: 'field' }, el('label', { for: 'v-entrada', text: 'Entrada paga (R$)' }), fEntrada),
+          el('div', { class: 'field' }, el('label', { for: 'v-receber', text: 'A receber (R$)' }), fReceber)),
+        total,
         el('div', { class: 'actions' },
           el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvar }, 'Salvar valor'),
           el('button', { class: 'btn', type: 'button', onclick: () => abrir(false) }, 'Cancelar')));
-      setTimeout(() => { fValor.focus(); fValor.select(); }, 50);
+      setTimeout(() => { fEntrada.focus(); fEntrada.select(); }, 50);
     } else {
-      valorCard = el('div', { class: 'card' }, el('div', { class: 'valor-box' },
-        el('div', { style: 'display:grid;gap:4px' },
-          el('span', { class: 'label', text: 'Valor do serviço' }),
-          el('span', { class: 'valor-num' + (at.valor == null ? ' vazio' : ''), text: at.valor == null ? 'Ainda sem valor' : fmtBRL(at.valor) })),
-        el('button', { class: 'btn' + (at.valor == null ? ' btn--primary' : ''), type: 'button', style: 'flex:none', onclick: () => abrir(true) }, at.valor == null ? 'Lançar valor' : 'Alterar')));
+      const rec = aReceberDe(at), ent = entradaDe(at);
+      valorCard = el('div', { class: 'card' },
+        el('div', { class: 'valor-box' },
+          el('div', { style: 'display:grid;gap:4px' },
+            el('span', { class: 'label', text: 'Valor do serviço' }),
+            el('span', { class: 'valor-num' + (at.valor == null ? ' vazio' : ''), text: at.valor == null ? 'Ainda sem valor' : fmtBRL(at.valor) })),
+          el('button', { class: 'btn' + (at.valor == null ? ' btn--primary' : ''), type: 'button', style: 'flex:none', onclick: () => abrir(true) }, at.valor == null ? 'Lançar valor' : 'Alterar')),
+        at.valor == null ? null : el('div', { class: 'valor-partes' },
+          el('div', { class: 'valor-parte' + (ent ? '' : ' zerado') }, el('span', { class: 'label', text: 'Entrada paga' }), el('b', { text: fmtBRL(ent) })),
+          el('div', { class: 'valor-parte receber' + (rec ? '' : ' zerado') }, el('span', { class: 'label', text: 'A receber' }), el('b', { text: rec ? fmtBRL(rec) : 'Quitado' }))));
     }
   }
 

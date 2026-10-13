@@ -86,7 +86,7 @@ async function carregar(c, eu) {
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
       opcionais: listaOpcionais(a.opcionais), opcionaisFeitos: opcFeitos(a.opcionais_feitos, a.opcionais),
-      ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor) } : {}),
+      ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada) } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
     estoque: {
@@ -149,7 +149,7 @@ function historico(v) {
   }));
 }
 // O histórico guarda textos com valores ("Valor definido: R$ ..."). O Funcionário não recebe essas linhas.
-const RE_HIST_VALOR = /^Valor (definido|removido)/;
+const RE_HIST_VALOR = /^(Valor (definido|removido)|Entrada paga|A receber)/;
 function semValores(h) { return (Array.isArray(h) ? h : []).filter(x => !RE_HIST_VALOR.test(String(x && x.texto || ''))); }
 function feitas(v) {
   const out = {};
@@ -282,6 +282,8 @@ async function aplicar(c, op, eu, versoes) {
       if (Array.isArray(it.opcionais) && it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos(it.opcionaisFeitos, it.opcionais);
       // Valor só o Controle define. O Funcionário não recebe o valor, então não mexe nele.
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
+      // Entrada paga: só quando veio (site antigo não manda e não apaga). A receber = valor - entrada.
+      if (ctrl && it.entrada !== undefined) linha.valor_entrada = it.entrada == null || it.entrada === '' ? null : num(it.entrada, 'entrada');
       const atId = id(it.id);
       if (op.versao == null) {
         await rest(c, 'sd_atendimentos', {
