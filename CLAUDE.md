@@ -55,7 +55,8 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
 
 ## Telas (roteamento por hash)
 
-- Topo: tocar no próprio nome abre a janela "Notificações" deste aparelho.
+- Topo: tocar no próprio nome abre a janela "Notificações" deste aparelho. O nome fica em cima e, para o Controle, o modo embaixo ("Controle" ou a etiqueta preta "Funcionário"); a logo encolhe antes do nome (nome nunca cortado no celular).
+- **Modo funcionário** (Controle, pedido de 13/10/2026, para testes e apresentações): na janela do nome, "Modo" com Controle / Funcionário (`trocarModo`). Fica neste aparelho (`localStorage` `sd:modo`) até voltar ou sair do sistema. O site passa a se comportar como Funcionário (`me().tipo`; `me().real` guarda o nível de verdade) e os pedidos ao `api/dados` levam o cabeçalho `X-SD-Modo: funcionario`: o servidor (`verComo` em `api/_supabase.js`) trata a pessoa do Controle como Funcionário nesse pedido (sem valores, só os atendimentos recentes, regras de gravação do Funcionário), então nada do Controle é apagado por engano. Só rebaixa, nunca eleva. O que for feito nesse modo fica no nome da própria pessoa do Controle.
 - `#/` login da equipe (usuário e senha) · página do cliente em `/cliente` (hash `#/PLACA`)
 - `#/inicio` galeria dos veículos em serviço. Card: foto de capa (Frente), **modelo** (só as 2 primeiras palavras da descrição, em maiúsculas, `modeloCurto`), **placa** (mini placa estilo Mercosul, `miniPlaca`: faixa azul com "BRASIL" no centro e a bandeira do Brasil em SVG no canto direito) com o **nome do cliente** ao lado (desce de linha se não couber; ou "(NOME PENDENTE)"), **serviço**, situação e barra de progresso. Sem modelo cadastrado, a placa vira o título.
 - `#/placa` "Adicionar veículo": câmera ao vivo com moldura, foto da galeria ou digitar

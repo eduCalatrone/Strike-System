@@ -77,6 +77,11 @@ async function usuarioDaSessao(c, req) {
   return u;
 }
 
+// Modo funcionário (Controle testando ou apresentando): com o cabeçalho x-sd-modo: funcionario, a pessoa do Controle
+// passa a valer como Funcionário nesta chamada (recebe e grava com as regras do Funcionário). Só rebaixa, nunca eleva.
+function verComo(eu, req) {
+  return eu && eu.nivel === 'controle' && String(req.headers['x-sd-modo'] || '') === 'funcionario' ? { ...eu, nivel: 'funcionario', simulado: true } : eu;
+}
 async function readJsonBody(req) {
   if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body; // Vercel já decodifica JSON
   let raw = '';
@@ -172,7 +177,7 @@ const iso = v => {
   return v == null || v === '' || !Number.isFinite(n) ? null : new Date(n).toISOString();
 };
 
-module.exports = {
+module.exports = { verComo,
   config, send, erro, readJsonBody, readRawBody, rest, restAll, uploadFoto, apagarArquivos, fotoBase, ms, iso,
   hashSenha, confereSenha, criarToken, usuarioDaSessao,
 };

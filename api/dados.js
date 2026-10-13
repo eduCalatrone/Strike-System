@@ -12,7 +12,7 @@
 // Precisa de login (token). O que é só do Controle é conferido aqui também, não só na tela.
 // O Funcionário não recebe valores dos serviços.
 
-const { config, send, erro, readJsonBody, rest, restAll, fotoBase, ms, iso, hashSenha, usuarioDaSessao } = require('./_supabase.js');
+const { verComo, config, send, erro, readJsonBody, rest, restAll, fotoBase, ms, iso, hashSenha, usuarioDaSessao } = require('./_supabase.js');
 const push = require('./_push.js');
 
 /* ---------- Leitura ---------- */
@@ -479,7 +479,7 @@ module.exports = async (req, res) => {
   if (!c) return send(res, 501, { error: 'not_configured' });
 
   try {
-    const eu = await usuarioDaSessao(c, req);
+    const eu = verComo(await usuarioDaSessao(c, req), req); // Controle em modo funcionário vale como Funcionário
     if (req.method === 'GET') return send(res, 200, await carregar(c, eu));
     if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
 

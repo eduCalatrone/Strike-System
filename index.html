@@ -90,7 +90,22 @@ button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; fo
 .notif-envios li { display: grid; gap: 2px; justify-items: start; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .notif-envios li:last-child { border-bottom: 0; padding-bottom: 0; }
 .notif-card { gap: 12px; }
-@media (max-width: 440px) { .who-role { display: none; } }
+/* Nome no topo: nome em cima e, para o Controle, o modo embaixo (não corta mais o nome no celular). */
+button.who-name { display: grid; gap: 1px; min-width: 0; line-height: 1.15; padding: 2px 0; }
+.who-name b { overflow: hidden; text-overflow: ellipsis; }
+.who-role { font-size: 11px; color: var(--muted); }
+.who-name.is-modo .who-role { justify-self: start; padding: 1px 6px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 600; }
+/* A logo encolhe antes do nome: o nome (até 120 px) nunca é cortado por causa dela. */
+.topbar .wordmark { min-width: 0; flex: 0 1 auto; }
+.topbar .wordmark-txt { max-width: 100%; height: auto; max-height: 15px; object-fit: contain; object-position: left; }
+.topbar .who { flex: none; }
+.topbar .who-name { max-width: 120px; }
+@media (max-width: 440px) {
+  .topbar-in { gap: 8px; }
+  .who { gap: 6px; }
+  .topbar .top-ico { width: 34px; height: 34px; }
+  .topbar .top-ico svg { width: 18px; height: 18px; }
+}
 .link-btn { border: 0; background: none; padding: 8px 2px; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 main {
@@ -1161,6 +1176,7 @@ async function apiJson(path, { method = 'GET', body, raw } = {}) {
   const headers = {};
   const sessao = getSession();
   if (sessao && sessao.token) headers.Authorization = `Bearer ${sessao.token}`;
+  if (modoFuncionario()) headers['X-SD-Modo'] = 'funcionario';
   let payload;
   if (raw) { headers['Content-Type'] = 'application/octet-stream'; payload = raw; }
   else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
@@ -1667,14 +1683,29 @@ const MODO_CLIENTE = /^\/cliente\/?$/.test(location.pathname);
 const SKEY = 'sd:sessao:v2';
 function getSession() { try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch { return null; } }
 function setSession(s) { try { if (s) localStorage.setItem(SKEY, JSON.stringify(s)); else localStorage.removeItem(SKEY); } catch {} }
+// Modo funcionário (Controle, pedido de 13/10/2026): tocando no nome, o Controle passa a ver e usar o sistema como
+// Funcionário, para testes e apresentações. Fica neste aparelho (sd:modo) até voltar ou sair. Os pedidos ao api/dados
+// vão com o cabeçalho X-SD-Modo e o servidor aplica as regras do Funcionário (sem valores, só os recentes).
+const MKEY = 'sd:modo';
+const modoFuncionario = () => { try { return localStorage.getItem(MKEY) === 'funcionario'; } catch { return false; } };
 function me() {
   const s = getSession(); if (!s || !s.token) return null;
   const f = DB && funcById(s.id); if (!f) return null;
-  return { tipo: f.nivel, id: f.id, nome: f.nome };
+  return { tipo: f.nivel === 'controle' && modoFuncionario() ? 'funcionario' : f.nivel, real: f.nivel, id: f.id, nome: f.nome };
+}
+function trocarModo(funcionario) {
+  if (pendentes) { toast('Aguarde terminar de salvar.', true); return; }
+  try { if (funcionario) localStorage.setItem(MKEY, 'funcionario'); else localStorage.removeItem(MKEY); }
+  catch { toast('Não deu para trocar o modo neste aparelho.', true); return; }
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  S.notif = null; S.valorAberto = null; S.entradaEdit = null; S.marcandoEtapas = null; S.problema = null;
+  esquecerDados(); // busca de novo, já com as regras do modo escolhido
+  go('#/inicio');
+  toast(funcionario ? 'Modo funcionário' : 'Modo Controle');
 }
 const isCtrl = () => { const u = me(); return !!u && u.tipo === 'controle'; };
 function esquecerDados() { DB = null; VERS.clear(); geracao++; carregadoEm = 0; versaoCarregada = null; }
-function sair() { avisarPresenca({ saiu: true }); const t = (getSession() || {}).token; if (t) desativarNotificacoes({ token: t }); notifConferida = false; try { localStorage.removeItem(NKEY); } catch {} setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
+function sair() { avisarPresenca({ saiu: true }); const t = (getSession() || {}).token; if (t) desativarNotificacoes({ token: t }); notifConferida = false; try { localStorage.removeItem(NKEY); } catch {} try { localStorage.removeItem(MKEY); } catch {} setSession(null); esquecerDados(); S.pending = null; $('toast').hidden = true; go('#/'); }
 function sessaoTerminou() {
   if (!getSession()) return;
   notifConferida = false;
@@ -1927,9 +1958,17 @@ function janelaNotificacoes() {
   let d = $('pop-notif');
   if (!d) { d = el('dialog', { id: 'pop-notif', class: 'sheet', 'aria-label': 'Notificações' }); d.addEventListener('click', e => { if (e.target === d) d.close(); }); document.body.append(d); }
   const u = me();
+  const ctrlReal = !!u && u.real === 'controle';
+  // Controle: escolhe o modo (Controle ou Funcionário) antes das notificações.
+  const modo = ctrlReal ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Modo' }),
+    el('div', { class: 'seg', role: 'group', 'aria-label': 'Modo', style: 'display:flex;width:100%' },
+      [['controle', 'Controle'], ['funcionario', 'Funcionário']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(u.tipo === k),
+        onclick: () => { if (u.tipo !== k) trocarModo(k === 'funcionario'); } }, t)))) : null;
   preencher(d, el('div', { class: 'sheet-in' },
-    el('div', { class: 'card-head' }, el('h2', { text: 'Notificações' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Fechar')),
-    el('p', { class: 'hint', text: `${u ? u.nome : ''}, os avisos do sistema chegam neste celular mesmo com o app fechado.` }),
+    el('div', { class: 'card-head' }, el('h2', { text: ctrlReal ? u.nome : 'Notificações' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Fechar')),
+    modo,
+    ctrlReal ? el('span', { class: 'label', text: 'Notificações' }) : null,
+    el('p', { class: 'hint', text: 'Os avisos chegam neste celular mesmo com o app fechado.' }),
     blocoEsteAparelho(),
     isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes/notificacoes', style: 'justify-self:start', onclick: () => d.close() }, 'Configurar notificações da equipe') : null));
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
@@ -2417,7 +2456,9 @@ function shell(body, { nav = true, current = '' } = {}) {
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
     el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     u ? el('div', { class: 'who' },
-      el('button', { class: 'who-name', type: 'button', title: 'Notificações', 'aria-label': `${u.nome}: notificações`, onclick: janelaNotificacoes }, el('b', { text: u.nome }), u.tipo === 'controle' ? el('span', { class: 'who-role', text: ' · Controle' }) : null),
+      el('button', { class: 'who-name' + (u.real === 'controle' && u.tipo !== 'controle' ? ' is-modo' : ''), type: 'button', title: u.real === 'controle' ? 'Modo e notificações' : 'Notificações',
+        'aria-label': `${u.nome}: ${u.real === 'controle' ? 'modo e notificações' : 'notificações'}`, onclick: janelaNotificacoes },
+        el('b', { text: u.nome }), u.real === 'controle' ? el('span', { class: 'who-role', text: u.tipo === 'controle' ? 'Controle' : 'Funcionário' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       // Recarregar: no app da tela inicial (iPhone principalmente) não existe o botão do navegador.
       appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
