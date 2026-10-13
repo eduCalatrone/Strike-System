@@ -94,6 +94,17 @@ button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; fo
 button.who-name { display: grid; gap: 1px; min-width: 0; line-height: 1.15; padding: 2px 0; }
 .who-name b { overflow: hidden; text-overflow: ellipsis; }
 .who-role { font-size: 11px; color: var(--muted); }
+.link-btn.add-opc { justify-self: start; display: inline-flex; align-items: center; gap: 6px; color: #6D28D9; }
+.link-btn.add-opc svg { width: 16px; height: 16px; flex: none; }
+.menu-modo-fundo { position: fixed; inset: 0; z-index: 90; }
+.menu-modo { position: fixed; z-index: 91; min-width: 180px; padding: 6px; display: grid; gap: 2px; border-radius: 14px; background: #fff; border: 1px solid var(--line);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .18); transform-origin: top left; animation: menu-entra .14s var(--suave) both; }
+.menu-modo button { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border: 0; border-radius: 10px; background: none; color: var(--ink); font: 600 15px var(--body); text-align: left; }
+.menu-modo button[aria-checked="true"] { background: #F0F0EE; }
+.mm-check { flex: none; width: 18px; height: 18px; display: grid; place-items: center; }
+.mm-check svg { width: 16px; height: 16px; }
+@keyframes menu-entra { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .menu-modo { animation: none; } }
 .who-name.is-modo .who-role { justify-self: start; padding: 1px 6px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 600; }
 /* A logo encolhe antes do nome: o nome (até 120 px) nunca é cortado por causa dela. */
 .topbar .wordmark { min-width: 0; flex: 0 1 auto; }
@@ -781,8 +792,9 @@ body::before {
 .nav a.nav-problema, .nav a.nav-problema span.lbl { color: #B4231B; }
 .nav a.nav-problema .ico { opacity: .85; }
 .nav a.nav-problema[aria-current="page"] .ico { background: rgba(180, 35, 27, .1); opacity: 1; }
-.topbar .top-ico.tem-chamado { position: relative; }
-.topbar .top-ico.tem-chamado::after { content: ""; position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: #B4231B; box-shadow: 0 0 0 2px #fff; }
+.nav a.has-chamado .ico::after { content: ""; position: absolute; top: 2px; right: 12px; width: 9px; height: 9px; border-radius: 50%; background: #B4231B; box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
+/* Cartão "Chamados" em Relatórios (mesmo estilo do Status da equipe) */
+.cta-alerta { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 99, 88, .18); color: #FF9A92; font: 600 10px/1 var(--body); letter-spacing: .06em; text-transform: uppercase; }
 .chamado-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: #B4231B; color: #fff; font: 700 11px/1 var(--body); }
 .chamados { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .chamado { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
@@ -1483,6 +1495,29 @@ function concluirOpcional(at, nome, texto) {
   registrar(at, texto || `Opcional concluído: ${nome}`);
   talvezConcluir(at);
 }
+// "+ Adicionar opcional" (qualquer pessoa da equipe, pedido de 13/10/2026): no veículo em serviço, abre a lista dos
+// opcionais de Ajustes que o veículo ainda não tem. Tirar um opcional continua só nas Opções do Controle.
+function botaoAddOpcional(at, redraw) {
+  if (at.concluido) return null;
+  const livres = (DB.opcionais || []).map(o => o.nome).filter(n => !opcionaisDe(at).includes(n));
+  if (!livres.length) return null;
+  return el('button', { class: 'link-btn add-opc', type: 'button', onclick: () => {
+    const d = el('dialog', { class: 'sheet', 'aria-label': 'Adicionar opcional' });
+    const fechar = () => { d.close(); d.remove(); };
+    d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+    d.addEventListener('click', e => { if (e.target === d) fechar(); });
+    d.append(el('div', { class: 'sheet-in' },
+      el('div', { class: 'card-head' }, el('h2', { text: 'Adicionar opcional' }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
+      el('div', { class: 'sheet-tags' }, livres.map(n => el('button', { class: 'sheet-tag', type: 'button', onclick: () => {
+        fechar();
+        const atual = DB.atendimentos.find(a => a.id === at.id);
+        if (!atual || atual.concluido || opcionaisDe(atual).includes(n)) return redraw();
+        if (commit(() => { atual.opcionais = [...opcionaisDe(atual), n]; registrar(atual, `Opcional adicionado: ${n}`); })) { toast(`Opcional adicionado: ${n}`); redraw(); }
+      } }, n)))));
+    document.body.append(d);
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  } }, icon('plus'), 'Adicionar opcional');
+}
 // Botões de marcar/desmarcar. Mostra também o que o veículo tem e saiu da lista de Ajustes.
 function chipsOpcionais(marcados, aoTrocar) {
   const nomes = [...(DB.opcionais || []).map(o => o.nome), ...marcados.filter(n => !(DB.opcionais || []).some(o => o.nome === n))];
@@ -1693,6 +1728,25 @@ function me() {
   const f = DB && funcById(s.id); if (!f) return null;
   return { tipo: f.nivel === 'controle' && modoFuncionario() ? 'funcionario' : f.nivel, real: f.nivel, id: f.id, nome: f.nome };
 }
+// Menu flutuante do nome (só Controle): Controle ou Funcionário. Toque fora ou Esc fecha.
+function fecharMenuModo() { document.querySelectorAll('.menu-modo, .menu-modo-fundo').forEach(n => n.remove()); }
+function menuModo(btn) {
+  const u = me(); if (!u) return;
+  if (document.querySelector('.menu-modo')) return fecharMenuModo();
+  const r = btn.getBoundingClientRect();
+  const opc = (k, t) => el('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(u.tipo === k),
+    onclick: () => { fecharMenuModo(); if (u.tipo !== k) trocarModo(k === 'funcionario'); } },
+    el('span', { class: 'mm-check', 'aria-hidden': 'true', html: u.tipo === k ? ICON.check : '' }), t);
+  const menu = el('div', { class: 'menu-modo', role: 'menu', 'aria-label': 'Modo',
+    style: `top:${Math.round(r.bottom + 8)}px;left:${Math.round(Math.max(8, Math.min(r.left - 8, innerWidth - 196)))}px` },
+    opc('controle', 'Controle'), opc('funcionario', 'Funcionário'));
+  const fundo = el('div', { class: 'menu-modo-fundo', onclick: fecharMenuModo });
+  document.body.append(fundo, menu);
+  const esc = e => { if (e.key === 'Escape') { fecharMenuModo(); removeEventListener('keydown', esc); } };
+  addEventListener('keydown', esc);
+  addEventListener('hashchange', fecharMenuModo, { once: true });
+  menu.querySelector('[aria-checked="true"]').focus();
+}
 function trocarModo(funcionario) {
   if (pendentes) { toast('Aguarde terminar de salvar.', true); return; }
   try { if (funcionario) localStorage.setItem(MKEY, 'funcionario'); else localStorage.removeItem(MKEY); }
@@ -1808,6 +1862,14 @@ function secaoChamados(redraw) {
       el('ul', { class: 'chamados' }, mostrar.map(x => cartaoChamado(x, { controle: true, redraw }))),
       feitos.length > mostrar.length ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.chamadosTodos = true; redraw(); } }, `Mostrar mais (${feitos.length - mostrar.length})`) : null) : null);
 }
+// #/chamados (Controle, pelo cartão em Relatórios)
+function renderChamados() {
+  const redraw = () => { const y = window.scrollY; renderChamados(); window.scrollTo(0, y); };
+  shell(el('div', { class: 'stack', style: 'max-width:720px' },
+    backLink('#/relatorios', 'Relatórios'),
+    el('h1', { text: 'Chamados' }),
+    secaoChamados(redraw)), { current: 'relatorios' });
+}
 // #/problema (Funcionário; o Controle também abre pelo endereço)
 function renderProblema() {
   const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
@@ -1836,10 +1898,10 @@ function renderProblema() {
       await buscarDados({ forcar: true }).catch(() => {});
       redraw();
     } catch (e) {
-      enviarBtn.disabled = false; enviarBtn.textContent = 'Enviar para o Controle';
+      enviarBtn.disabled = false; enviarBtn.textContent = 'Enviar para o suporte';
       toast(e && e.code === 'network' ? 'Sem internet. O texto continua aqui, tente de novo.' : 'Não deu para enviar agora. Tente de novo.', true);
     }
-  } }, icon('warn'), 'Enviar para o Controle');
+  } }, icon('warn'), 'Enviar para o suporte');
   const meus = (DB.chamados || []).filter(x => x.porId === (me() || {}).id);
   shell(el('div', { class: 'stack', style: 'max-width:640px' },
     el('h1', { text: 'Relatar problema' }),
@@ -1958,19 +2020,11 @@ function janelaNotificacoes() {
   let d = $('pop-notif');
   if (!d) { d = el('dialog', { id: 'pop-notif', class: 'sheet', 'aria-label': 'Notificações' }); d.addEventListener('click', e => { if (e.target === d) d.close(); }); document.body.append(d); }
   const u = me();
-  const ctrlReal = !!u && u.real === 'controle';
-  // Controle: escolhe o modo (Controle ou Funcionário) antes das notificações.
-  const modo = ctrlReal ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Modo' }),
-    el('div', { class: 'seg', role: 'group', 'aria-label': 'Modo', style: 'display:flex;width:100%' },
-      [['controle', 'Controle'], ['funcionario', 'Funcionário']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(u.tipo === k),
-        onclick: () => { if (u.tipo !== k) trocarModo(k === 'funcionario'); } }, t)))) : null;
   preencher(d, el('div', { class: 'sheet-in' },
-    el('div', { class: 'card-head' }, el('h2', { text: ctrlReal ? u.nome : 'Notificações' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Fechar')),
-    modo,
-    ctrlReal ? el('span', { class: 'label', text: 'Notificações' }) : null,
+    el('div', { class: 'card-head' }, el('h2', { text: 'Notificações' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Fechar')),
     el('p', { class: 'hint', text: 'Os avisos chegam neste celular mesmo com o app fechado.' }),
     blocoEsteAparelho(),
-    isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes/notificacoes', style: 'justify-self:start', onclick: () => d.close() }, 'Configurar notificações da equipe') : null));
+    null));
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
 /* Lembrete de notificações: toda vez que a pessoa abre o sistema (uma vez por abertura, por pessoa),
@@ -2067,7 +2121,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema', chamados: 'Chamados' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -2348,6 +2402,7 @@ function route(opts) {
     case 'agenda': return a ? renderAgendaItem(a) : renderAgenda();
     case 'ajustes': return isCtrl() ? renderSettings() : go('#/inicio');
     case 'problema': return renderProblema();
+    case 'chamados': return isCtrl() ? renderChamados() : go('#/inicio');
     default: return renderHome();
   }
 }
@@ -2456,14 +2511,14 @@ function shell(body, { nav = true, current = '' } = {}) {
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
     el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
     u ? el('div', { class: 'who' },
-      el('button', { class: 'who-name' + (u.real === 'controle' && u.tipo !== 'controle' ? ' is-modo' : ''), type: 'button', title: u.real === 'controle' ? 'Modo e notificações' : 'Notificações',
-        'aria-label': `${u.nome}: ${u.real === 'controle' ? 'modo e notificações' : 'notificações'}`, onclick: janelaNotificacoes },
+      el('button', { class: 'who-name' + (u.real === 'controle' && u.tipo !== 'controle' ? ' is-modo' : ''), type: 'button', title: u.real === 'controle' ? 'Trocar modo' : 'Notificações',
+        'aria-label': `${u.nome}: ${u.real === 'controle' ? 'trocar modo' : 'notificações'}`, 'aria-haspopup': u.real === 'controle' ? 'menu' : null,
+        onclick: e => u.real === 'controle' ? menuModo(e.currentTarget) : janelaNotificacoes() },
         el('b', { text: u.nome }), u.real === 'controle' ? el('span', { class: 'who-role', text: u.tipo === 'controle' ? 'Controle' : 'Funcionário' }) : null),
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       // Recarregar: no app da tela inicial (iPhone principalmente) não existe o botão do navegador.
       appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
-      u.tipo === 'controle' ? (() => { const n = chamadosAbertos().length;
-        return el('a', { class: 'top-ico' + (n ? ' tem-chamado' : ''), href: n ? '#/ajustes/chamados' : '#/ajustes', 'aria-label': n ? `Ajustes, ${n} ${n === 1 ? 'problema relatado' : 'problemas relatados'}` : 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')); })() : null,
+      u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
       el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Sair', title: 'Sair', onclick: sair }, icon('logout'))) : null));
   // Entra com animação só quando trocou de tela (as atualizações automáticas redesenham sem mexer).
   const tela = location.hash || '#/', trocou = tela !== ultimaTela; ultimaTela = tela;
@@ -2485,8 +2540,11 @@ function navBar(current) {
   ler.setAttribute('aria-label', 'Adicionar veículo');
   const agenda = item('#/agenda', 'agenda', 'Agenda', 'calendar');
   // "Adicionar" fica no meio. Ajustes do Controle ficam na engrenagem do topo.
+  const nCham = isCtrl() ? chamadosAbertos().length : 0; // problema relatado em aberto: bolinha vermelha em Relatórios
+  const relatorios = item('#/relatorios', 'relatorios', 'Relatórios', 'chart', nCham ? 'has-chamado' : '');
+  if (nCham) relatorios.setAttribute('aria-label', `Relatórios, ${nCham} ${nCham === 1 ? 'chamado aberto' : 'chamados abertos'}`);
   const items = isCtrl()
-    ? [inicio, agenda, ler, estoque, item('#/relatorios', 'relatorios', 'Relatórios', 'chart')]
+    ? [inicio, agenda, ler, estoque, relatorios]
     : [inicio, agenda, ler, estoque, item('#/problema', 'problema', 'Problema', 'warn', 'nav-problema')]; // 5 botões: "Adicionar" no meio
   return el('nav', { class: 'nav', 'aria-label': 'Menu' }, el('div', { class: 'nav-in' }, items));
 }
@@ -3606,7 +3664,7 @@ function renderVehicle(id) {
       el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
         el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),
       el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
-      steps, concluirBtn),
+      steps, concluirBtn, botaoAddOpcional(at, redraw)),
     valorCard,
     el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeServico(f)).length}` })),
       at.fotosApagadas ? el('p', { class: 'hint', text: `${at.fotosApagadas} ${at.fotosApagadas === 1 ? 'foto foi apagada' : 'fotos foram apagadas'} pela limpeza automática (serviço concluído há mais de ${DB.ajustes.limpezaDias} dias).` }) : null,
@@ -3813,17 +3871,13 @@ function renderHistory() {
 // Abas de Ajustes: Geral (#/ajustes) e Notificações (#/ajustes/notificacoes).
 function abasAjustes(aba) {
   return el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Ajustes', style: 'display:flex;width:100%' },
-    [['geral', 'Geral', '#/ajustes'], ['notif', 'Notificações', '#/ajustes/notificacoes'], ['chamados', 'Chamados', '#/ajustes/chamados']].map(([k, t, h]) =>
-      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 8px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k), onclick: () => go(h) },
-        k === 'notif' ? icon('bell') : null, t,
-        k === 'chamados' && chamadosAbertos().length ? el('span', { class: 'chamado-n', text: String(chamadosAbertos().length) }) : null)));
+    [['geral', 'Geral', '#/ajustes'], ['notif', 'Notificações', '#/ajustes/notificacoes']].map(([k, t, h]) =>
+      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k), onclick: () => go(h) },
+        k === 'notif' ? icon('bell') : null, t)));
 }
 function renderSettings() {
   const redraw = () => { const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
-  if (parts()[1] === 'chamados') {
-    shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, el('h1', { text: 'Ajustes' }), abasAjustes('chamados'), secaoChamados(redraw)), { current: 'ajustes' });
-    return;
-  }
+  if (parts()[1] === 'chamados') return go('#/chamados'); // endereço antigo (avisos já enviados)
   if (parts()[1] === 'notificacoes') {
     shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, el('h1', { text: 'Ajustes' }), abasAjustes('notif'), secaoNotificacoes(redraw)), { current: 'ajustes' });
     return;
@@ -4528,7 +4582,14 @@ function renderRelatorios() {
           el('span', { class: 'cta-txt' }, el('span', { class: 'cta-tit', text: 'Histórico de serviços' }),
             el('span', { class: 'cta-sub', text: `${n} ${n === 1 ? 'concluído' : 'concluídos'} · com busca` })),
           el('span', { class: 'cta-chev', 'aria-hidden': 'true', html: ICON.chev })); })(),
-      (() => { const a = el('a', { class: 'equipe-cta', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })()),
+      (() => { const a = el('a', { class: 'equipe-cta', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
+      (() => { const n = chamadosAbertos().length;
+        return el('a', { class: 'equipe-cta', href: '#/chamados' },
+          el('span', { class: 'cta-ico', 'aria-hidden': 'true', html: ICON.warn }),
+          el('span', { class: 'cta-txt' },
+            el('span', { class: 'cta-tit' }, 'Chamados', n ? el('span', { class: 'cta-alerta', text: `${n} ${n === 1 ? 'aberto' : 'abertos'}` }) : null),
+            el('span', { class: 'cta-sub', text: n ? 'Problemas relatados pela equipe' : 'Nenhum problema em aberto' })),
+          el('span', { class: 'cta-chev', 'aria-hidden': 'true', html: ICON.chev })); })()),
     el('div', { class: 'card' },
       el('h2', { text: 'Período' }),
       el('div', { class: 'seg seg-grade', role: 'group', 'aria-label': 'Período' }, preset('mes', 'Este mês'), preset('anterior', 'Mês passado'), preset('ano', 'Este ano'), preset('custom', 'Escolher')),

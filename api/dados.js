@@ -316,17 +316,25 @@ async function aplicar(c, op, eu, versoes, depois = []) {
         const salvo = Array.isArray(atual.historico) ? atual.historico : [];
         const novas = linha.historico.slice(semValores(salvo).length).filter(h => !RE_HIST_VALOR.test(h.texto)).map(h => ({ ...h, porId: eu.id, porNome: eu.nome }));
         linha.historico = historico([...salvo, ...novas]);
-        // O que só o Controle muda fica como está no banco (cliente, estado na entrada, tipo, etapas e opcionais).
+        // O que só o Controle muda fica como está no banco (cliente, estado na entrada, tipo e etapas; opcionais logo abaixo).
         Object.assign(linha, { cliente_nome: atual.cliente_nome, danos: atual.danos, objetos: atual.objetos, tipo_id: atual.tipo_id, tipo_nome: atual.tipo_nome });
         if (Array.isArray(atual.etapas) && atual.etapas.length) {
           linha.etapas = atual.etapas;
           if (linha.etapa_index >= atual.etapas.length) linha.etapa_index = atual.etapas.length - 1;
         }
         delete linha.etapas_livres;
-        delete linha.opcionais;
+        // Opcionais: o Funcionário só acrescenta (pedido de 13/10/2026), só os da lista de Ajustes e só em serviço
+        // em andamento. Tirar um opcional continua sendo do Controle.
+        const salvos = listaOpcionais(atual.opcionais);
+        const novos = !atual.concluido && Array.isArray(it.opcionais) ? listaOpcionais(it.opcionais).filter(n => !salvos.includes(n)) : [];
+        if (novos.length) {
+          const daLista = (await restAll(c, 'sd_opcionais?select=nome&ativo=eq.true')).map(o => o.nome);
+          linha.opcionais = listaOpcionais([...salvos, ...novos.filter(n => daLista.includes(n))]);
+        } else delete linha.opcionais;
+        const opcFinal = linha.opcionais || atual.opcionais;
         // Datas das etapas e dos opcionais: o Funcionário só conclui (acrescenta), não desmarca.
         linha.feitas = { ...linha.feitas, ...feitas(atual.feitas) };
-        if (it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos({ ...it.opcionaisFeitos, ...(atual.opcionais_feitos || {}) }, atual.opcionais);
+        if (it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos({ ...it.opcionaisFeitos, ...(atual.opcionais_feitos || {}) }, opcFinal);
         // Concluído continua concluído (reabrir é do Controle).
         if (atual.concluido) { linha.concluido = true; linha.concluido_em = atual.concluido_em || agora(); }
       }
@@ -419,7 +427,7 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const chamado = { id: id(it.id), texto, fotos, contexto, por_id: eu.id, por_nome: quem, criado_em: agora(), atualizado_em: agora() };
       await inserirSeNovo(c, 'sd_chamados', chamado);
       depois.push(origem => push.enviar(c, { para: 'controle', tipo: 'chamado', por: eu, origem,
-        mensagem: { titulo: `Problema relatado: ${quem}`, texto: texto.slice(0, 160), url: '/#/ajustes/chamados', tag: `chamado-${chamado.id}` } }));
+        mensagem: { titulo: `Problema relatado: ${quem}`, texto: texto.slice(0, 160), url: '/#/chamados', tag: `chamado-${chamado.id}` } }));
       return;
     }
     // Controle marca como resolvido (com uma resposta opcional, que a pessoa vê) e quem relatou recebe o aviso.
