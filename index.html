@@ -1774,6 +1774,8 @@ function sessaoTerminou() {
    ===================================================================== */
 const appInstalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const eIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// Celular ou tablet (Android ou iPhone/iPad). No computador não aparece o pedido para ativar notificações.
+const eCelular = () => eIOS() || /android|mobile/i.test(navigator.userAgent) || !!(navigator.userAgentData && navigator.userAgentData.mobile);
 const IKEY = 'sd:instalar:fechado';
 let pedidoInstalar = null;
 if (!MODO_CLIENTE) {
@@ -2037,6 +2039,7 @@ async function lembrarNotificacoes() {
   if (MODO_CLIENTE || !u || notifLembradaPara === u.id || document.querySelector('dialog[open]')) return;
   const [r] = parts();
   if (r === 'placa' || r === 'novo') return;
+  if (!eCelular()) { notifLembradaPara = u.id; return; } // computador: sem lembrete (dá para ativar em Ajustes)
   const sit = await situacaoNotif();
   if (sit === 'ativo' || sit === 'sem') { notifLembradaPara = u.id; return; }
   if ((me() || {}).id !== u.id || document.querySelector('dialog[open]')) return; // mudou algo enquanto conferia
@@ -2068,7 +2071,7 @@ async function lembrarNotificacoes() {
 }
 // Cartão do Início: aparece até a pessoa ativar ou tocar em "Agora não".
 function cartaoNotificacoes() {
-  if (!pushSuportado()) return null;
+  if (!pushSuportado() || !eCelular()) return null; // computador: sem cartão
   try { if (localStorage.getItem(NKEY)) return null; } catch {}
   const card = el('div', { class: 'card notif-card', hidden: true },
     el('div', { class: 'row', style: 'align-items:center;gap:12px' },
