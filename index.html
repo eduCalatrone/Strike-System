@@ -760,6 +760,28 @@ body::before {
 .nav a.nav-scan span.pill { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.25); }
 .nav a.nav-scan[aria-current="page"] span.pill { box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 4px var(--ink); }
 .nav a.has-alert .ico::after { box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
+/* Botão "Problema" do Funcionário: vermelho, mas discreto (só o ícone e o texto). */
+.nav a.nav-problema, .nav a.nav-problema span.lbl { color: #B4231B; }
+.nav a.nav-problema .ico { opacity: .85; }
+.nav a.nav-problema[aria-current="page"] .ico { background: rgba(180, 35, 27, .1); opacity: 1; }
+.topbar .top-ico.tem-chamado { position: relative; }
+.topbar .top-ico.tem-chamado::after { content: ""; position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: #B4231B; box-shadow: 0 0 0 2px #fff; }
+.chamado-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: #B4231B; color: #fff; font: 700 11px/1 var(--body); }
+.chamados { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.chamado { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.chamado.aberto { border-color: rgba(180, 35, 27, .35); }
+.chamado-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.chamado-sit { font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 999px; background: #EDEDEB; color: var(--ink-2); }
+.chamado.aberto .chamado-sit { background: rgba(180, 35, 27, .1); color: #B4231B; }
+.chamado-txt { white-space: pre-wrap; word-break: break-word; font-size: 15px; }
+.chamado-ctx { font-size: 12px; color: var(--muted); display: grid; gap: 2px; }
+.chamado-ctx code { font-size: 11px; word-break: break-all; }
+.chamado-resp { font-size: 14px; padding: 8px 10px; border-radius: 10px; background: #F2F2F0; }
+.chamado-fotos { display: flex; gap: 8px; flex-wrap: wrap; }
+.chamado-fotos button { width: 72px; height: 72px; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #EEE; }
+.chamado-fotos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chamado-fotos .rm { position: relative; }
+.chamado-fotos button svg { width: 24px; height: 24px; }
 main { padding-bottom: calc(var(--nav-h) + 44px + env(safe-area-inset-bottom, 0px)); }
 main.no-nav { padding-bottom: 48px; }
 .toast { bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom, 0px)); }
@@ -1161,7 +1183,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -1255,7 +1277,7 @@ async function commitAgora(fn) {
 // Só troca os dados em segundo plano quando dá para redesenhar a tela sem atrapalhar quem está usando.
 function podeRedesenhar() {
   const [r] = parts();
-  if (['placa', 'novo', 'ajustes', 'relatorios'].includes(r)) return false;
+  if (['placa', 'novo', 'ajustes', 'relatorios', 'problema'].includes(r)) return false;
   if (r === 'agenda' && parts()[1]) return false; // formulário de agendamento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
@@ -1682,6 +1704,114 @@ if (!MODO_CLIENTE) {
   });
 }
 /* =====================================================================
+   Chamados (problemas relatados). O Funcionário relata pelo botão vermelho "Problema" do menu (#/problema):
+   texto, até 3 prints ou fotos e, sozinho, a tela onde estava, o aparelho, a versão do site e os últimos
+   erros do sistema neste aparelho. O Controle recebe o aviso no celular e resolve em Ajustes > Chamados
+   (com resposta opcional, que volta como aviso para quem relatou). Tabela sd_chamados (nunca apaga).
+   ===================================================================== */
+const ERROS_RECENTES = []; // últimos erros do sistema neste aparelho, vão junto no chamado
+function guardarErro(m) { const t = `${new Date().toLocaleTimeString('pt-BR')} ${String(m || '').slice(0, 280)}`; ERROS_RECENTES.push(t); if (ERROS_RECENTES.length > 5) ERROS_RECENTES.shift(); }
+addEventListener('error', e => guardarErro(e.message ? `${e.message} (${String(e.filename || '').split('/').pop()}:${e.lineno || ''})` : 'Erro ao carregar um arquivo'));
+addEventListener('unhandledrejection', e => { const r = e.reason; if (r && (r.code === 'network' || r.code === 'sessao')) return; guardarErro(r && (r.stack || r.message || r.code) || String(r)); });
+let telaDoChamado = null;
+const chamadosAbertos = () => ((DB && DB.chamados) || []).filter(x => !x.resolvidoEm);
+function fotosDoChamado(x) {
+  if (!x.fotos || !x.fotos.length) return null;
+  return el('div', { class: 'chamado-fotos' }, x.fotos.map((f, i) => el('button', { type: 'button', 'aria-label': `Ver foto ${i + 1}`, onclick: () => openViewer({ ...f, rotulo: 'Foto do problema' }) },
+    photoImg(f, `Foto ${i + 1}`))));
+}
+const dataHoraCurta = ts => ts ? `${fmtData(ts)} ${new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '';
+function cartaoChamado(x, { controle = false, redraw } = {}) {
+  const aberto = !x.resolvidoEm, ctx = x.contexto || {};
+  const li = el('li', { class: 'chamado' + (aberto ? ' aberto' : '') },
+    el('div', { class: 'chamado-topo' },
+      el('span', { text: [controle ? x.porNome : '', dataHoraCurta(x.criadoEm)].filter(Boolean).join(' · ') }),
+      el('span', { class: 'chamado-sit', text: aberto ? 'Aberto' : 'Resolvido' })),
+    el('div', { class: 'chamado-txt', text: x.texto }),
+    fotosDoChamado(x),
+    controle ? el('div', { class: 'chamado-ctx' },
+      ctx.tela ? el('span', { text: `Tela: ${ctx.tela}` }) : null,
+      el('span', { text: [ctx.aparelho, ctx.versao ? `versão ${ctx.versao}` : '', ctx.online === false ? 'sem internet' : ''].filter(Boolean).join(' · ') }),
+      (ctx.erros || []).length ? el('details', {}, el('summary', { text: `Erros do sistema no aparelho (${ctx.erros.length})` }), ...ctx.erros.map(e => el('code', { text: e }))) : null,
+      ctx.navegador ? el('details', {}, el('summary', { text: 'Navegador' }), el('code', { text: ctx.navegador })) : null) : null,
+    !aberto ? el('div', { class: 'chamado-resp' }, el('b', { text: `Resolvido${x.resolvidoPor ? ` por ${x.resolvidoPor}` : ''} em ${dataHoraCurta(x.resolvidoEm)}` }), x.resposta ? el('div', { text: x.resposta }) : null) : null);
+  if (controle) {
+    if (aberto) {
+      const fResp = el('textarea', { rows: '2', maxlength: '600', placeholder: 'Resposta para quem relatou (opcional)', 'aria-label': 'Resposta' });
+      const btn = el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async () => {
+        btn.disabled = true;
+        try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'resolver', id: x.id, resposta: fResp.value.trim() }] } }); toast(`Resolvido. ${x.porNome || 'A pessoa'} recebe o aviso.`); }
+        catch { toast('Não deu para salvar agora.', true); }
+        await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
+      } }, icon('check'), 'Marcar como resolvido');
+      li.append(fResp, el('div', { class: 'actions' }, btn, ctx.endereco ? el('a', { class: 'btn', href: ctx.endereco }, 'Abrir a tela') : null));
+    } else {
+      li.append(el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: async () => {
+        try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'reabrir', id: x.id }] } }); } catch { toast('Não deu para salvar agora.', true); }
+        await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
+      } }, 'Reabrir'));
+    }
+  }
+  return li;
+}
+// Ajustes > Chamados (Controle)
+function secaoChamados(redraw) {
+  const todos = DB.chamados || [], abertos = todos.filter(x => !x.resolvidoEm), feitos = todos.filter(x => x.resolvidoEm);
+  const mostrar = S.chamadosTodos ? feitos : feitos.slice(0, 5);
+  return el('section', { class: 'stack' },
+    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h3', { text: 'Problemas em aberto' }), el('span', { class: 'count', text: String(abertos.length) })),
+      abertos.length ? el('ul', { class: 'chamados' }, abertos.map(x => cartaoChamado(x, { controle: true, redraw })))
+        : el('p', { class: 'hint', text: 'Nenhum problema em aberto. Quando alguém da equipe relatar pelo botão "Problema", aparece aqui e chega o aviso no celular.' })),
+    feitos.length ? el('div', { class: 'card' }, el('h3', { text: 'Resolvidos (últimos 60 dias)' }),
+      el('ul', { class: 'chamados' }, mostrar.map(x => cartaoChamado(x, { controle: true, redraw }))),
+      feitos.length > mostrar.length ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.chamadosTodos = true; redraw(); } }, `Mostrar mais (${feitos.length - mostrar.length})`) : null) : null);
+}
+// #/problema (Funcionário; o Controle também abre pelo endereço)
+function renderProblema() {
+  const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
+  const f = S.problema = S.problema || { texto: '', fotos: [] };
+  const origem = telaDoChamado || { hash: '#/inicio', nome: 'Início' };
+  const fTxt = el('textarea', { id: 'p-texto', rows: '5', maxlength: '1500', placeholder: 'Ex.: Ao concluir a etapa Montagem da placa ABC1D23, a foto não sobe e aparece "Não foi possível salvar".', oninput: e => { f.texto = e.target.value; } });
+  fTxt.value = f.texto;
+  const fotosBox = el('div', { class: 'chamado-fotos' }, f.fotos.map((x, i) => el('button', { type: 'button', class: 'rm', 'aria-label': `Tirar foto ${i + 1}`, title: 'Tirar esta foto', onclick: () => { URL.revokeObjectURL(x.url); f.fotos.splice(i, 1); redraw(); } },
+    el('img', { src: x.url, alt: `Foto ${i + 1}` }))),
+    f.fotos.length < 3 ? el('button', { type: 'button', 'aria-label': 'Adicionar print ou foto', style: 'display:grid;place-items:center;color:var(--muted)', onclick: async () => {
+      const file = await pickPhoto('galeria'); if (!file) return;
+      try { const blob = await compress(file); f.fotos.push({ blob, url: URL.createObjectURL(blob) }); redraw(); } catch { toast('Não consegui abrir essa imagem.', true); }
+    } }, icon('plus')) : null);
+  const enviarBtn = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button', onclick: async () => {
+    const texto = f.texto.trim();
+    if (texto.length < 5) { toast('Conte o que aconteceu.', true); fTxt.focus(); return; }
+    enviarBtn.disabled = true; enviarBtn.textContent = f.fotos.length ? 'Enviando fotos…' : 'Enviando…';
+    try {
+      const fotos = [];
+      for (const x of f.fotos) { x.meta = x.meta || await enviarFoto(x.blob); fotos.push({ caminho: x.meta.caminho, miniatura: x.meta.miniatura }); }
+      enviarBtn.textContent = 'Enviando…';
+      const contexto = { tela: origem.nome, endereco: origem.hash, aparelho: nomeAparelho(), navegador: navigator.userAgent, versao: etagInicial ? String(etagInicial).replace(/["W\/]/g, '').slice(0, 12) : '', online: navigator.onLine, erros: [...ERROS_RECENTES] };
+      await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'abrir', item: { id: uid(), texto, fotos, contexto } }] } });
+      f.fotos.forEach(x => URL.revokeObjectURL(x.url)); S.problema = null;
+      toast('Problema enviado. O Controle já recebeu o aviso.');
+      await buscarDados({ forcar: true }).catch(() => {});
+      redraw();
+    } catch (e) {
+      enviarBtn.disabled = false; enviarBtn.textContent = 'Enviar para o Controle';
+      toast(e && e.code === 'network' ? 'Sem internet. O texto continua aqui, tente de novo.' : 'Não deu para enviar agora. Tente de novo.', true);
+    }
+  } }, icon('warn'), 'Enviar para o Controle');
+  const meus = (DB.chamados || []).filter(x => x.porId === (me() || {}).id);
+  shell(el('div', { class: 'stack', style: 'max-width:640px' },
+    el('h1', { text: 'Relatar problema' }),
+    el('div', { class: 'card' },
+      el('p', { class: 'hint', text: 'Algo deu errado no sistema? Conte aqui. O Controle recebe na hora e você é avisado quando for resolvido.' }),
+      el('div', { class: 'field' }, el('label', { for: 'p-texto', text: 'O que aconteceu?' }), fTxt),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Print da tela ou foto (opcional, até 3)' }), fotosBox),
+      el('p', { class: 'hint', text: `Vai junto: a tela onde você estava (${origem.nome}), o aparelho e os últimos erros do sistema.` }),
+      enviarBtn),
+    meus.length ? el('div', { class: 'card' }, el('h2', { text: 'Seus problemas relatados' }),
+      el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: 'problema' });
+}
+
+/* =====================================================================
    Notificações no celular (Web Push, api/notificacoes). Cada pessoa ativa no próprio aparelho
    (cartão no Início ou tocando no nome, no topo). Android: Chrome, no site ou no app. iPhone: só com o
    app na tela inicial (iOS 16.4 ou mais novo). O Controle configura em Ajustes > Notificações.
@@ -1889,7 +2019,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -2155,6 +2285,7 @@ function route(opts) {
   if (r !== 'veiculo' || a !== S.valorAberto) S.valorAberto = null;
   if (r !== 'veiculo' || a !== S.marcandoEtapas) S.marcandoEtapas = null;
   if (r !== 'placa' && r !== 'novo') { setTimeout(avisoNovidades, 700); setTimeout(lembrarNotificacoes, 1400); }
+  if (r !== 'problema') telaDoChamado = { hash: location.hash || '#/inicio', nome: telaDePresenca() }; // a tela onde o problema aconteceu
   conferirNotificacoes();
   atualizarSeVelho();
   setTimeout(() => avisarPresenca(), 0); // tela nova: avisa (no máximo a cada 10 s)
@@ -2168,6 +2299,7 @@ function route(opts) {
     case 'equipe': return isCtrl() ? (a ? renderFuncionario(a) : renderEquipe()) : go('#/inicio');
     case 'agenda': return a ? renderAgendaItem(a) : renderAgenda();
     case 'ajustes': return isCtrl() ? renderSettings() : go('#/inicio');
+    case 'problema': return renderProblema();
     default: return renderHome();
   }
 }
@@ -2280,7 +2412,8 @@ function shell(body, { nav = true, current = '' } = {}) {
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       // Recarregar: no app da tela inicial (iPhone principalmente) não existe o botão do navegador.
       appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
-      u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
+      u.tipo === 'controle' ? (() => { const n = chamadosAbertos().length;
+        return el('a', { class: 'top-ico' + (n ? ' tem-chamado' : ''), href: n ? '#/ajustes/chamados' : '#/ajustes', 'aria-label': n ? `Ajustes, ${n} ${n === 1 ? 'problema relatado' : 'problemas relatados'}` : 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')); })() : null,
       el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Sair', title: 'Sair', onclick: sair }, icon('logout'))) : null));
   // Entra com animação só quando trocou de tela (as atualizações automáticas redesenham sem mexer).
   const tela = location.hash || '#/', trocou = tela !== ultimaTela; ultimaTela = tela;
@@ -2304,7 +2437,7 @@ function navBar(current) {
   // "Adicionar" fica no meio. Ajustes do Controle ficam na engrenagem do topo.
   const items = isCtrl()
     ? [inicio, agenda, ler, estoque, item('#/relatorios', 'relatorios', 'Relatórios', 'chart')]
-    : [inicio, agenda, ler, estoque];
+    : [inicio, agenda, ler, estoque, item('#/problema', 'problema', 'Problema', 'warn', 'nav-problema')]; // 5 botões: "Adicionar" no meio
   return el('nav', { class: 'nav', 'aria-label': 'Menu' }, el('div', { class: 'nav-in' }, items));
 }
 /* Histórico do veículo (Controle): agrupado por dia, cada tipo de movimentação com ícone, cor e etiqueta
@@ -3630,12 +3763,17 @@ function renderHistory() {
 // Abas de Ajustes: Geral (#/ajustes) e Notificações (#/ajustes/notificacoes).
 function abasAjustes(aba) {
   return el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Ajustes', style: 'display:flex;width:100%' },
-    [['geral', 'Geral', '#/ajustes'], ['notif', 'Notificações', '#/ajustes/notificacoes']].map(([k, t, h]) =>
-      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k), onclick: () => go(h) },
-        k === 'notif' ? icon('bell') : null, t)));
+    [['geral', 'Geral', '#/ajustes'], ['notif', 'Notificações', '#/ajustes/notificacoes'], ['chamados', 'Chamados', '#/ajustes/chamados']].map(([k, t, h]) =>
+      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 8px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k), onclick: () => go(h) },
+        k === 'notif' ? icon('bell') : null, t,
+        k === 'chamados' && chamadosAbertos().length ? el('span', { class: 'chamado-n', text: String(chamadosAbertos().length) }) : null)));
 }
 function renderSettings() {
   const redraw = () => { const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
+  if (parts()[1] === 'chamados') {
+    shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, el('h1', { text: 'Ajustes' }), abasAjustes('chamados'), secaoChamados(redraw)), { current: 'ajustes' });
+    return;
+  }
   if (parts()[1] === 'notificacoes') {
     shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, el('h1', { text: 'Ajustes' }), abasAjustes('notif'), secaoNotificacoes(redraw)), { current: 'ajustes' });
     return;
@@ -3912,7 +4050,7 @@ function renderSettings() {
 
 /* Ajustes > aba Notificações (Controle, #/ajustes/notificacoes): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
    quem tem notificação ativa e os últimos avisos. Dados de api/notificacoes (S.notif, busca de novo a cada minuto). */
-const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque' };
+const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque', chamado: 'Problema' };
 // Por que a pessoa não recebe: situação do último aparelho que ela usou (vem do aviso de presença).
 function motivoSemAparelho(p) {
   const ap = p.ultimoAparelho ? ` (${p.ultimoAparelho})` : '';

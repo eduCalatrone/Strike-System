@@ -27,7 +27,7 @@ async function carregar(c, eu) {
   const filtroAts = ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})`
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
-  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais] = await Promise.all([
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -38,6 +38,11 @@ async function carregar(c, eu) {
     restAll(c, 'sd_ajustes?select=chave,valor'),
     restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,obs,status&excluido_em=is.null&order=data,id'),
     restAll(c, 'sd_opcionais?select=id,nome&ativo=eq.true&order=nome,id'),
+    // Chamados (problemas relatados): o Controle recebe os abertos e os resolvidos dos últimos 60 dias;
+    // o Funcionário só os dele dos últimos 30 dias.
+    restAll(c, ctrl
+      ? `sd_chamados?select=*&or=(resolvido_em.is.null,criado_em.gte.${encodeURIComponent(`"${new Date(Date.now() - 60 * 864e5).toISOString()}"`)})&order=criado_em.desc`
+      : `sd_chamados?select=*&por_id=eq.${encodeURIComponent(eu.id)}&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -95,6 +100,10 @@ async function carregar(c, eu) {
         id: m.id, itemId: m.item_id, tipo: m.tipo, delta: Number(m.delta), obs: m.obs || '', porId: m.por_id, porNome: m.por_nome || '', em: ms(m.em),
       })),
     },
+    chamados: chamados.map(x => ({
+      id: x.id, texto: x.texto, fotos: Array.isArray(x.fotos) ? x.fotos : [], contexto: x.contexto || {}, porId: x.por_id, porNome: x.por_nome || '',
+      criadoEm: ms(x.criado_em), resolvidoEm: ms(x.resolvido_em), resolvidoPor: x.resolvido_por || '', resposta: x.resposta || '',
+    })),
     agenda: agenda.map(a => ({
       id: a.id, cliente: a.cliente, tel: a.tel || '', servico: a.servico || '', data: String(a.data).slice(0, 10), marca: a.marca || '',
       prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), obs: a.obs || '', status: a.status,
@@ -111,7 +120,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -171,7 +180,8 @@ async function marcar(c, tabela, filtro, campos) {
   await rest(c, `${tabela}?${filtro}`, { method: 'PATCH', body: campos, prefer: 'return=minimal' });
 }
 
-async function aplicar(c, op, eu, versoes) {
+// depois: avisos que só saem depois de gravar tudo (chamados); recebem a origem do site.
+async function aplicar(c, op, eu, versoes, depois = []) {
   const it = op.item || {};
   const quem = eu.nome;
   const ctrl = eu.nivel === 'controle';
@@ -396,6 +406,35 @@ async function aplicar(c, op, eu, versoes) {
     case 'agenda:remover':
       return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
 
+    // Problema relatado (qualquer pessoa da equipe): sempre no nome de quem está logado e com a hora do servidor.
+    case 'chamados:abrir': {
+      const texto = txt(it.texto, 1500); if (!texto) throw invalido('texto');
+      const fotos = (Array.isArray(it.fotos) ? it.fotos : []).slice(0, 3).map(f => {
+        const caminho = String((f && f.caminho) || ''); if (!RE_CAMINHO.test(caminho)) throw invalido('fotos');
+        return { caminho, miniatura: f.miniatura && RE_CAMINHO.test(String(f.miniatura)) ? String(f.miniatura) : null };
+      });
+      const ctx = it.contexto && typeof it.contexto === 'object' ? it.contexto : {};
+      const contexto = { tela: txt(ctx.tela, 80), endereco: txt(ctx.endereco, 120), aparelho: txt(ctx.aparelho, 60), navegador: txt(ctx.navegador, 250),
+        versao: txt(ctx.versao, 80), online: ctx.online !== false, erros: (Array.isArray(ctx.erros) ? ctx.erros : []).slice(-5).map(e => txt(e, 300)) };
+      const chamado = { id: id(it.id), texto, fotos, contexto, por_id: eu.id, por_nome: quem, criado_em: agora(), atualizado_em: agora() };
+      await inserirSeNovo(c, 'sd_chamados', chamado);
+      depois.push(origem => push.enviar(c, { para: 'controle', tipo: 'chamado', por: eu, origem,
+        mensagem: { titulo: `Problema relatado: ${quem}`, texto: texto.slice(0, 160), url: '/#/ajustes/chamados', tag: `chamado-${chamado.id}` } }));
+      return;
+    }
+    // Controle marca como resolvido (com uma resposta opcional, que a pessoa vê) e quem relatou recebe o aviso.
+    case 'chamados:resolver': {
+      const [x] = await rest(c, `sd_chamados?select=por_id,texto&id=eq.${q(id(op.id))}&resolvido_em=is.null`) || [];
+      if (!x) return;
+      const resposta = txt(op.resposta, 600) || null;
+      await marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}&resolvido_em=is.null`, { resolvido_em: agora(), resolvido_por: quem, resposta, atualizado_em: agora() });
+      if (x.por_id && x.por_id !== eu.id) depois.push(origem => push.enviar(c, { para: [x.por_id], tipo: 'chamado', por: eu, origem,
+        mensagem: { titulo: 'Problema resolvido', texto: resposta || `O problema que você relatou foi resolvido: ${x.texto.slice(0, 100)}`, url: '/#/problema', tag: `chamado-${op.id}` } }));
+      return;
+    }
+    case 'chamados:reabrir':
+      return marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}`, { resolvido_em: null, resolvido_por: null, resposta: null, atualizado_em: agora() });
+
     default:
       throw invalido('op');
   }
@@ -447,12 +486,18 @@ module.exports = async (req, res) => {
     if (!ops || ops.length > 2000) return send(res, 400, { error: 'bad_request' });
 
     const versoes = {};
+    const depois = [];
     for (let i = 0; i < ops.length; i++) {
-      try { await aplicar(c, ops[i] || {}, eu, versoes); }
+      try { await aplicar(c, ops[i] || {}, eu, versoes, depois); }
       catch (e) { e.index = i; e.versoes = versoes; throw e; }
     }
     // Aviso automático de estoque baixo (notificação no celular). Nunca atrapalha a gravação.
     try { await avisarEstoque(c, ops, eu, req); } catch (e) { console.error('aviso de estoque', e); }
+    // Avisos de chamado (problema relatado / resolvido): depois de gravar, respeitando "Notificações ligadas".
+    if (depois.length) {
+      try { if ((await push.lerConfig(c)).ativo) await Promise.all(depois.map(f => f(push.origemDe(req)).catch(e => console.error('aviso de chamado', e)))); }
+      catch (e) { console.error('aviso de chamado', e); }
+    }
     return send(res, 200, { ok: true, versoes });
   } catch (e) {
     if (!e.status) console.error(e);
