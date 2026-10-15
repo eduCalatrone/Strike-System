@@ -96,6 +96,7 @@ button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; fo
 .notif-chip .pres-av { width: 24px; height: 24px; font-size: 11px; }
 .notif-envio-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .notif-card { gap: 12px; }
+.rasc-card { gap: 12px; border-color: var(--ink); }
 /* Nome no topo: nome em cima e, para o Controle, o modo embaixo (não corta mais o nome no celular). */
 button.who-name { display: grid; gap: 1px; min-width: 0; line-height: 1.15; padding: 2px 0; }
 .who-name b { overflow: hidden; text-overflow: ellipsis; }
@@ -1432,6 +1433,96 @@ async function fotoAntiga(id) {
   const db = await idb();
   return new Promise((res, rej) => { const r = db.transaction('fotos').objectStore('fotos').get(id); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); });
 }
+/* Rascunho do cadastro de veículo (pedido de 15/10/2026): no iPhone, sair do site no meio do cadastro
+   (trocar de app, abrir a galeria) às vezes recarregava a página e perdia as fotos e os textos.
+   O formulário de entrada guarda tudo neste aparelho a cada mudança (IndexedDB "sd-rascunho": "dados" com
+   os campos e "fotos" com as fotos). Um rascunho só, da pessoa logada. Some ao iniciar o serviço, ao
+   descartar ou ao começar o cadastro de outra placa. */
+let rascDbP = null, RASC = null, rascPronto = false;
+function rascDb() {
+  if (!rascDbP) rascDbP = new Promise((res, rej) => {
+    const r = indexedDB.open('sd-rascunho', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('dados'); r.result.createObjectStore('fotos'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return rascDbP;
+}
+function rascTx(stores, fn) {
+  return rascDb().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(stores, 'readwrite'); let out;
+    const r = fn(tx); if (r) r.onsuccess = () => { out = r.result; };
+    tx.oncomplete = () => res(out); tx.onerror = tx.onabort = () => rej(tx.error);
+  }));
+}
+const rascP = /^\/cliente\/?$/.test(location.pathname) || !window.indexedDB ? Promise.resolve().finally(() => { rascPronto = true; }) : rascTx('dados', tx => tx.objectStore('dados').get('atual'))
+  .then(r => { RASC = r || null; }).catch(() => {}).finally(() => { rascPronto = true; });
+// Rascunho da pessoa logada (outra pessoa no mesmo aparelho não vê).
+function rascunhoDaPessoa() { const u = me(); return RASC && u && RASC.porId === u.id ? RASC : null; }
+async function salvarRascunho(d) {
+  const antigo = RASC; RASC = d;
+  try {
+    await rascTx(['dados', 'fotos'], tx => {
+      if (antigo && antigo.placa !== d.placa) antigo.fotos.forEach(f => tx.objectStore('fotos').delete(f.id)); // outra placa: o antigo sai
+      return tx.objectStore('dados').put(d, 'atual');
+    });
+  } catch {}
+}
+// Foto guardada como ArrayBuffer (Blob no IndexedDB falha em iPhone mais antigo).
+async function guardarFotoRascunho(id, blob) {
+  try { const buf = await blob.arrayBuffer(); await rascTx('fotos', tx => tx.objectStore('fotos').put({ buf, type: blob.type || 'image/jpeg' }, id)); } catch {}
+}
+function tirarFotoRascunho(id) { rascTx('fotos', tx => tx.objectStore('fotos').delete(id)).catch(() => {}); }
+async function fotoRascunho(id) {
+  try { const r = await rascTx('fotos', tx => tx.objectStore('fotos').get(id)); return r ? new Blob([r.buf], { type: r.type }) : null; } catch { return null; }
+}
+function apagarRascunho() { RASC = null; return rascTx(['dados', 'fotos'], tx => { tx.objectStore('dados').clear(); tx.objectStore('fotos').clear(); }).catch(() => {}); }
+function resumoRascunho(r) {
+  const tipo = r.tipoId && DB ? (DB.tipos.find(t => t.id === r.tipoId) || {}).nome : '';
+  const n = r.fotos.length;
+  return [tipo, r.desc, n ? `${n} ${n === 1 ? 'foto' : 'fotos'}` : 'sem fotos', `salvo ${fmtDataHora(r.em)}`].filter(Boolean).join(' · ');
+}
+function continuarRascunho(r) { S.entradaAg = r.agendaId || null; go(`#/novo/${encodeURIComponent(r.placa)}`); }
+// Placa do rascunho já entrou em serviço (por outro aparelho): o rascunho não serve mais.
+function rascunhoValido() {
+  const r = rascunhoDaPessoa(); if (!r) return null;
+  if (ativoDaPlaca(r.placa)) { apagarRascunho(); return null; }
+  return r;
+}
+// Início: cartão "Cadastro não terminado" com Continuar e Descartar (dois toques).
+function cartaoRascunho() {
+  const r = rascunhoValido(); if (!r) return null;
+  const card = el('div', { class: 'card rasc-card' });
+  const descartar = el('button', { class: 'btn', type: 'button', onclick: () => {
+    if (!descartar.dataset.conf) { descartar.dataset.conf = '1'; descartar.textContent = 'Tocar de novo para apagar'; setTimeout(() => { if (descartar.isConnected) { delete descartar.dataset.conf; descartar.textContent = 'Descartar'; } }, 4000); return; }
+    apagarRascunho(); card.remove(); toast('Rascunho apagado.');
+  } }, 'Descartar');
+  preencher(card,
+    el('div', { style: 'display:grid;gap:2px' },
+      el('span', { class: 'label', text: 'Cadastro não terminado' }),
+      el('b', { text: fmtPlaca(r.placa) }),
+      el('span', { class: 'hint', text: resumoRascunho(r) })),
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn btn--primary grow', type: 'button', onclick: () => continuarRascunho(r) }, 'Continuar'),
+      descartar));
+  return card;
+}
+// Adicionar: pergunta se quer continuar o rascunho. "Começar outro" apaga o rascunho.
+function perguntarRascunho(tentativa = 0) {
+  if (parts()[0] !== 'placa' || $('pop-rascunho')) return;
+  if (document.querySelector('dialog[open]')) { if (tentativa < 20) setTimeout(() => perguntarRascunho(tentativa + 1), 1000); return; } // outra janela aberta: pergunta quando fechar
+  const r = rascunhoValido(); if (!r) return;
+  const d = el('dialog', { id: 'pop-rascunho', class: 'sheet', 'aria-label': 'Cadastro não terminado' });
+  const fechar = () => { if (d.open) d.close(); d.remove(); };
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.append(el('div', { class: 'sheet-in' },
+    el('h2', { text: 'Continuar o cadastro?' }),
+    el('p', { class: 'hint', text: `O veículo ${fmtPlaca(r.placa)} estava sendo cadastrado e não foi salvo (${resumoRascunho(r)}). Começar outro apaga este rascunho.` }),
+    el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button', onclick: () => { fechar(); continuarRascunho(r); } }, `Continuar ${fmtPlaca(r.placa)}`),
+    el('button', { class: 'btn btn--lg btn--block', type: 'button', onclick: () => { fechar(); apagarRascunho(); toast('Rascunho apagado. Pode cadastrar outro veículo.'); } }, 'Começar outro')));
+  document.body.append(d);
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
 async function compress(fileOrBlob, max = 1280, q = 0.8) { // foto: 1280 px, JPEG 0,8 (uns 200 KB)
   const url = URL.createObjectURL(fileOrBlob);
   try {
@@ -2428,6 +2519,7 @@ function route(opts) {
   if (s && s.token && !DB) return abrirComDados();
   const u = me();
   if (!u) { if (s) setSession(null); return renderLogin(); }
+  if (r !== 'novo' && S.rascAgora) { S.rascAgora(); S.rascAgora = null; } // saiu do cadastro: rascunho gravado na hora
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
   if (r !== 'veiculo' || a !== S.entradaEdit) S.entradaEdit = null; // edição aberta não fica presa ao sair do veículo
   if (r !== 'veiculo' || a !== S.valorAberto) S.valorAberto = null;
@@ -2438,7 +2530,7 @@ function route(opts) {
   atualizarSeVelho();
   setTimeout(() => avisarPresenca(), 0); // tela nova: avisa (no máximo a cada 10 s)
   switch (r) {
-    case 'placa': return renderReader();
+    case 'placa': renderReader(); setTimeout(() => perguntarRascunho(), 250); return;
     case 'novo': return renderNew(a);
     case 'veiculo': return renderVehicle(a);
     case 'estoque': return renderStock();
@@ -2750,6 +2842,7 @@ function renderHome() {
   const alertas = isCtrl() ? itensEmAlerta() : [];
   const body = el('div', { class: 'stack' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Em serviço' }), el('span', { class: 'count', text: all.length ? `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}` : '' })),
+    cartaoRascunho(),
     cartaoInstalar({ fechavel: true }),
     cartaoNotificacoes(),
     alertas.length ? el('a', { class: 'alert', href: '#/estoque' },
@@ -3127,13 +3220,15 @@ function renderNew(placaRaw) {
   const placa = norm(placaRaw);
   if (!isValid(placa)) return go('#/placa');
   const existente = ativoDaPlaca(placa);
-  if (existente) return go(`#/veiculo/${esc(existente.id)}`);
+  if (existente) { if (RASC && RASC.placa === placa) apagarRascunho(); return go(`#/veiculo/${esc(existente.id)}`); }
+  // Rascunho ainda carregando do aparelho (abriu o site direto nesta tela): espera e desenha de novo.
+  if (!rascPronto) { rascP.then(() => { if (parts()[0] === 'novo') route({ manterScroll: true }); }); return; }
+  const r0 = rascunhoDaPessoa(), rasc = r0 && r0.placa === placa ? r0 : null;
+  if (rasc && rasc.agendaId && !S.entradaAg) S.entradaAg = rasc.agendaId;
   const v = DB.veiculos[placa] || {};
   const anteriores = passagensDaPlaca(placa);
-  const fotos = []; // {rotulo, blob, url}
-  if (S.pending && S.pending.placa === placa && S.pending.blob) {
-    fotos.push({ rotulo: 'Placa', blob: S.pending.blob, url: URL.createObjectURL(S.pending.blob) });
-  }
+  const fotos = []; // {id, rotulo, blob, url, meta?}
+  const pendente = S.pending && S.pending.placa === placa && S.pending.blob ? S.pending.blob : null;
   S.pending = null;
   // Entrada vinda da agenda: cliente, serviço, veículo e valor já vêm do agendamento.
   const agAberto = agendaEmEntrada(), ag0 = agAberto;
@@ -3153,30 +3248,73 @@ function renderNew(placaRaw) {
   // Valor (só Controle): Entrada paga e A receber. O valor do agendamento entra como "A receber".
   const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off' });
   const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
-  const opcSel = []; // opcionais marcados na entrada
+  const opcSel = rasc ? (rasc.opcionais || []).filter(n => (DB.opcionais || []).some(o => o.nome === n)) : []; // opcionais marcados na entrada
+  // Rascunho: volta com o que já tinha sido preenchido.
+  if (rasc) {
+    fCliente.value = rasc.cliente || ''; fDesc.value = rasc.desc || '';
+    fDanos.value = rasc.danos || ''; fObj.value = rasc.objetos || '';
+    fEntrada.value = rasc.entrada || ''; fReceber.value = rasc.receber || '';
+    if (rasc.tipoId && tiposOk.some(t => t.id === rasc.tipoId)) fTipo.value = rasc.tipoId;
+  }
+
+  // Guarda o rascunho neste aparelho a cada mudança (só depois de a pessoa mexer em algo).
+  let mexeu = !!rasc, encerrado = false, tRasc = 0;
+  const gravarRascunho = async () => {
+    clearTimeout(tRasc);
+    if (encerrado || !mexeu) return;
+    const u = me(); if (!u) return;
+    // Foto que ainda não está no aparelho (ex.: a da leitura da placa) vai antes do rascunho.
+    await Promise.all(fotos.filter(f => !f.guardada).map(f => guardarFotoRascunho(f.id, f.blob).then(() => { f.guardada = true; })));
+    if (encerrado) return;
+    salvarRascunho({
+      placa, porId: u.id, em: Date.now(), agendaId: ag ? ag.id : null,
+      cliente: fCliente.value, desc: fDesc.value, tipoId: fTipo.value, danos: fDanos.value, objetos: fObj.value,
+      entrada: fEntrada.value, receber: fReceber.value, opcionais: [...opcSel],
+      fotos: fotos.map(f => ({ id: f.id, rotulo: f.rotulo, meta: f.meta || null })),
+    });
+  };
+  const guardar = () => { if (encerrado) return; mexeu = true; clearTimeout(tRasc); tRasc = setTimeout(gravarRascunho, 400); };
+  S.rascAgora = gravarRascunho; // sair do app ou da tela: grava na hora (ver "pagehide" no fim)
+
   const opcBox = el('div');
-  const drawOpc = () => preencher(opcBox, chipsOpcionais(opcSel, (n, on) => { if (on) opcSel.push(n); else opcSel.splice(opcSel.indexOf(n), 1); drawOpc(); }));
+  const drawOpc = () => preencher(opcBox, chipsOpcionais(opcSel, (n, on) => { if (on) opcSel.push(n); else opcSel.splice(opcSel.indexOf(n), 1); drawOpc(); guardar(); }));
   drawOpc();
   const fotosBox = el('div');
+  const novaFoto = (rotulo, blob, extra) => ({ id: uid(), rotulo, blob, url: URL.createObjectURL(blob), ...extra });
   const drawFotos = () => preencher(fotosBox, photoGrid({
     items: fotos, slots: ROTULOS, carro: false, // cadastro: lista simples de tipos, sem o carro visto de cima
     onAdd: async (rotulo, origem) => {
       const file = await pickPhoto(origem); if (!file) return;
       try {
         const blob = await compress(file);
+        const item = novaFoto(rotulo, blob);
+        await guardarFotoRascunho(item.id, blob); item.guardada = true; // a foto fica no aparelho antes de aparecer na tela
         const i = ROTULOS.includes(rotulo) ? fotos.findIndex(f => f.rotulo === rotulo) : -1;
-        const item = { rotulo, blob, url: URL.createObjectURL(blob) };
-        if (i >= 0) { URL.revokeObjectURL(fotos[i].url); fotos[i] = item; } else fotos.push(item);
-        drawFotos();
+        if (i >= 0) { URL.revokeObjectURL(fotos[i].url); tirarFotoRascunho(fotos[i].id); fotos[i] = item; } else fotos.push(item);
+        drawFotos(); guardar();
       } catch { toast('Não consegui abrir essa foto.', true); }
     },
-    onRemove: f => { URL.revokeObjectURL(f.url); fotos.splice(fotos.indexOf(f), 1); drawFotos(); },
+    onRemove: f => { URL.revokeObjectURL(f.url); tirarFotoRascunho(f.id); fotos.splice(fotos.indexOf(f), 1); drawFotos(); guardar(); },
   }));
-  drawFotos();
+  // Fotos: as do rascunho (lidas do aparelho) e a foto da leitura da placa, se o rascunho ainda não tem "Placa".
+  const comPlaca = () => {
+    if (pendente && !fotos.some(f => f.rotulo === 'Placa')) { fotos.unshift(novaFoto('Placa', pendente)); if (mexeu) guardar(); }
+  };
+  if (rasc && rasc.fotos.length) {
+    preencher(fotosBox, el('p', { class: 'hint', text: 'Recuperando as fotos…' }));
+    Promise.all(rasc.fotos.map(async f => { const blob = await fotoRascunho(f.id); return blob ? novaFoto(f.rotulo, blob, { id: f.id, meta: f.meta || undefined, guardada: true }) : null; }))
+      .then(lista => {
+        const ok = lista.filter(Boolean);
+        fotos.unshift(...ok.filter(f => !ROTULOS.includes(f.rotulo) || !fotos.some(x => x.rotulo === f.rotulo)));
+        comPlaca(); drawFotos();
+        if (ok.length < rasc.fotos.length) { toast('Algumas fotos do rascunho não foram encontradas no aparelho.', true); guardar(); }
+      });
+  } else { comPlaca(); drawFotos(); }
+  if (rasc) setTimeout(() => toast('Rascunho recuperado.'), 300);
 
   // "Não usar": tira o aviso e segue a entrada sem ligar ao agendamento (o que já foi digitado fica).
   let ag = agAberto; // vira null se tocar em "Não usar"
-  const avisoAg = ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; avisoAg.remove(); toast('A entrada segue sem o agendamento.'); }) : null;
+  const avisoAg = ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; avisoAg.remove(); toast('A entrada segue sem o agendamento.'); if (mexeu) guardar(); }) : null;
 
   const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, 'Iniciar serviço');
   salvar.addEventListener('click', async () => {
@@ -3195,6 +3333,7 @@ function renderNew(placaRaw) {
       if (faltam.length) salvar.textContent = `Enviando fotos 0 de ${faltam.length}…`;
       const enviadas = await enviarFotos(faltam.map(f => f.blob), n => { salvar.textContent = `Enviando fotos ${n} de ${faltam.length}…`; });
       enviadas.forEach((m, i) => { faltam[i].meta = m; });
+      if (enviadas.length) guardar(); // rascunho lembra das fotos já enviadas
       fotosMeta = fotos.map(f => ({ ...f.meta, rotulo: f.rotulo, em: Date.now() }));
     } catch (e) {
       voltar();
@@ -3222,6 +3361,7 @@ function renderNew(placaRaw) {
       return;
     }
     for (const f of fotos) URL.revokeObjectURL(f.url);
+    encerrado = true; clearTimeout(tRasc); S.rascAgora = null; apagarRascunho(); // salvo no banco: o rascunho não serve mais
     // Agendamento usado: fica "em serviço" na agenda (operação própria, liberada também para o Funcionário).
     // Quando o serviço for concluído, o servidor muda o agendamento para "concluído".
     if (ag) {
@@ -3258,6 +3398,8 @@ function renderNew(placaRaw) {
       el('div', { class: 'field' }, el('label', { for: 'f-danos', text: 'Danos ou problemas' }), fDanos),
       el('div', { class: 'field' }, el('label', { for: 'f-obj', text: 'Objetos pessoais no veículo' }), fObj)),
     salvar);
+  body.addEventListener('input', guardar);
+  body.addEventListener('change', guardar);
   shell(body, { current: 'placa' });
 }
 
@@ -4938,6 +5080,9 @@ async function carregarCliente(placa, box) {
 
 /* ---------- Início ---------- */
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(); });
+// Rascunho do cadastro: ao trocar de app ou fechar, grava na hora (o iPhone pode recarregar a página na volta).
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.rascAgora) S.rascAgora(); });
+addEventListener('pagehide', () => { if (S.rascAgora) S.rascAgora(); });
 // Aberto em "/" (ex.: recarregado pelo service worker): vai para o Início, com a aba marcada no menu.
 if (!MODO_CLIENTE && !location.hash && getSession()) history.replaceState(null, '', '#/inicio');
 route();
