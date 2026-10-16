@@ -422,10 +422,9 @@ textarea { resize: vertical; min-height: 76px; }
 .mov-qtd small { font-size: 11.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ---------- Estoque ---------- */
-.stock { list-style: none; margin: 0; padding: 0; display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-/* Lista compacta (16/10/2026): um cartão só, materiais separados por linha. */
-.item { padding: 11px 14px; display: grid; gap: 8px; align-content: start; }
-.item + .item { border-top: 1px solid var(--line); }
+.stock { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+/* Lista compacta (16/10/2026): cada material num cartão baixo, um embaixo do outro. */
+.item { padding: 11px 14px; display: grid; gap: 8px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .item.is-low { box-shadow: inset 3px 0 0 #D99A2B; }
 .item.is-out { box-shadow: inset 3px 0 0 var(--danger); }
 .item-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -440,7 +439,8 @@ textarea { resize: vertical; min-height: 76px; }
 .uso-medio b { font: 700 26px/1.1 var(--cond); }
 .item-acoes { display: flex; align-items: center; gap: 8px; }
 .item-acoes .btn--sm { min-width: 84px; }
-.item-mais { margin-left: auto; font-size: 13px; padding: 4px 2px; }
+.item-mais { margin-left: auto; width: 36px; height: 36px; border: 1px solid var(--line); background: var(--surface); }
+.item-mais[aria-expanded="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
 .item-qty small { font: 500 14px var(--body); color: var(--muted); margin-left: 4px; }
 .item-last { font-size: 12px; color: var(--muted); }
 .stepper { display: flex; align-items: center; gap: 8px; }
@@ -4126,7 +4126,21 @@ function renderStock() {
     const toggle = mode => { S.stockOpen = open === mode ? null : { itemId: it.id, mode }; renderStock(); };
 
     let form = null;
-    if (open && open !== 'mais') {
+    // Unidade (lata, rolo, m²...): o Controle troca pela engrenagem. Os movimentos continuam com as mesmas quantidades.
+    if (open === 'unidade') {
+      const fu = el('input', { type: 'text', maxlength: '20', value: it.unidade, placeholder: 'lata, rolo, m², un', 'aria-label': 'Unidade' });
+      const salvarUn = () => {
+        const nova = fu.value.trim();
+        if (!nova) { toast('Digite a unidade.', true); fu.focus(); return; }
+        if (nova === it.unidade) { S.stockOpen = null; renderStock(); return; }
+        if (commit(() => { it.unidade = nova; })) { S.stockOpen = null; toast(`Unidade trocada para ${nova}.`); renderStock(); }
+      };
+      fu.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvarUn(); } });
+      form = el('div', { class: 'inline-form' }, el('span', { class: 'label', text: `Unidade de ${it.nome}` }), fu,
+        el('div', { class: 'actions' }, el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvarUn }, 'Salvar unidade'),
+          el('button', { class: 'btn', type: 'button', onclick: () => toggle('unidade') }, 'Cancelar')));
+      setTimeout(() => { fu.focus(); fu.select(); }, 30);
+    } else if (open && open !== 'mais') {
       const qInit = open === 'ajuste' ? fmtQ(Math.max(0, s)) : open === 'minimo' ? fmtQ(it.minimo) : '1';
       const q = el('input', { type: 'text', inputmode: 'decimal', value: qInit, autocomplete: 'off', 'aria-label': 'Quantidade' });
       const bump = d => { const n = parseNum(q.value); q.value = fmtQ(Math.max(0, (isNaN(n) ? 0 : n) + d)); };
@@ -4157,10 +4171,12 @@ function renderStock() {
     const actions = el('div', { class: 'item-acoes' },
       el('button', { class: 'btn btn--sm' + (ctrl ? '' : ' btn--primary'), type: 'button', 'aria-expanded': String(open === 'saida'), onclick: () => toggle('saida') }, 'Retirar'),
       ctrl ? el('button', { class: 'btn btn--sm btn--primary', type: 'button', 'aria-expanded': String(open === 'entrada'), onclick: () => toggle('entrada') }, 'Entrada') : null,
-      ctrl ? el('button', { class: 'link-btn item-mais', type: 'button', 'aria-expanded': String(!!open && open !== 'saida' && open !== 'entrada'), onclick: () => toggle(open && open !== 'saida' && open !== 'entrada' ? open : 'mais') }, 'Mais') : null);
+      ctrl ? el('button', { class: 'top-ico item-mais', type: 'button', 'aria-label': `Ajustes de ${it.nome}`, title: 'Contagem, mínimo, unidade e histórico',
+        'aria-expanded': String(!!open && open !== 'saida' && open !== 'entrada'), onclick: () => toggle(open && open !== 'saida' && open !== 'entrada' ? open : 'mais') }, icon('gear')) : null);
     const ctrlLinks = ctrl && open && open !== 'saida' && open !== 'entrada' ? el('div', { class: 'actions', style: 'gap:14px' },
       el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('ajuste') }, 'Contagem'),
-      el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('minimo') }, 'Estoque mínimo'),
+      el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('minimo') }, it.minimo > 0 ? `Estoque mínimo (${fmtQ(it.minimo)})` : 'Estoque mínimo'),
+      el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('unidade') }, `Unidade (${it.unidade})`),
       DB.estoque.movimentos.some(m => m.itemId === it.id) ? el('button', { class: 'link-btn', type: 'button', onclick: () => {
         S.estFiltro = { tipo: 'todos', item: it.id }; delete S.abertos.movimentos; renderStock();
         const c = document.getElementById('movimentacoes'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -4169,8 +4185,7 @@ function renderStock() {
       el('div', { class: 'item-top' },
         el('div', { class: 'item-info' },
           el('span', { class: 'item-name', text: it.nome }),
-          el('span', { class: 'item-min' }, sit.txt ? el('span', { class: 'tag ' + sit.cls, text: sit.txt }) : null,
-            it.minimo > 0 ? ` mín. ${fmtQ(it.minimo)}` : '')),
+          sit.txt ? el('span', { class: 'item-min' }, el('span', { class: 'tag ' + sit.cls, text: sit.txt })) : null),
         el('span', { class: 'item-qty' }, fmtQ(s), ' ', el('small', { text: it.unidade }))),
       open === 'mais' && ult ? el('span', { class: 'item-last', text: `Última retirada: ${fmtQ(-ult.delta)} ${it.unidade}, ${ult.porId === (u && u.id) ? 'você' : ult.porNome}, ${ago(ult.em)}` }) : null,
       sit.k === 'neg' && ctrl ? el('span', { class: 'item-last', style: 'color:var(--danger)', text: 'Retiraram mais do que entrou. Falta registrar uma entrada ou fazer contagem.' }) : null,
@@ -5013,6 +5028,14 @@ function periodoRel() {
   if (R.ate < R.de) [R.de, R.ate] = [R.ate, R.de];
   return R;
 }
+// Dia em que o Cabine Blindada usou manta e espuma: quando a última etapa de vedação (isolamento) foi feita.
+// Sem etapa de vedação com data: a data de conclusão (ou null, se ainda não concluiu).
+const RE_VEDACAO = /veda[cç][aã]o|isolamento/i;
+function diaDoUso(a) {
+  const idx = a.etapas.map((n, i) => (RE_VEDACAO.test(n) ? i : -1)).filter(i => i >= 0);
+  if (idx.length && idx.every(i => a.feitas[i] != null)) return Math.max(...idx.map(i => a.feitas[i]));
+  return a.concluido ? a.concluidoEm : null;
+}
 function calcularRelatorio(de, ate) {
   const ini = dataDe(de).getTime(), fim = dataDe(somaDias(ate, 1)).getTime();
   const dentro = ms => ms != null && ms >= ini && ms < fim;
@@ -5037,9 +5060,11 @@ function calcularRelatorio(de, ate) {
     r.qtd = round2(r.qtd - m.delta); porPessoa.set(k, r);
   }
   // Uso médio por veículo no Cabine Blindada (pedido de 16/10/2026): retiradas do período de manta asfáltica e espuma
-  // expansiva divididas pelos Cabine Blindada concluídos no período (a retirada não fica ligada a um veículo).
-  const cabine = concluidos.filter(a => /cabine\s*blindada/i.test(a.tipoNome || ''));
-  const usoCabine = { veiculos: cabine.length, linhas: itens.filter(i => /manta|espuma/i.test(i.nome))
+  // expansiva divididas pelos Cabine Blindada que usaram o material no período (a retirada não fica ligada a um veículo).
+  // O veículo conta no dia em que as etapas de vedação (isolamento interno e externo) ficaram feitas, mesmo ainda em
+  // serviço; sem essas etapas (ou sem data), conta pela conclusão. Assim cada veículo entra uma vez só.
+  const cabine = DB.atendimentos.filter(a => /cabine\s*blindada/i.test(a.tipoNome || '') && dentro(diaDoUso(a)));
+  const usoCabine = { veiculos: cabine.length, emServico: cabine.filter(a => !a.concluido).length, linhas: itens.filter(i => /manta|espuma/i.test(i.nome))
     .map(i => ({ nome: i.nome, unidade: i.unidade, saiu: i.saiu, media: cabine.length ? round2(i.saiu / cabine.length) : null })) };
   return {
     de, ate, concluidos, comValor, faturamento, semValor: concluidos.length - comValor.length, usoCabine,
@@ -5119,8 +5144,8 @@ function renderRelatorios() {
           el('b', { text: l.media == null ? '-' : `${fmtQ(l.media)} ${l.unidade}` }),
           el('span', { class: 'hint', text: `por veículo · saiu ${fmtQ(l.saiu)} ${l.unidade}` })))),
         el('p', { class: 'hint', text: r.usoCabine.veiculos
-          ? `Média de ${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'Cabine Blindada concluído' : 'Cabine Blindada concluídos'} no período (retiradas do período divididas pelos veículos).`
-          : 'Nenhum Cabine Blindada concluído no período.' })) : null,
+          ? `Média de ${r.usoCabine.veiculos} Cabine Blindada com a vedação feita no período${r.usoCabine.emServico ? ` (${r.usoCabine.emServico} ainda em serviço)` : ''}. Retiradas do período divididas pelos veículos.`
+          : 'Nenhum Cabine Blindada com a vedação feita no período.' })) : null,
       el('div', { class: 'card' }, el('h3', { text: 'Materiais no período' }),
         r.itens.length ? tabela(['Material', 'Entrou', 'Saiu', 'Saldo hoje'], r.itens.map(i => [i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), [1, 2, 3])
           : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
