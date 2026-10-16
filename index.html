@@ -611,20 +611,67 @@ textarea { resize: vertical; min-height: 76px; }
 .ag-cell.tem { background: #E6F4EC; border-color: #B7DEC6; }
 .ag-cell.feriado { background: var(--danger-bg); border-color: #F2C3BD; }
 .ag-cell.feriado .n { color: var(--danger); font-weight: 700; }
-.ag-cell.rng::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; border-radius: 2px; background: var(--line-2); }
 .ag-cell.today { border: 2px solid var(--ink); }
 .ag-cell.today .n { font-weight: 700; }
 .ag-cell.sel { background: var(--ink); }
 .ag-cell.sel .n { color: #fff; font-weight: 700; }
-.ag-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
-.ag-dot { width: 7px; height: 7px; border-radius: 50%; background: #1F9D55; box-shadow: 0 0 0 2px rgba(31, 157, 85, .18); }
-.ag-dot.concluido { background: #9A9A98; box-shadow: none; }
-.ag-dot.em_servico { background: var(--ink); box-shadow: none; }
-.ag-cell.sel .ag-dot.em_servico { background: #fff; }
-.ag-dot.cancelado { background: none; border: 1px solid #B5B5B2; box-shadow: none; }
-.ag-cell.sel .ag-dot { background: #4ADE80; box-shadow: none; }
-.ag-cell.sel .ag-dot.concluido { background: #CFCFCC; }
-.ag-mais { font-size: 9px; color: var(--muted); line-height: 1; }
+/* Sino no topo e aba Notificações (16/10/2026) */
+.top-sino { position: relative; }
+.top-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--danger); color: #fff; font: 700 10px/18px var(--body); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+.avisos-dia { display: grid; gap: 8px; }
+.avisos-dia h3 { margin: 0; font: 600 13px var(--body); color: var(--muted); }
+.avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.aviso { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; text-align: left; color: inherit; font: inherit; }
+button.aviso { cursor: pointer; }
+.aviso.is-novo { border-color: var(--ink); }
+.av-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--soft); color: var(--ink-2); }
+.av-ico svg { width: 18px; height: 18px; }
+.av-ico.is-ok { background: #E8F3EC; color: var(--ok); }
+.av-ico.is-danger { background: var(--danger-bg); color: var(--danger); }
+.av-ico.is-warn { background: var(--warn-bg); color: var(--warn); }
+.av-main { display: grid; gap: 2px; min-width: 0; }
+.av-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; color: var(--muted); }
+.av-topo > span:first-child { font-weight: 700; color: var(--ink-2); }
+.av-tit { font-weight: 600; overflow-wrap: anywhere; }
+.av-txt { font-size: 14px; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.av-novo { font-size: 11px; font-weight: 700; color: #fff; background: var(--ink); padding: 1px 7px; border-radius: 999px; }
+.av-ir { align-self: center; color: var(--muted); }
+.av-ir svg { width: 18px; height: 18px; }
+/* Veículo concluído: janela no meio da tela e cartões dos concluídos nas últimas 24 h no Início */
+dialog.sheet.pop-centro { margin: auto; width: calc(100% - 32px); max-width: 400px; border-radius: 18px; }
+.conc-in { gap: 12px; }
+.conc-foto { position: relative; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: var(--soft); display: grid; place-items: center; color: #B5B5B2; }
+.conc-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.conc-foto .ph svg { width: 48px; height: 48px; }
+.conc-selo { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 8px; border-radius: 999px; background: #1F9D55; color: #fff; font: 700 13px var(--body); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
+.conc-selo svg { width: 14px; height: 14px; }
+.conc-txt { display: grid; gap: 6px; }
+.conc-modelo { font: 700 24px/1.1 var(--cond); letter-spacing: .03em; }
+.car.is-feito .car-stage { color: var(--ok); }
+.bar.is-ok > i { background: #1F9D55; }
+.foto-rep { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.foto-rep figure { margin: 0; display: grid; gap: 6px; }
+.foto-rep img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--soft); }
+.foto-rep figcaption { font-size: 12px; font-weight: 600; color: var(--muted); text-align: center; }
+.foto-rep .is-nova img { border: 2px solid var(--ink); }
+.foto-rep .is-nova figcaption { color: var(--ink); }
+.ag-marcas { display: flex; gap: 3px; height: 14px; align-items: center; }
+/* Quantas entradas tem o dia (no lugar das bolinhas, 16/10/2026). Cor: tem agendado (verde), só em serviço (preto), só concluído (cinza). */
+.ag-num { min-width: 15px; height: 14px; padding: 0 4px; border-radius: 999px; background: #1F9D55; color: #fff; font: 700 10px/14px var(--body); text-align: center; font-variant-numeric: tabular-nums; }
+.ag-num.em_servico { background: var(--ink); }
+.ag-num.concluido { background: #9A9A98; }
+.ag-cell.sel .ag-num { background: #4ADE80; color: var(--ink); }
+.ag-cell.sel .ag-num.em_servico { background: #fff; }
+.ag-cell.sel .ag-num.concluido { background: #CFCFCC; }
+/* Dia de entrega: anel pequeno (a faixa até a entrega saiu). */
+.ag-ent { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink-2); box-sizing: border-box; flex: none; }
+.ag-cell.sel .ag-ent { border-color: #fff; }
+.ag-legenda b.ag-leg-ent { background: none; border: 1.5px solid var(--ink-2); box-sizing: border-box; }
+/* Dia escolhido: entradas e entregas em blocos separados. */
+.ag-sec { display: grid; gap: 8px; }
+.ag-sec + .ag-sec { padding-top: 12px; border-top: 1px solid var(--line); }
+.ag-sec h3 { margin: 0; display: flex; align-items: center; gap: 8px; font: 700 13px var(--body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.ag-sec h3 .count { font-weight: 600; letter-spacing: 0; text-transform: none; }
 .ag-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 11px; color: var(--muted); }
 .ag-legenda .ag-total { margin-left: auto; color: var(--ink-2); font-weight: 600; }
 /* Agenda mais direta (13/10/2026): topo sem estourar a largura, dias mais baixos e o dia escolhido logo abaixo. */
@@ -1260,7 +1307,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -1355,7 +1402,7 @@ async function commitAgora(fn) {
 function podeRedesenhar() {
   const [r] = parts();
   if (['placa', 'novo', 'ajustes', 'relatorios', 'problema'].includes(r)) return false;
-  if (r === 'agenda' && parts()[1]) return false; // formulário de agendamento aberto
+  if (r === 'agenda' && (parts()[1] === 'novo' || parts()[2] === 'editar')) return false; // formulário de agendamento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
   if (r === 'veiculo' && (S.entradaEdit || S.valorAberto || S.marcandoEtapas)) return false; // editando estado na entrada, valor ou etapas
@@ -1705,13 +1752,24 @@ function capaDe(at) {
 const entradaDe = at => at.entrada == null ? 0 : at.entrada;
 const aReceberDe = at => at.valor == null ? null : round2(at.valor - entradaDe(at));
 // Lê os dois campos. Devolve { valor, entrada } ou null se algum estiver inválido (já avisa).
-function lerValorPartes(fEntrada, fReceber) {
+function lerValorPartes(fEntrada, fReceber, nomeR = 'Valor a receber') {
   const rawE = fEntrada.value.trim(), rawR = fReceber.value.trim();
   const e = rawE ? parseNum(rawE) : null, r = rawR ? parseNum(rawR) : null;
   if (rawE && (isNaN(e) || e < 0)) { toast('Entrada paga inválida. Use só números, como 500 ou 1.960,00.', true); fEntrada.focus(); return null; }
-  if (rawR && (isNaN(r) || r < 0)) { toast('Valor a receber inválido. Use só números, como 500 ou 1.960,00.', true); fReceber.focus(); return null; }
+  if (rawR && (isNaN(r) || r < 0)) { toast(`${nomeR} inválido. Use só números, como 500 ou 1.960,00.`, true); fReceber.focus(); return null; }
   if (e == null && r == null) return { valor: null, entrada: null };
   return { valor: round2((e || 0) + (r || 0)), entrada: e || 0 };
+}
+// Total embaixo dos dois campos (entrada + a receber/a pagar), atualizado enquanto digita.
+function previaTotal(fEntrada, fResto, rotulo = 'Total do serviço') {
+  const p = el('p', { class: 'valor-total' });
+  const somar = () => {
+    const rawE = fEntrada.value.trim(), rawR = fResto.value.trim();
+    const e = parseNum(rawE || '0'), r = parseNum(rawR || '0');
+    preencher(p, `${rotulo}: `, el('b', { text: !rawE && !rawR ? 'sem valor' : isNaN(e) || isNaN(r) ? '...' : fmtBRL(round2(e + r)) }));
+  };
+  fEntrada.addEventListener('input', somar); fResto.addEventListener('input', somar); somar();
+  return p;
 }
 const textoValor = (valor, entrada) => valor == null ? 'Valor removido'
   : `Valor definido: ${fmtBRL(valor)} (entrada paga ${fmtBRL(entrada || 0)}, a receber ${fmtBRL(round2(valor - (entrada || 0)))})`;
@@ -1947,12 +2005,13 @@ function fotosDoChamado(x) {
     photoImg(f, `Foto ${i + 1}`))));
 }
 const dataHoraCurta = ts => ts ? `${fmtData(ts)} ${new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '';
-function cartaoChamado(x, { controle = false, redraw } = {}) {
+function cartaoChamado(x, { controle = false, autor = false, redraw } = {}) {
   const aberto = !x.resolvidoEm, ctx = x.contexto || {};
   const li = el('li', { class: 'chamado' + (aberto ? ' aberto' : '') },
     el('div', { class: 'chamado-topo' },
-      el('span', { text: [controle ? x.porNome : '', dataHoraCurta(x.criadoEm)].filter(Boolean).join(' · ') }),
+      el('span', { text: [controle || autor ? x.porNome : '', dataHoraCurta(x.criadoEm)].filter(Boolean).join(' · ') }),
       el('span', { class: 'chamado-sit', text: aberto ? 'Aberto' : 'Resolvido' })),
+    x.destino === 'todos' ? el('span', {}, el('span', { class: 'tag', text: 'Para toda a equipe' })) : null,
     el('div', { class: 'chamado-txt', text: x.texto }),
     fotosDoChamado(x),
     controle ? el('div', { class: 'chamado-ctx' },
@@ -2012,7 +2071,8 @@ function renderChamados() {
 // #/problema (Funcionário; o Controle também abre pelo endereço)
 function renderProblema() {
   const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
-  const f = S.problema = S.problema || { texto: '', fotos: [] };
+  const f = S.problema = S.problema || { texto: '', fotos: [], destino: 'suporte' };
+  const rotuloEnviar = () => f.destino === 'todos' ? 'Enviar para toda a equipe' : 'Enviar para o suporte';
   const origem = telaDoChamado || { hash: '#/inicio', nome: 'Início' };
   const fTxt = el('textarea', { id: 'p-texto', rows: '5', maxlength: '1500', placeholder: 'Descreva o problema', oninput: e => { f.texto = e.target.value; } });
   fTxt.value = f.texto;
@@ -2031,25 +2091,120 @@ function renderProblema() {
       for (const x of f.fotos) { x.meta = x.meta || await enviarFoto(x.blob); fotos.push({ caminho: x.meta.caminho, miniatura: x.meta.miniatura }); }
       enviarBtn.textContent = 'Enviando…';
       const contexto = { tela: origem.nome, endereco: origem.hash, aparelho: nomeAparelho(), navegador: navigator.userAgent, versao: etagInicial ? String(etagInicial).replace(/["W\/]/g, '').slice(0, 12) : '', online: navigator.onLine, erros: [...ERROS_RECENTES] };
-      await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'abrir', item: { id: uid(), texto, fotos, contexto } }] } });
+      await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'abrir', item: { id: uid(), texto, fotos, contexto, destino: f.destino } }] } });
       f.fotos.forEach(x => URL.revokeObjectURL(x.url)); S.problema = null;
-      toast('Problema enviado.');
+      toast(f.destino === 'todos' ? 'Enviado para toda a equipe.' : 'Problema enviado.');
       await buscarDados({ forcar: true }).catch(() => {});
       redraw();
     } catch (e) {
-      enviarBtn.disabled = false; enviarBtn.textContent = 'Enviar para o suporte';
+      enviarBtn.disabled = false; preencher(enviarBtn, icon('warn'), rotuloEnviar());
       toast(e && e.code === 'network' ? 'Sem internet. O texto continua aqui, tente de novo.' : 'Não deu para enviar agora. Tente de novo.', true);
     }
-  } }, icon('warn'), 'Enviar para o suporte');
+  } }, icon('warn'), rotuloEnviar());
+  // Para quem vai (pedido de 16/10/2026): só o suporte (Controle) ou toda a equipe (aba Notificações de todos).
+  const segDestino = el('div', { class: 'seg', role: 'group', 'aria-label': 'Enviar para', style: 'display:flex;width:100%' },
+    [['suporte', 'Só o suporte'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(f.destino === k),
+      onclick: () => { f.destino = k; redraw(); } }, t)));
   const meus = (DB.chamados || []).filter(x => x.porId === (me() || {}).id);
   shell(el('div', { class: 'stack', style: 'max-width:640px' },
     el('h1', { text: 'Relatar problema' }),
     el('div', { class: 'card' },
       el('div', { class: 'field' }, el('label', { for: 'p-texto', text: 'O que aconteceu?' }), fTxt),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Prints ou fotos (opcional)' }), fotosBox),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Enviar para' }), segDestino,
+        el('span', { class: 'hint', text: f.destino === 'todos' ? 'Aparece em Notificações para toda a equipe e chega no celular de quem ativou os avisos.' : 'Vai só para o Controle.' })),
       enviarBtn),
     meus.length ? el('div', { class: 'card' }, el('h2', { text: 'Seus problemas relatados' }),
       el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: 'problema' });
+}
+
+/* =====================================================================
+   Aba Notificações (#/notificacoes, sino no topo; pedido de 16/10/2026). Os avisos dos últimos 30 dias que eram
+   para a pessoa: veículo concluído, chamado (para o suporte ou para toda a equipe), estoque baixo e avisos do
+   Controle. Vêm de api/dados (DB.avisos, o registro sd_push_envios), então aparecem no app mesmo com o celular sem
+   notificação ativada. Novos: depois da última vez que a pessoa abriu a aba neste aparelho (localStorage
+   sd:avisos:lido:<id>; na primeira vez os antigos não contam). Base para um chat dentro do app (por enquanto só ideia).
+   ===================================================================== */
+const TIPO_AVISO = {
+  conclusao: { rot: 'Concluído', ico: 'check', cls: 'ok' },
+  chamado: { rot: 'Chamado', ico: 'warn', cls: 'danger' },
+  estoque: { rot: 'Estoque', ico: 'box', cls: 'warn' },
+  personalizado: { rot: 'Aviso', ico: 'bell', cls: '' },
+};
+const chaveLido = () => `sd:avisos:lido:${(me() || {}).id}`;
+function avisosLidoAte() {
+  try {
+    const v = Number(localStorage.getItem(chaveLido()));
+    if (v) return v;
+    const agora = Date.now(); localStorage.setItem(chaveLido(), String(agora)); return agora;
+  } catch { return Date.now(); }
+}
+const avisosNovos = () => (DB && me() ? (DB.avisos || []).filter(x => x.em > avisosLidoAte()) : []);
+function botaoSino(current) {
+  const n = avisosNovos().length;
+  return el('a', { class: 'top-ico top-sino', href: '#/notificacoes', title: 'Notificações', 'aria-label': n ? `Notificações, ${n} ${n === 1 ? 'nova' : 'novas'}` : 'Notificações',
+    'aria-current': current === 'notificacoes' ? 'page' : null }, icon('bell'), n ? el('span', { class: 'top-badge', 'aria-hidden': 'true', text: n > 9 ? '9+' : String(n) }) : null);
+}
+// Para onde o aviso leva (a mesma tela que o toque na notificação do celular abre). Sem destino: null.
+function destinoAviso(x) {
+  const m = /^\/?#\/(veiculo|chamados|estoque|problema)(?:\/([\w-]+))?$/.exec(x.url || '');
+  if (!m) return null;
+  const [, tela, id] = m;
+  if (tela === 'veiculo') return DB.atendimentos.some(a => a.id === id) ? () => go(`#/veiculo/${esc(id)}`) : null;
+  if (tela === 'chamados') {
+    if (isCtrl()) return () => go('#/chamados');
+    const c = id && (DB.chamados || []).find(y => y.id === id);
+    return c ? () => janelaChamado(c) : null;
+  }
+  return () => go(`#/${tela}`);
+}
+function janelaChamado(c) {
+  const d = el('dialog', { class: 'sheet', 'aria-label': `Chamado de ${c.porNome}` });
+  const fechar = () => { d.close(); d.remove(); };
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.addEventListener('click', e => { if (e.target === d) fechar(); });
+  d.append(el('div', { class: 'sheet-in' },
+    el('div', { class: 'card-head' }, el('h2', { text: 'Chamado' }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Fechar')),
+    el('ul', { class: 'chamados' }, cartaoChamado(c, { autor: true }))));
+  document.body.append(d);
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+function renderAvisos() {
+  const lidoAntes = avisosLidoAte();
+  const lista = (DB.avisos || []).slice().sort((a, b) => b.em - a.em);
+  const novos = lista.filter(x => x.em > lidoAntes).length;
+  // Abriu a aba: tudo o que está aqui passa a contar como lido (o sino zera).
+  if (lista.length && lista[0].em > lidoAntes) { try { localStorage.setItem(chaveLido(), String(lista[0].em)); } catch {} }
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const rotDia = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); const dif = Math.round((hoje - d) / 864e5);
+    return dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : `${DIAS_SEMANA[d.getDay()]}, ${fmtData(ts)}`; };
+  const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
+  const n = Math.min(lista.length, S.avisosN || 20);
+  const dias = [];
+  for (const x of lista.slice(0, n)) { const r = rotDia(x.em); if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(x); }
+  const item = x => {
+    const t = TIPO_AVISO[x.tipo] || TIPO_AVISO.personalizado, abrir = destinoAviso(x), novo = x.em > lidoAntes;
+    const kids = [
+      el('span', { class: 'av-ico' + (t.cls ? ` is-${t.cls}` : ''), 'aria-hidden': 'true' }, icon(t.ico)),
+      el('span', { class: 'av-main' },
+        el('span', { class: 'av-topo' }, el('span', { text: t.rot }), el('span', { text: [hora(x.em), x.porNome && x.tipo !== 'conclusao' ? x.porNome : ''].filter(Boolean).join(' · ') }),
+          novo ? el('span', { class: 'av-novo', text: 'Nova' }) : null),
+        el('span', { class: 'av-tit', text: x.titulo }),
+        x.texto ? el('span', { class: 'av-txt', text: x.texto }) : null),
+    ];
+    return el('li', {}, abrir ? el('button', { class: 'aviso' + (novo ? ' is-novo' : ''), type: 'button', onclick: abrir }, ...kids, el('span', { class: 'av-ir', 'aria-hidden': 'true' }, icon('chev')))
+      : el('div', { class: 'aviso' + (novo ? ' is-novo' : '') }, ...kids));
+  };
+  shell(el('div', { class: 'stack', style: 'max-width:640px' },
+    el('div', { class: 'page-head' }, el('h1', { text: 'Notificações' }), el('span', { class: 'count', text: novos ? `${novos} ${novos === 1 ? 'nova' : 'novas'}` : '' })),
+    lista.length ? dias.map(d => el('section', { class: 'avisos-dia' }, el('h3', { text: d.r }), el('ul', { class: 'avisos' }, d.itens.map(item))))
+      : el('div', { class: 'card' }, el('p', { class: 'hint', text: 'Nenhuma notificação nos últimos 30 dias.' })),
+    lista.length > n ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.avisosN = n + 30; const y = window.scrollY; renderAvisos(); window.scrollTo(0, y); } }, `Mostrar mais (${lista.length - n})`) : null,
+    el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('h3', { text: 'Receber no celular' }),
+        isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes/notificacoes' }, 'Configurar avisos') : null),
+      el('p', { class: 'hint', text: 'Os mesmos avisos chegam neste celular mesmo com o app fechado.' }),
+      blocoEsteAparelho())), { current: 'notificacoes' });
 }
 
 /* =====================================================================
@@ -2261,7 +2416,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema', chamados: 'Chamados' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -2540,7 +2695,8 @@ function route(opts) {
     case 'agenda': return a ? renderAgendaItem(a) : renderAgenda();
     case 'ajustes': return isCtrl() ? renderSettings() : go('#/inicio');
     case 'problema': return renderProblema();
-    case 'chamados': return isCtrl() ? renderChamados() : go('#/inicio');
+    case 'chamados': return isCtrl() ? renderChamados() : go('#/notificacoes'); // aviso de chamado no celular do Funcionário
+    case 'notificacoes': return renderAvisos();
     default: return renderHome();
   }
 }
@@ -2595,14 +2751,14 @@ async function conferirVersao() {
 }
 /* Aviso único "Sistema atualizado": aparece uma vez em cada aparelho (localStorage sd:novidades).
    Para avisar de novo numa próxima leva de mudanças, trocar NOVIDADES_ID. */
-const NOVIDADES_ID = '2026-10-06';
+const NOVIDADES_ID = '2026-10-16';
 function avisoNovidades() {
   if (MODO_CLIENTE || !me() || document.querySelector('dialog[open]')) return;
   const [r] = parts();
   if (r === 'placa' || r === 'novo') return; // não atrapalha a entrada de veículo
   try { if (localStorage.getItem('sd:novidades') === NOVIDADES_ID) return; } catch { return; }
   const d = el('dialog', { id: 'pop-novidades', class: 'sheet', 'aria-label': 'Sistema atualizado' });
-  const ok = () => { try { localStorage.setItem('sd:novidades', NOVIDADES_ID); } catch {} d.close(); d.remove(); };
+  const ok = () => { try { localStorage.setItem('sd:novidades', NOVIDADES_ID); } catch {} d.close(); d.remove(); setTimeout(popupConcluidos, 300); };
   d.addEventListener('cancel', () => { try { localStorage.setItem('sd:novidades', NOVIDADES_ID); } catch {} setTimeout(() => d.remove(), 0); });
   d.append(el('div', { class: 'sheet-in versao-in' },
     el('span', { class: 'versao-ico', 'aria-hidden': 'true', html: ICON.reload }),
@@ -2656,6 +2812,7 @@ function shell(body, { nav = true, current = '' } = {}) {
       // Ajustes fica no topo (engrenagem), para o menu de baixo ter no máximo 5 botões.
       // Recarregar: no app da tela inicial (iPhone principalmente) não existe o botão do navegador.
       appInstalado() ? el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Recarregar', title: 'Recarregar', onclick: recarregar }, icon('reload')) : null,
+      botaoSino(current),
       u.tipo === 'controle' ? el('a', { class: 'top-ico', href: '#/ajustes', 'aria-label': 'Ajustes', 'aria-current': current === 'ajustes' ? 'page' : null }, icon('gear')) : null,
       el('button', { class: 'top-ico', type: 'button', 'aria-label': 'Sair', title: 'Sair', onclick: sair }, icon('logout'))) : null));
   // Entra com animação só quando trocou de tela (as atualizações automáticas redesenham sem mexer).
@@ -2813,7 +2970,7 @@ function carCard(at) {
   const capa = capaDe(at);
   const v = DB.veiculos[at.placa] || {};
   const pct = Math.round(progresso(at) * 100);
-  return el('li', {}, el('a', { class: 'car', href: `#/veiculo/${esc(at.id)}`, style: 'color:inherit;text-decoration:none' },
+  return el('li', {}, el('a', { class: 'car' + (at.concluido ? ' is-feito' : ''), href: `#/veiculo/${esc(at.id)}`, style: 'color:inherit;text-decoration:none' },
     el('div', { class: 'car-photo' }, capa ? photoImg(capa, `Foto do veículo ${at.placa}`) : el('div', { class: 'ph' }, icon('car'))),
     // Ordem: modelo (2 primeiras palavras, maiúsculas), placa · cliente, serviço, situação. Sem modelo, a placa vira o título.
     el('div', { class: 'car-body' },
@@ -2822,20 +2979,27 @@ function carCard(at) {
         at.clienteNome ? el('span', { class: 'car-cliente', text: at.clienteNome }) : el('span', { class: 'car-cliente is-pendente', text: `(${NOME_PENDENTE})` })),
       at.tipoNome ? el('span', { class: 'car-desc', text: at.tipoNome }) : null,
       opcionaisDe(at).length ? el('span', { class: 'car-opc', text: `+ ${opcionaisDe(at).join(', ')}` }) : null,
-      el('span', { class: 'car-stage', text: textoEtapa(at) }),
-      el('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
+      el('span', { class: 'car-stage', text: at.concluido ? `Concluído ${ago(at.concluidoEm)}` : textoEtapa(at) }),
+      el('div', { class: 'bar' + (at.concluido ? ' is-ok' : ''), role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
 }
 function renderHome() {
   const all = ativos();
-  const grid = el('ul', { class: 'gallery' });
+  // Concluídos nas últimas 24 h (pedido de 16/10/2026): ficam embaixo dos em serviço antes de irem só para o Histórico.
+  const feitos = concluidosRecentes();
+  const grid = el('ul', { class: 'gallery' }), gridFeitos = el('ul', { class: 'gallery' });
+  const secFeitos = el('section', { class: 'stack', hidden: true });
   const empty = el('p', { class: 'empty' });
   const draw = () => {
     const q = S.homeQuery.trim().toLowerCase(), q2 = norm(q);
-    const items = !q ? all : all.filter(a => {
+    const bate = a => {
       const v = DB.veiculos[a.placa] || {};
       return (q2 && a.placa.includes(q2)) || [a.clienteNome || NOME_PENDENTE, v.descricao, a.tipoNome, etapaAtual(a), ...opcionaisDe(a)].join(' ').toLowerCase().includes(q);
-    });
+    };
+    const items = !q ? all : all.filter(bate), itemsFeitos = !q ? feitos : feitos.filter(bate);
     preencher(grid, ...items.map(carCard));
+    preencher(gridFeitos, ...itemsFeitos.map(carCard));
+    preencher(secFeitos, el('div', { class: 'page-head' }, el('h2', { text: 'Concluídos nas últimas 24 h' }), el('span', { class: 'count', text: String(itemsFeitos.length) })), gridFeitos);
+    secFeitos.hidden = !itemsFeitos.length;
     empty.hidden = items.length > 0;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum veículo em serviço. Toque em Adicionar para registrar a entrada de um veículo.';
   };
@@ -2848,11 +3012,52 @@ function renderHome() {
     alertas.length ? el('a', { class: 'alert', href: '#/estoque' },
       el('span', {}, el('b', { text: 'Estoque: ' }), alertas.map(it => `${it.nome} (${fmtQ(saldo(it.id))} ${it.unidade})`).join(', ')),
       icon('chev')) : null,
-    all.length > 4 ? el('div', { class: 'search' }, icon('search'),
+    all.length + feitos.length > 4 ? el('div', { class: 'search' }, icon('search'),
       el('input', { type: 'search', placeholder: 'Buscar placa, cliente, veículo ou opcional', value: S.homeQuery, 'aria-label': 'Buscar veículos', oninput: e => { S.homeQuery = e.target.value; draw(); } })) : null,
-    grid, empty);
+    grid, empty, secFeitos);
   shell(body, { current: 'inicio' });
   draw();
+  setTimeout(popupConcluidos, 900);
+}
+const CONC_MS = 24 * 3600e3;
+const concluidosRecentes = () => DB.atendimentos.filter(a => a.concluido && a.concluidoEm && Date.now() - a.concluidoEm < CONC_MS).sort((a, b) => b.concluidoEm - a.concluidoEm);
+/* Veículo concluído (pedido de 16/10/2026): no Início, janela no meio da tela com foto, modelo, placa, dono e quem
+   concluiu. Vem dos avisos de conclusão da pessoa (DB.avisos: o Controle, ou toda a equipe se Ajustes > Notificações
+   mandar; nunca quem concluiu). Cada um aparece uma vez neste aparelho (localStorage sd:conclusao:vista:<id>) e só
+   nas 24 h depois da conclusão. Vários: um de cada vez, com "Próximo". Não abre por cima de outra janela. */
+const chaveConc = () => `sd:conclusao:vista:${(me() || {}).id}`;
+function popupConcluidos() {
+  if (MODO_CLIENTE || !DB || !me() || document.querySelector('dialog[open]')) return;
+  const [r] = parts(); if (r && r !== 'inicio') return;
+  let vista = 0; try { vista = Number(localStorage.getItem(chaveConc())) || 0; } catch { return; }
+  const fila = (DB.avisos || []).filter(x => x.tipo === 'conclusao' && x.em > vista && Date.now() - x.em < CONC_MS).sort((a, b) => a.em - b.em);
+  if (!fila.length) return;
+  const d = el('dialog', { id: 'pop-concluido', class: 'sheet pop-centro', 'aria-label': 'Veículo concluído' });
+  const marcar = x => { try { if (x.em > (Number(localStorage.getItem(chaveConc())) || 0)) localStorage.setItem(chaveConc(), String(x.em)); } catch {} };
+  const fechar = () => { if (d.open) d.close(); d.remove(); };
+  d.addEventListener('cancel', () => { fila.forEach(marcar); setTimeout(() => d.remove(), 0); });
+  let k = 0;
+  const desenhar = () => {
+    const x = fila[k], id = (/#\/veiculo\/([\w-]+)/.exec(x.url || '') || [])[1], at = id ? DB.atendimentos.find(a => a.id === id) : null;
+    const v = at ? DB.veiculos[at.placa] || {} : {}, capa = at ? capaDe(at) : null;
+    const quem = at ? ((at.historico || []).slice().reverse().find(h => h.texto === 'Serviço concluído') || {}).porNome : '';
+    const resto = fila.length - k - 1;
+    preencher(d, el('div', { class: 'sheet-in conc-in' },
+      el('div', { class: 'conc-foto' }, capa ? photoImg(capa, `Foto do veículo ${fmtPlaca(at.placa)}`) : el('span', { class: 'ph' }, icon('car')),
+        el('span', { class: 'conc-selo' }, icon('check'), 'Concluído')),
+      at ? el('div', { class: 'conc-txt' },
+        el('b', { class: 'conc-modelo', text: v.descricao ? modeloCurto(v.descricao) : fmtPlaca(at.placa) }),
+        el('span', { class: 'car-meta' }, v.descricao ? miniPlaca(at.placa) : null,
+          el('span', { class: 'car-cliente' + (at.clienteNome ? '' : ' is-pendente'), text: at.clienteNome || `(${NOME_PENDENTE})` })),
+        el('span', { class: 'hint', text: [at.tipoNome, `concluído ${ago(at.concluidoEm || x.em)}`, quem ? `por ${quem}` : ''].filter(Boolean).join(' · ') }))
+        : el('div', { class: 'conc-txt' }, el('b', { text: x.titulo }), x.texto ? el('span', { class: 'hint', text: x.texto }) : null),
+      el('div', { class: 'actions' },
+        at ? el('button', { class: 'btn btn--lg grow', type: 'button', onclick: () => { marcar(x); fechar(); go(`#/veiculo/${esc(at.id)}`); } }, 'Ver veículo') : null,
+        el('button', { class: 'btn btn--primary btn--lg grow', type: 'button', onclick: () => { marcar(x); if (resto) { k++; desenhar(); } else fechar(); } }, resto ? `Próximo (${resto})` : 'OK'))));
+  };
+  desenhar();
+  document.body.append(d);
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
 
 /* =====================================================================
@@ -3080,13 +3285,15 @@ async function runRead(frame, crop, mode) {
 // carro: false usa a lista simples de tipos (cadastro do veículo), sem o carro visto de cima.
 function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto', carro = true }) {
   const ul = el('ul', { class: 'photos' });
-  const tiles = [];
+  const tiles = [], qtd = {};
   for (const f of items) {
-    const img = f.url ? el('img', { src: f.mini || f.url, alt: f.rotulo, loading: 'lazy' }) : photoImg(f, f.rotulo);
+    // Mais de uma foto do mesmo tipo (extra no cadastro): "Lateral esquerda", "Lateral esquerda 2"...
+    const n = qtd[f.rotulo] = (qtd[f.rotulo] || 0) + 1, cap = n > 1 ? `${f.rotulo} ${n}` : f.rotulo;
+    const img = f.url ? el('img', { src: f.mini || f.url, alt: cap, loading: 'lazy' }) : photoImg(f, cap);
     tiles.push(el('li', { class: 'photo' }, img,
-      el('button', { class: 'open', type: 'button', 'aria-label': `Ver foto: ${f.rotulo}`, onclick: () => openViewer(f, acoes ? acoes(f) : []) }),
-      el('span', { class: 'cap', text: f.rotulo }),
-      onRemove ? el('button', { class: 'rm', type: 'button', 'aria-label': `Remover foto ${f.rotulo}`, onclick: () => onRemove(f) }, '×') : null));
+      el('button', { class: 'open', type: 'button', 'aria-label': `Ver foto: ${cap}`, onclick: () => openViewer(f, acoes ? acoes(f) : []) }),
+      el('span', { class: 'cap', text: cap }),
+      onRemove ? el('button', { class: 'rm', type: 'button', 'aria-label': `Remover foto ${cap}`, onclick: () => onRemove(f) }, '×') : null));
   }
   const tem = new Set(items.map(f => f.rotulo));
   for (const r of slots) if (!tem.has(r) && onAdd) tiles.push(el('li', {}, el('button', { class: 'slot', type: 'button', onclick: () => janelaFoto(r, onAdd, tem, carro) }, icon('camera'), r)));
@@ -3169,6 +3376,27 @@ function janelaFoto(tipoInicial, aoEscolher, feitos = new Set(), comCarro = true
     el('div', { class: 'actions' }, tirar, galeria)));
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
 }
+// Cadastro do veículo (pedido de 16/10/2026): foto num tipo que já tem foto (ex.: Lateral esquerda) pergunta se
+// a nova fica como extra (as duas ficam) ou substitui a última desse tipo. Devolve 'extra', 'substituir' ou null.
+function perguntarFotoRepetida(rotulo, urlAtual, urlNova) {
+  return new Promise(resolve => {
+    const d = el('dialog', { class: 'sheet', 'aria-label': `Já tem foto: ${rotulo}` });
+    let fim = false;
+    const fechar = r => { if (fim) return; fim = true; if (d.open) d.close(); d.remove(); resolve(r); };
+    d.addEventListener('cancel', e => { e.preventDefault(); fechar(null); });
+    d.addEventListener('click', e => { if (e.target === d) fechar(null); });
+    d.append(el('div', { class: 'sheet-in' },
+      el('div', { class: 'card-head' }, el('h2', { text: `Já tem foto: ${rotulo}` }), el('button', { class: 'link-btn', type: 'button', onclick: () => fechar(null) }, 'Cancelar')),
+      el('div', { class: 'foto-rep' },
+        el('figure', {}, el('img', { src: urlAtual, alt: `${rotulo}: foto que já está` }), el('figcaption', { text: 'Já está' })),
+        el('figure', { class: 'is-nova' }, el('img', { src: urlNova, alt: `${rotulo}: foto nova` }), el('figcaption', { text: 'Nova' }))),
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn btn--primary btn--lg grow', type: 'button', onclick: () => fechar('extra') }, icon('plus'), 'Adicionar como extra'),
+        el('button', { class: 'btn btn--lg grow', type: 'button', onclick: () => fechar('substituir') }, 'Substituir'))));
+    document.body.append(d);
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  });
+}
 // acoes: botões embaixo da foto, [{ texto, perigo, manter, fn }]. O visualizador fecha antes de rodar a ação
 // (a não ser com manter: true, usado para escolher o tipo da foto com ela ainda aberta).
 // A foto grande é trocada por uma <img> nova a cada abertura: a anterior nunca aparece no lugar da escolhida.
@@ -3245,9 +3473,9 @@ function renderNew(placaRaw) {
     tiposOk.map(t => el('option', { value: t.id, selected: tipoAg && t.id === tipoAg.id }, t.nome)));
   const fDanos = el('textarea', { id: 'f-danos', rows: '3', maxlength: '1000', placeholder: 'Riscos, amassados, peças soltas, problemas já existentes' });
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
-  // Valor (só Controle): Entrada paga e A receber. O valor do agendamento entra como "A receber".
-  const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off' });
-  const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(ag0.valor) : '' });
+  // Valor (só Controle): Entrada paga e A receber. Do agendamento vêm a entrada e o que falta pagar.
+  const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null && entradaDe(ag0) ? fmtQ(entradaDe(ag0)) : '' });
+  const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(aReceberDe(ag0)) : '' });
   const opcSel = rasc ? (rasc.opcionais || []).filter(n => (DB.opcionais || []).some(o => o.nome === n)) : []; // opcionais marcados na entrada
   // Rascunho: volta com o que já tinha sido preenchido.
   if (rasc) {
@@ -3288,9 +3516,16 @@ function renderNew(placaRaw) {
       try {
         const blob = await compress(file);
         const item = novaFoto(rotulo, blob);
+        // Tipo fixo que já tem foto: a nova fica como extra (junto das outras desse tipo) ou substitui a última.
+        const iguais = ROTULOS.includes(rotulo) ? fotos.filter(f => f.rotulo === rotulo) : [];
+        const ult = iguais[iguais.length - 1];
+        const modo = ult ? await perguntarFotoRepetida(rotulo, ult.url, item.url) : 'nova';
+        if (!modo || encerrado) { URL.revokeObjectURL(item.url); return; }
         await guardarFotoRascunho(item.id, blob); item.guardada = true; // a foto fica no aparelho antes de aparecer na tela
-        const i = ROTULOS.includes(rotulo) ? fotos.findIndex(f => f.rotulo === rotulo) : -1;
-        if (i >= 0) { URL.revokeObjectURL(fotos[i].url); tirarFotoRascunho(fotos[i].id); fotos[i] = item; } else fotos.push(item);
+        const i = ult ? fotos.indexOf(ult) : -1;
+        if (modo === 'substituir' && i >= 0) { URL.revokeObjectURL(ult.url); tirarFotoRascunho(ult.id); fotos[i] = item; }
+        else if (i >= 0) fotos.splice(i + 1, 0, item); // extra: logo depois das outras do mesmo tipo
+        else fotos.push(item);
         drawFotos(); guardar();
       } catch { toast('Não consegui abrir essa foto.', true); }
     },
@@ -3385,11 +3620,12 @@ function renderNew(placaRaw) {
       el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
-      el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo (marca e modelo primeiro)' }), fDesc),
+      el('div', { class: 'field' }, el('label', { for: 'f-desc', text: 'Veículo' }), fDesc),
       (DB.opcionais || []).length ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Opcionais (ex.: carpete que vai no veículo)' }), opcBox) : null,
       isCtrl() ? el('div', { class: 'valor-campos' },
         el('div', { class: 'field' }, el('label', { for: 'f-entrada', text: 'Entrada paga (R$)' }), fEntrada),
-        el('div', { class: 'field' }, el('label', { for: 'f-receber', text: 'A receber (R$)' }), fReceber)) : null),
+        el('div', { class: 'field' }, el('label', { for: 'f-receber', text: 'A receber (R$)' }), fReceber)) : null,
+      isCtrl() ? previaTotal(fEntrada, fReceber) : null),
     el('div', { class: 'card' },
       el('h2', { text: 'Fotos de entrada' }),
       fotosBox),
@@ -3845,8 +4081,10 @@ function renderVehicle(id) {
   }
 
   const pct = Math.round(progresso(at) * 100);
+  const recente = at.concluido && Date.now() - (at.concluidoEm || 0) < CONC_MS;
   const body = el('div', { class: 'stack', style: 'max-width:720px' },
-    backLink(at.concluido ? '#/historico' : '#/inicio', at.concluido ? 'Histórico' : 'Em serviço'),
+    // Concluído nas últimas 24 h (ou Funcionário): volta para o Início, onde ele ainda aparece.
+    at.concluido && ctrl && !recente ? backLink('#/historico', 'Histórico') : backLink('#/inicio', at.concluido ? 'Início' : 'Em serviço'),
     topoVeiculo(at, v),
     el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
@@ -3861,7 +4099,7 @@ function renderVehicle(id) {
     ctrlCard,
     // Histórico só para o Controle (tem os valores lançados).
     isCtrl() ? historicoVeiculo(at) : null);
-  shell(body, { current: at.concluido ? 'relatorios' : 'inicio' });
+  shell(body, { current: at.concluido && ctrl && !recente ? 'relatorios' : 'inicio' });
 }
 
 /* =====================================================================
@@ -4356,7 +4594,7 @@ function renderSettings() {
 
 /* Ajustes > aba Notificações (Controle, #/ajustes/notificacoes): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
    quem tem notificação ativa e os últimos avisos. Dados de api/notificacoes (S.notif, busca de novo a cada minuto). */
-const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque', chamado: 'Problema' };
+const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque', chamado: 'Chamado', conclusao: 'Concluído' };
 // Por que a pessoa não recebe: situação do último aparelho que ela usou (vem do aviso de presença).
 function motivoSemAparelho(p) {
   const ap = p.ultimoAparelho ? ` (${p.ultimoAparelho})` : '';
@@ -4398,15 +4636,18 @@ function secaoNotificacoes(redraw) {
     el('button', { class: 'sheet-tag', type: 'button', 'aria-pressed': String(f.escolhidos.includes(p.id)), onclick: () => {
       f.escolhidos = f.escolhidos.includes(p.id) ? f.escolhidos.filter(x => x !== p.id) : [...f.escolhidos, p.id]; redraw();
     } }, p.nome, p.aparelhos.length ? null : el('span', { class: 'notif-sem', text: ' (sem aparelho)' })))) : null;
-  const btnEnviar = el('button', { class: 'btn btn--primary btn--block', type: 'button', disabled: !cfg.ativo, onclick: async () => {
+  const btnEnviar = el('button', { class: 'btn btn--primary btn--block', type: 'button', onclick: async () => {
     if (!f.titulo.trim() && !f.texto.trim()) { toast('Escreva a mensagem.', true); fTxt.focus(); return; }
     if (f.para === 'escolher' && !f.escolhidos.length) { toast('Escolha quem recebe.', true); return; }
     btnEnviar.disabled = true; btnEnviar.textContent = 'Enviando…';
     try {
       const r = await apiJson('/api/notificacoes', { method: 'POST', body: { acao: 'enviar', titulo: f.titulo, texto: f.texto, para: f.para === 'escolher' ? f.escolhidos : f.para } });
-      if (!r.aparelhos) toast('Ninguém desse grupo ativou as notificações ainda.', true);
-      else { toast(`Aviso enviado: chegou em ${r.entregues} de ${r.aparelhos} ${r.aparelhos === 1 ? 'aparelho' : 'aparelhos'}.`); S.notifForm = null; }
-    } catch (e) { toast(e && e.code === 'desligadas' ? 'As notificações estão desligadas.' : 'Não deu para enviar agora.', true); }
+      // Fica sempre na aba Notificações do app de quem recebe; no celular, só de quem ativou.
+      if (r.soNoApp) toast('Aviso enviado só para a aba Notificações do app (as do celular estão desligadas).');
+      else if (!r.aparelhos) toast('Aviso enviado para a aba Notificações do app. Ninguém desse grupo ativou no celular ainda.');
+      else toast(`Aviso enviado: chegou em ${r.entregues} de ${r.aparelhos} ${r.aparelhos === 1 ? 'aparelho' : 'aparelhos'} e está na aba Notificações.`);
+      S.notifForm = null;
+    } catch { toast('Não deu para enviar agora.', true); }
     recarregar();
   } }, icon('bell'), 'Enviar aviso');
   // Ordem pelo uso (13/10/2026): enviar aviso primeiro; quem recebe (destacando quem falta e por quê);
@@ -4415,9 +4656,9 @@ function secaoNotificacoes(redraw) {
   const envios = S.notifTodos ? d.envios : d.envios.slice(0, 3);
   return el('section', { class: 'stack', id: 'notif' },
     cfg.ativo ? null : el('div', { class: 'notif-off' },
-      el('span', { text: 'Notificações desligadas: nenhum aviso é enviado.' }),
+      el('span', { text: 'Notificações desligadas: nada chega no celular (os avisos continuam na aba Notificações do app).' }),
       el('button', { class: 'btn btn--sm btn--primary', type: 'button', style: 'flex:none', onclick: () => salvarCfg({ ...cfg, ativo: true }) }, 'Ligar')),
-    el('div', { class: 'card' + (cfg.ativo ? '' : ' is-off') }, el('h3', { text: 'Enviar aviso' }),
+    el('div', { class: 'card' }, el('h3', { text: 'Enviar aviso' }),
       fTit, fTxt,
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Para' }), segPara), pessoas,
       btnEnviar),
@@ -4434,14 +4675,19 @@ function secaoNotificacoes(redraw) {
       chave('Estoque baixo', 'Quando um material chega no mínimo ou acaba.', cfg.ativo && cfg.estoque.ativo, v => salvarCfg({ ...cfg, estoque: { ...cfg.estoque, ativo: v } }), !cfg.ativo),
       cfg.ativo && cfg.estoque.ativo ? el('div', { class: 'seg', role: 'group', 'aria-label': 'Quem recebe o aviso de estoque', style: 'display:flex;width:100%' },
         [['controle', 'Só o Controle'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(cfg.estoque.para === k),
-          onclick: () => { if (cfg.estoque.para !== k) salvarCfg({ ...cfg, estoque: { ...cfg.estoque, para: k } }); } }, t))) : null),
+          onclick: () => { if (cfg.estoque.para !== k) salvarCfg({ ...cfg, estoque: { ...cfg.estoque, para: k } }); } }, t))) : null,
+      // Veículo concluído (16/10/2026): quem concluiu não recebe. Também abre a janela no Início de quem recebe.
+      chave('Veículo concluído', 'Quando o serviço de um veículo termina. Também aparece no Início.', cfg.ativo && cfg.conclusao.ativo, v => salvarCfg({ ...cfg, conclusao: { ...cfg.conclusao, ativo: v } }), !cfg.ativo),
+      cfg.ativo && cfg.conclusao.ativo ? el('div', { class: 'seg', role: 'group', 'aria-label': 'Quem recebe o aviso de veículo concluído', style: 'display:flex;width:100%' },
+        [['controle', 'Só o Controle'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(cfg.conclusao.para === k),
+          onclick: () => { if (cfg.conclusao.para !== k) salvarCfg({ ...cfg, conclusao: { ...cfg.conclusao, para: k } }); } }, t))) : null),
     d.envios.length ? el('div', { class: 'card' }, el('h3', { text: 'Últimos avisos' }),
       el('ul', { class: 'notif-envios' }, envios.map(e => el('li', {},
         el('span', { class: 'notif-envio-topo' },
           el('span', { class: 'tag' + (e.tipo === 'estoque' ? ' tag--warn' : ''), text: TIPO_ENVIO[e.tipo] || e.tipo }),
           el('span', { class: 'hint', text: ago(e.em) })),
         el('b', { text: e.titulo }), e.texto ? el('span', { text: e.texto }) : null,
-        el('span', { class: 'hint', text: [`Chegou em ${e.entregues} de ${e.aparelhos}`, e.porNome && e.tipo === 'personalizado' ? `por ${e.porNome}` : ''].filter(Boolean).join(' · ') })))),
+        el('span', { class: 'hint', text: [e.aparelhos ? `Chegou em ${e.entregues} de ${e.aparelhos}` : 'Só no app', e.porNome && e.tipo === 'personalizado' ? `por ${e.porNome}` : ''].filter(Boolean).join(' · ') })))),
       d.envios.length > envios.length ? el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: () => { S.notifTodos = true; redraw(); } }, `Mostrar mais (${d.envios.length - envios.length})`) : null) : null,
     el('div', { class: 'card' }, el('h3', { text: 'Este aparelho' }), blocoEsteAparelho(recarregar)));
 }
@@ -4533,7 +4779,8 @@ function linhaAgendamento(a, { entrega = false } = {}) {
   const selo = seloMarca(a.marca);
   const meta = entrega
     ? [`Entrega · entrou em ${brDia(a.data)}`, a.servico]
-    : [a.servico, a.prazo ? `entrega ${brDia(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : '', a.valor != null ? fmtBRL(a.valor) : '', a.obs];
+    : [a.servico, a.prazo ? `entrega ${brDia(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : '', a.valor != null ? fmtBRL(a.valor) : '',
+      a.valor != null && entradaDe(a) ? `a pagar ${fmtBRL(aReceberDe(a))}` : '', a.obs];
   const wa = telWa(a.tel);
   const abrir = () => go(`#/agenda/${esc(a.id)}`);
   return el('div', { class: `ag-appt ${a.status}${entrega ? ' entrega' : ''}`, role: 'link', tabindex: '0', style: 'cursor:pointer', onclick: abrir,
@@ -4589,27 +4836,31 @@ function renderAgenda() {
   // Mês
   const fer = feriados(A.y), first = new Date(A.y, A.m, 1).getDay(), total = new Date(A.y, A.m + 1, 0).getDate();
   const porDia = {}; lista.forEach(a => { (porDia[a.data] = porDia[a.data] || []).push(a); });
-  // dias entre a entrada e a entrega (faixa embaixo do dia)
-  const noPrazo = new Set();
-  lista.filter(a => a.prazo && a.status !== 'cancelado').forEach(a => { for (let i = 1; i <= a.prazo; i++) noPrazo.add(somaDias(a.data, i)); });
+  // Entregas de cada dia (anel pequeno no dia; ficam fora da contagem de entradas).
+  const entregasDia = {};
+  lista.filter(a => a.prazo && a.status !== 'cancelado').forEach(a => { const k = entregaDe(a); entregasDia[k] = (entregasDia[k] || 0) + 1; });
   const cells = [];
   for (let i = 0; i < first; i++) cells.push(el('span', { class: 'ag-cell out', 'aria-hidden': 'true' }));
   for (let d = 1; d <= total; d++) {
     const k = isoDia(A.y, A.m, d), its = porDia[k] || [], dow = new Date(A.y, A.m, d).getDay();
-    const ativos = its.filter(a => a.status !== 'cancelado').length;
+    const ativos = its.filter(a => a.status !== 'cancelado'), n = ativos.length, nEnt = entregasDia[k] || 0;
+    const cor = ativos.some(a => a.status === 'agendado') ? 'agendado' : ativos.some(a => a.status === 'em_servico') ? 'em_servico' : 'concluido';
     cells.push(el('button', {
-      type: 'button', title: fer[k] || null, 'aria-label': `${d} de ${MESES[A.m].toLowerCase()}${its.length ? `, ${its.length} ${its.length === 1 ? 'agendamento' : 'agendamentos'}` : ''}${fer[k] ? `, ${fer[k]}` : ''}`,
+      type: 'button', title: fer[k] || null,
+      'aria-label': [`${d} de ${MESES[A.m].toLowerCase()}`, n ? `${n} ${n === 1 ? 'entrada' : 'entradas'}` : '', nEnt ? `${nEnt} ${nEnt === 1 ? 'entrega' : 'entregas'}` : '', fer[k] || ''].filter(Boolean).join(', '),
       'aria-pressed': String(k === A.sel),
-      class: ['ag-cell', ativos ? 'tem' : '', noPrazo.has(k) ? 'rng' : '', k === hoje ? 'today' : '', k === A.sel ? 'sel' : '', fer[k] ? 'feriado' : '', dow === 0 || dow === 6 ? 'fim' : ''].filter(Boolean).join(' '),
+      class: ['ag-cell', n ? 'tem' : '', k === hoje ? 'today' : '', k === A.sel ? 'sel' : '', fer[k] ? 'feriado' : '', dow === 0 || dow === 6 ? 'fim' : ''].filter(Boolean).join(' '),
       onclick: () => { A.sel = k; redraw(); },
     }, el('span', { class: 'n', text: String(d) }),
-      el('span', { class: 'ag-dots' }, its.slice(0, 3).map(a => el('i', { class: 'ag-dot ' + a.status })), its.length > 3 ? el('span', { class: 'ag-mais', text: `+${its.length - 3}` }) : null)));
+      el('span', { class: 'ag-marcas', 'aria-hidden': 'true' }, n ? el('span', { class: 'ag-num ' + cor, text: String(n) }) : null, nEnt ? el('i', { class: 'ag-ent' }) : null)));
   }
   const doMes = lista.filter(a => a.data.startsWith(`${A.y}-${pad2(A.m + 1)}-`));
 
   // Dia escolhido
   const selDt = dataDe(A.sel), selFer = feriados(selDt.getFullYear())[A.sel];
-  const doDia = (porDia[A.sel] || []).slice().sort((a, b) => a.cliente.localeCompare(b.cliente));
+  // Cancelados no fim da lista e fora da contagem (a mesma do número no dia).
+  const doDia = (porDia[A.sel] || []).slice().sort((a, b) => (a.status === 'cancelado') - (b.status === 'cancelado') || a.cliente.localeCompare(b.cliente));
+  const nEntradas = doDia.filter(a => a.status !== 'cancelado').length;
   const entregas = lista.filter(a => a.prazo && a.status !== 'cancelado' && entregaDe(a) === A.sel);
   const nomeDia = A.sel === hoje ? 'Hoje' : A.sel === somaDias(hoje, 1) ? 'Amanhã' : A.sel === somaDias(hoje, -1) ? 'Ontem' : DIAS_SEMANA[selDt.getDay()].replace('-feira', '');
   const dia = el('div', { class: 'card ag-dia' },
@@ -4617,9 +4868,14 @@ function renderAgenda() {
       el('h2', {}, nomeDia, el('span', { class: 'ag-dia-data', text: ` ${selDt.getDate()} de ${MESES[selDt.getMonth()].toLowerCase()}` })),
       ctrl ? el('a', { class: 'btn btn--sm btn--primary', href: `#/agenda/novo` }, icon('plus'), 'Agendar') : null),
     selFer ? el('span', {}, el('span', { class: 'tag tag--danger', text: selFer })) : null,
-    entregas.length ? el('div', { class: 'stack', style: 'gap:8px' }, entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null,
-    doDia.length ? el('div', { class: 'stack', style: 'gap:8px' }, doDia.map(a => linhaAgendamento(a)))
-      : el('p', { class: 'hint', text: entregas.length ? 'Nenhuma entrada neste dia.' : 'Nenhum cliente neste dia.' }));
+    // Entradas do dia e, separadas, as entregas (carro que entrou antes e sai neste dia).
+    !doDia.length && !entregas.length ? el('p', { class: 'hint', text: 'Nenhum cliente neste dia.' }) : null,
+    doDia.length || entregas.length ? el('div', { class: 'ag-sec' },
+      el('h3', {}, 'Entradas', el('span', { class: 'count', text: String(nEntradas) })),
+      doDia.length ? doDia.map(a => linhaAgendamento(a)) : el('p', { class: 'hint', text: 'Nenhuma entrada neste dia.' })) : null,
+    entregas.length ? el('div', { class: 'ag-sec' },
+      el('h3', {}, 'Entregas', el('span', { class: 'count', text: String(entregas.length) })),
+      entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null);
 
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     topo, nav,
@@ -4630,44 +4886,56 @@ function renderAgenda() {
       el('span', {}, el('b', { style: 'background:var(--ink)' }), 'em serviço'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
       el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
-      el('span', {}, el('b', { style: 'width:14px;height:3px;border-radius:2px;background:var(--line-2)' }), 'prazo'),
+      el('span', {}, el('b', { class: 'ag-leg-ent' }), 'entrega'),
       el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` })),
     dia), { current: 'agenda' });
 }
 
-// Agendamento: Controle edita (ou cria com "novo"); Funcionário só vê.
+// Agendamento: primeiro a prévia, igual para todos (pedido de 16/10/2026); o Controle tem "Editar"
+// (#/agenda/ID/editar) e cria com "novo". Valor dividido em Entrada e A pagar, com o total embaixo.
 function renderAgendaItem(idRaw) {
   const A = estadoAgenda(), ctrl = isCtrl();
   const novo = idRaw === 'novo';
   const a = novo ? null : agendaAtiva().find(x => x.id === idRaw);
   if (!novo && !a) { toast('Agendamento não encontrado.', true); return go('#/agenda'); }
   if (novo && !ctrl) return go('#/agenda');
-  const voltar = backLink('#/agenda', 'Agenda');
-  // Dar entrada: vai para "Adicionar" com os dados do agendamento; falta só a placa, as fotos e o resto da entrada.
-  const entradaBtn = a && a.status === 'agendado' ? el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button',
-    onclick: () => { S.entradaAg = a.id; go('#/placa'); } }, icon('scan'), 'Registrar entrada') : null;
+  const editar = novo || (ctrl && parts()[2] === 'editar');
 
-  if (!ctrl) {
+  if (!editar) {
+    // Prévia: como o Funcionário vê. Dar entrada vai para "Adicionar" com os dados do agendamento.
+    const entradaBtn = a.status === 'agendado' ? el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button',
+      onclick: () => { S.entradaAg = a.id; go('#/placa'); } }, icon('scan'), 'Registrar entrada') : null;
     const wa = telWa(a.tel);
     const linha = (dt, dd) => dd ? el('div', {}, el('dt', { text: dt }), el('dd', { text: dd })) : null;
-    shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
-      el('div', { class: 'veh-head' }, el('h1', { text: a.cliente }), el('span', { class: 'veh-sub', text: STATUS_AG[a.status] })),
+    const temValor = a.valor != null, ent = entradaDe(a), pagar = aReceberDe(a);
+    shell(el('div', { class: 'stack', style: 'max-width:640px' }, backLink('#/agenda', 'Agenda'),
+      el('div', { class: 'page-head', style: 'align-items:flex-start' },
+        el('div', { class: 'veh-head' }, el('h1', { text: a.cliente }), el('span', { class: 'veh-sub', text: STATUS_AG[a.status] })),
+        ctrl ? el('a', { class: 'btn btn--sm', href: `#/agenda/${esc(a.id)}/editar`, style: 'flex:none' }, icon('edit'), 'Editar') : null),
       entradaBtn,
       el('div', { class: 'card' }, el('dl', { class: 'kv' },
         linha('Serviço', a.servico), linha('Veículo', a.marca), linha('Entrada', brData(a.data)),
         linha('Entrega prevista', a.prazo ? `${brData(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : 'No mesmo dia'),
-        linha('Valor', a.valor != null ? fmtBRL(a.valor) : ''), linha('WhatsApp', a.tel), linha('Observações', a.obs))),
+        linha('Valor total', temValor ? fmtBRL(a.valor) : ''),
+        linha('Entrada paga', temValor && ent ? fmtBRL(ent) : ''),
+        linha('A pagar', temValor && ent ? (pagar ? fmtBRL(pagar) : 'Quitado') : ''),
+        linha('WhatsApp', a.tel), linha('Observações', a.obs))),
       wa ? el('a', { class: 'btn btn--block', href: wa, target: '_blank', rel: 'noopener' }, icon('wa'), 'Chamar no WhatsApp') : null), { current: 'agenda' });
     return;
   }
 
+  const voltar = backLink(a ? `#/agenda/${esc(a.id)}` : '#/agenda', a ? 'Voltar' : 'Agenda');
   const fCli = el('input', { id: 'ag-cli', type: 'text', maxlength: '80', autocapitalize: 'words', autocomplete: 'off', placeholder: 'Nome do cliente', value: a ? a.cliente : '' });
   const fTel = el('input', { id: 'ag-tel', type: 'tel', maxlength: '30', inputmode: 'tel', placeholder: '(69) 99999-9999', value: a ? a.tel : '' });
   const fServ = el('input', { id: 'ag-serv', type: 'text', maxlength: '120', placeholder: 'O que vai ser feito', value: a ? a.servico : '' });
   const fMarca = el('input', { id: 'ag-marca', type: 'text', maxlength: '40', list: 'ag-marcas', placeholder: 'Fiat, Volkswagen, Toyota...', value: a ? a.marca : '' });
   const fData = el('input', { id: 'ag-data', type: 'date', value: a ? a.data : A.sel });
   const fPrazo = el('input', { id: 'ag-prazo', type: 'number', min: '0', max: '90', step: '1', inputmode: 'numeric', placeholder: '0', value: a && a.prazo ? String(a.prazo) : '' });
-  const fValor = el('input', { id: 'ag-valor', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'Opcional', value: a && a.valor != null ? fmtQ(a.valor) : '' });
+  // Valor: Entrada e A pagar (como na entrada do veículo), com o total embaixo.
+  const temValor = a && a.valor != null;
+  const fEnt = el('input', { id: 'ag-entrada', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: '0,00', value: temValor && entradaDe(a) ? fmtQ(entradaDe(a)) : '' });
+  const fPagar = el('input', { id: 'ag-pagar', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: '0,00', value: temValor ? fmtQ(aReceberDe(a)) : '' });
+  const total = previaTotal(fEnt, fPagar, 'Valor total');
   const fObs = el('textarea', { id: 'ag-obs', rows: '3', maxlength: '600', placeholder: 'Veículo, cor, combinados...' });
   fObs.value = a ? a.obs : '';
   const entrega = el('p', { class: 'hint' });
@@ -4688,14 +4956,13 @@ function renderAgendaItem(idRaw) {
     const cliente = fCli.value.trim().replace(/\s+/g, ' ');
     if (!cliente) { toast('Digite o nome do cliente.', true); fCli.focus(); return; }
     if (!fData.value) { toast('Escolha a data de entrada.', true); fData.focus(); return; }
-    const raw = fValor.value.trim(), valor = raw ? parseNum(raw) : null;
-    if (raw && isNaN(valor)) { toast('Valor inválido. Use só números, como 1960 ou 1.960,00.', true); fValor.focus(); return; }
+    const v = lerValorPartes(fEnt, fPagar, 'Valor a pagar'); if (!v) return;
     const reg = { id: a ? a.id : uid(), cliente, tel: fTel.value.trim(), servico: fServ.value.trim(), data: fData.value, marca: fMarca.value.trim(),
-      prazo: Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0)), valor, obs: fObs.value.trim(), status };
+      prazo: Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0)), valor: v.valor, entrada: v.valor == null ? null : v.entrada, obs: fObs.value.trim(), status };
     if (commit(() => { DB.agenda = a ? agendaAtiva().map(x => x.id === a.id ? reg : x) : [...agendaAtiva(), reg]; })) {
       const dt = dataDe(reg.data); Object.assign(A, { sel: reg.data, y: dt.getFullYear(), m: dt.getMonth(), modo: 'mes' });
       toast(a ? 'Agendamento atualizado.' : 'Cliente agendado.');
-      go('#/agenda');
+      go(a ? `#/agenda/${esc(a.id)}` : '#/agenda');
     }
   } }, a ? 'Salvar alterações' : 'Agendar');
   const excluir = a ? el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
@@ -4705,14 +4972,13 @@ function renderAgendaItem(idRaw) {
 
   const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
   shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
-    el('h1', { text: a ? a.cliente : 'Novo agendamento' }),
-    entradaBtn,
-    entradaBtn ? el('h2', { text: 'Editar agendamento', style: 'margin-top:6px' }) : null,
+    el('h1', { text: a ? 'Editar agendamento' : 'Novo agendamento' }),
     el('div', { class: 'card' },
       campo('ag-cli', 'Cliente', fCli), campo('ag-tel', 'WhatsApp', fTel), campo('ag-serv', 'Serviço', fServ),
       campo('ag-marca', 'Marca ou modelo do carro', fMarca), el('datalist', { id: 'ag-marcas' }, MARCAS.map(m => el('option', { value: m }))),
       el('div', { class: 'row' }, campo('ag-data', 'Entrada', fData), campo('ag-prazo', 'Prazo (dias)', fPrazo)), entrega,
-      campo('ag-valor', 'Valor (R$)', fValor), campo('ag-obs', 'Observações', fObs),
+      el('div', { class: 'valor-campos' }, campo('ag-entrada', 'Entrada (R$)', fEnt), campo('ag-pagar', 'A pagar (R$)', fPagar)), total,
+      campo('ag-obs', 'Observações', fObs),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Situação' }), seg)),
     salvar, excluir ? el('div', {}, excluir) : null), { current: 'agenda' });
   if (!a) fCli.focus();

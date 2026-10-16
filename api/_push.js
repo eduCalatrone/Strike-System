@@ -10,7 +10,7 @@
 const crypto = require('crypto');
 const { rest, restAll } = require('./_supabase.js');
 
-const CONFIG_PADRAO = { ativo: true, estoque: { ativo: true, para: 'controle' } };
+const CONFIG_PADRAO = { ativo: true, estoque: { ativo: true, para: 'controle' }, conclusao: { ativo: true, para: 'controle' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 
 /* ---------- Configuração ---------- */
@@ -18,15 +18,19 @@ async function lerConfig(c) {
   const [r] = await rest(c, 'sd_ajustes?select=valor&chave=eq.notificacoes') || [];
   const v = r && r.valor && typeof r.valor === 'object' ? r.valor : {};
   const est = v.estoque && typeof v.estoque === 'object' ? v.estoque : {};
+  const con = v.conclusao && typeof v.conclusao === 'object' ? v.conclusao : {};
   return {
     ativo: v.ativo !== false,
     estoque: { ativo: est.ativo !== false, para: ['controle', 'todos'].includes(est.para) ? est.para : 'controle' },
+    // Veículo concluído (16/10/2026): padrão ligado, só para o Controle.
+    conclusao: { ativo: con.ativo !== false, para: ['controle', 'todos'].includes(con.para) ? con.para : 'controle' },
   };
 }
 async function salvarConfig(c, cfg) {
   const valor = {
     ativo: cfg.ativo !== false,
     estoque: { ativo: !!(cfg.estoque && cfg.estoque.ativo !== false), para: cfg.estoque && cfg.estoque.para === 'todos' ? 'todos' : 'controle' },
+    conclusao: { ativo: !!(cfg.conclusao && cfg.conclusao.ativo !== false), para: cfg.conclusao && cfg.conclusao.para === 'todos' ? 'todos' : 'controle' },
   };
   await rest(c, 'sd_ajustes?on_conflict=chave', { method: 'POST', body: { chave: 'notificacoes', valor, atualizado_em: new Date().toISOString() }, prefer: 'resolution=merge-duplicates,return=minimal' });
   return valor;
@@ -114,10 +118,13 @@ async function idsDe(c, para) {
 }
 
 // Envia para as pessoas e registra o envio. mensagem: { titulo, texto, url }.
-async function enviar(c, { para, mensagem, tipo, por, origem, registrar = true }) {
-  const ids = await idsDe(c, para);
+// O registro (sd_push_envios) também é a aba Notificações do app: cada pessoa vê os avisos que eram para ela.
+// aparelhos: false só registra (notificações desligadas em Ajustes: nada vai para o celular, mas fica no app).
+// exceto: id de quem não recebe (quem fez a ação, ex.: quem concluiu o veículo ou abriu o chamado).
+async function enviar(c, { para, mensagem, tipo, por, origem, registrar = true, aparelhos = true, exceto = null }) {
+  const ids = (await idsDe(c, para)).filter(x => x !== exceto);
   const v = await chaves(c);
-  const inscs = ids.length ? await restAll(c, `sd_push_inscricoes?select=id,endpoint,p256dh,auth,falhas&ativo=eq.true&funcionario_id=in.(${ids.map(encodeURIComponent).join(',')})`) : [];
+  const inscs = ids.length && aparelhos ? await restAll(c, `sd_push_inscricoes?select=id,endpoint,p256dh,auth,falhas&ativo=eq.true&funcionario_id=in.(${ids.map(encodeURIComponent).join(',')})`) : [];
   const sub = /^https:\/\//.test(origem || '') ? origem : 'https://example.com'; // "sub" do VAPID: o endereço do site
   const corpo = { titulo: String(mensagem.titulo || '').slice(0, 80), texto: String(mensagem.texto || '').slice(0, 300), url: mensagem.url || '/#/inicio', tag: mensagem.tag || undefined, em: Date.now(), ttl: mensagem.ttl };
   const res = await Promise.all(inscs.map(i => enviarUm(v, i, corpo, sub)));
@@ -130,9 +137,9 @@ async function enviar(c, { para, mensagem, tipo, por, origem, registrar = true }
       body: { falhas, ultimo_erro: r === 'sumiu' ? 'cancelado pelo navegador' : r, atualizado_em: agora, ...(r === 'sumiu' || falhas >= 10 ? { ativo: false } : {}) } });
   }).filter(Boolean)).catch(() => {});
   const entregues = res.filter(r => r === 'ok').length;
-  if (registrar) {
+  if (registrar && ids.length) {
     await rest(c, 'sd_push_envios', { method: 'POST', prefer: 'return=minimal', body: {
-      id: crypto.randomBytes(9).toString('base64url'), tipo, titulo: corpo.titulo, texto: corpo.texto, para: ids,
+      id: crypto.randomBytes(9).toString('base64url'), tipo, titulo: corpo.titulo, texto: corpo.texto, para: ids, url: corpo.url,
       aparelhos: inscs.length, entregues, por_id: por ? por.id : null, por_nome: por ? por.nome : null, em: agora,
     } }).catch(() => {});
   }

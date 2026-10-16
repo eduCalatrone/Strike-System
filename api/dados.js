@@ -3,7 +3,7 @@
 //   POST /api/dados  { ops: [...], por: {id, nome} } grava as mudanças, uma por uma, na ordem.
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
-//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | opcionais
+//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | opcionais | chamados
 //   Só do Controle: ajustes, senha, opcionais (lista de Ajustes), agenda (o Funcionário só vê a agenda, com valores,
 //   e pode usar 'agenda:entrada', que só marca o agendamento como "em serviço" ao dar entrada no veículo;
 //   quando esse serviço é concluído, o agendamento vira "concluído" aqui mesmo)
@@ -27,7 +27,8 @@ async function carregar(c, eu) {
   const filtroAts = ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})`
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
-  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados] = await Promise.all([
+  const desde30 = encodeURIComponent(`"${new Date(Date.now() - 30 * 864e5).toISOString()}"`);
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -36,13 +37,15 @@ async function carregar(c, eu) {
     restAll(c, 'sd_estoque_itens?select=id,nome,unidade,minimo&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_estoque_movimentos?select=*&descartado_em=is.null&order=em,id'),
     restAll(c, 'sd_ajustes?select=chave,valor'),
-    restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,obs,status&excluido_em=is.null&order=data,id'),
+    restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,valor_entrada,obs,status&excluido_em=is.null&order=data,id'),
     restAll(c, 'sd_opcionais?select=id,nome&ativo=eq.true&order=nome,id'),
     // Chamados (problemas relatados): o Controle recebe os abertos e os resolvidos dos últimos 60 dias;
-    // o Funcionário só os dele dos últimos 30 dias.
+    // o Funcionário, dos últimos 30 dias, os dele e os mandados para toda a equipe (sem o contexto do aparelho).
     restAll(c, ctrl
       ? `sd_chamados?select=*&excluido_em=is.null&or=(resolvido_em.is.null,criado_em.gte.${encodeURIComponent(`"${new Date(Date.now() - 60 * 864e5).toISOString()}"`)})&order=criado_em.desc`
-      : `sd_chamados?select=*&excluido_em=is.null&por_id=eq.${encodeURIComponent(eu.id)}&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
+      : `sd_chamados?select=*&excluido_em=is.null&or=(por_id.eq.${encodeURIComponent(eu.id)},destino.eq.todos)&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
+    // Aba Notificações: os avisos dos últimos 30 dias que eram para esta pessoa (menos os que ela mesma causou).
+    rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)})&em=gte.${desde30}&order=em.desc&limit=80`),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -101,12 +104,14 @@ async function carregar(c, eu) {
       })),
     },
     chamados: chamados.map(x => ({
-      id: x.id, texto: x.texto, fotos: Array.isArray(x.fotos) ? x.fotos : [], contexto: x.contexto || {}, porId: x.por_id, porNome: x.por_nome || '',
+      id: x.id, texto: x.texto, fotos: Array.isArray(x.fotos) ? x.fotos : [], contexto: ctrl || x.por_id === eu.id ? x.contexto || {} : {}, porId: x.por_id, porNome: x.por_nome || '',
+      destino: x.destino === 'todos' ? 'todos' : 'suporte',
       criadoEm: ms(x.criado_em), resolvidoEm: ms(x.resolvido_em), resolvidoPor: x.resolvido_por || '', resposta: x.resposta || '',
     })),
+    avisos: (avisos || []).map(x => ({ id: x.id, tipo: x.tipo, titulo: x.titulo, texto: x.texto || '', url: x.url || '', porNome: x.por_nome || '', em: ms(x.em) })),
     agenda: agenda.map(a => ({
       id: a.id, cliente: a.cliente, tel: a.tel || '', servico: a.servico || '', data: String(a.data).slice(0, 10), marca: a.marca || '',
-      prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), obs: a.obs || '', status: a.status,
+      prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada), obs: a.obs || '', status: a.status,
     })),
   };
 }
@@ -340,7 +345,7 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       }
       // Correção de placa: só o Controle (o veículo novo é gravado antes, na mesma lista de operações).
       if (ctrl) linha.placa = placa;
-      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&versao=eq.${v}&excluido_em=is.null&select=versao,agenda_id,concluido`, {
+      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&versao=eq.${v}&excluido_em=is.null&select=versao,agenda_id,concluido,placa,cliente_nome,tipo_nome`, {
         method: 'PATCH', body: { ...linha, versao: v + 1 }, prefer: 'return=representation',
       }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
       if (!r || !r.length) throw erro(409, 'conflito', atId);
@@ -349,6 +354,17 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (r[0].concluido && r[0].agenda_id) {
         await marcar(c, 'sd_agenda', `id=eq.${q(r[0].agenda_id)}&status=eq.em_servico`, { status: 'concluido', atualizado_em: agora() });
       }
+      // Acabou de ser concluído (16/10/2026): aviso no celular e na aba Notificações (Ajustes > Notificações decide para quem).
+      if (r[0].concluido && !atual.concluido) depois.push(async (origem, cfg) => {
+        if (!cfg.conclusao.ativo) return;
+        const [veic] = await rest(c, `sd_veiculos?select=descricao&placa=eq.${q(r[0].placa)}`) || [];
+        const modelo = String((veic && veic.descricao) || '').trim().split(/\s+/).slice(0, 2).join(' ').toUpperCase();
+        const placaFmt = /^[A-Z]{3}[0-9]{4}$/.test(r[0].placa) ? `${r[0].placa.slice(0, 3)}-${r[0].placa.slice(3)}` : r[0].placa;
+        await push.enviar(c, { para: cfg.conclusao.para, tipo: 'conclusao', por: eu, origem, aparelhos: cfg.ativo, exceto: eu.id, mensagem: {
+          titulo: `Veículo concluído: ${modelo ? `${modelo} · ` : ''}${placaFmt}`,
+          texto: [r[0].cliente_nome || 'Nome pendente', r[0].tipo_nome, `concluído por ${quem}`].filter(Boolean).join(' · '),
+          url: `/#/veiculo/${atId}`, tag: `conclusao-${atId}` } });
+      });
       return;
     }
     case 'atendimentos:remover':
@@ -406,6 +422,8 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       return upsert(c, 'sd_agenda', {
         id: id(it.id), cliente, tel: txt(it.tel, 30), servico: txt(it.servico, 120), data, marca: txt(it.marca, 40), prazo,
         valor: it.valor == null || it.valor === '' ? null : num(it.valor, 'valor'), obs: txt(it.obs, 600), status, atualizado_em: agora(),
+        // Entrada paga: só quando veio (site antigo não manda e não apaga). A pagar = valor - entrada.
+        ...(it.entrada !== undefined ? { valor_entrada: it.entrada == null || it.entrada === '' ? null : num(it.entrada, 'entrada') } : {}),
       });
     }
     // Entrada do veículo feita a partir do agendamento: qualquer pessoa da equipe pode marcar como concluído.
@@ -424,10 +442,12 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const ctx = it.contexto && typeof it.contexto === 'object' ? it.contexto : {};
       const contexto = { tela: txt(ctx.tela, 80), endereco: txt(ctx.endereco, 120), aparelho: txt(ctx.aparelho, 60), navegador: txt(ctx.navegador, 250),
         versao: txt(ctx.versao, 80), online: ctx.online !== false, erros: (Array.isArray(ctx.erros) ? ctx.erros : []).slice(-5).map(e => txt(e, 300)) };
-      const chamado = { id: id(it.id), texto, fotos, contexto, por_id: eu.id, por_nome: quem, criado_em: agora(), atualizado_em: agora() };
+      // Destino (16/10/2026): só o suporte (Controle) ou toda a equipe (aparece na aba Notificações de todos).
+      const destino = it.destino === 'todos' ? 'todos' : 'suporte';
+      const chamado = { id: id(it.id), texto, fotos, contexto, destino, por_id: eu.id, por_nome: quem, criado_em: agora(), atualizado_em: agora() };
       await inserirSeNovo(c, 'sd_chamados', chamado);
-      depois.push(origem => push.enviar(c, { para: 'controle', tipo: 'chamado', por: eu, origem,
-        mensagem: { titulo: `Problema relatado: ${quem}`, texto: texto.slice(0, 160), url: '/#/chamados', tag: `chamado-${chamado.id}` } }));
+      depois.push((origem, cfg) => push.enviar(c, { para: destino === 'todos' ? 'todos' : 'controle', tipo: 'chamado', por: eu, origem, aparelhos: cfg.ativo, exceto: eu.id,
+        mensagem: { titulo: destino === 'todos' ? `Chamado de ${quem} (para toda a equipe)` : `Problema relatado: ${quem}`, texto: texto.slice(0, 300), url: `/#/chamados/${chamado.id}`, tag: `chamado-${chamado.id}` } }));
       return;
     }
     // Controle marca como resolvido (com uma resposta opcional, que a pessoa vê) e quem relatou recebe o aviso.
@@ -436,7 +456,7 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (!x) return;
       const resposta = txt(op.resposta, 600) || null;
       await marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}&resolvido_em=is.null`, { resolvido_em: agora(), resolvido_por: quem, resposta, atualizado_em: agora() });
-      if (x.por_id && x.por_id !== eu.id) depois.push(origem => push.enviar(c, { para: [x.por_id], tipo: 'chamado', por: eu, origem,
+      if (x.por_id && x.por_id !== eu.id) depois.push((origem, cfg) => push.enviar(c, { para: [x.por_id], tipo: 'chamado', por: eu, origem, aparelhos: cfg.ativo,
         mensagem: { titulo: 'Problema resolvido', texto: resposta || `O problema que você relatou foi resolvido: ${x.texto.slice(0, 100)}`, url: '/#/problema', tag: `chamado-${op.id}` } }));
       return;
     }
@@ -465,7 +485,7 @@ async function avisarEstoque(c, ops, eu, req) {
   }
   if (!novos.size) return;
   const cfg = await push.lerConfig(c);
-  if (!cfg.ativo || !cfg.estoque.ativo) return;
+  if (!cfg.estoque.ativo) return; // desligadas: só fica na aba Notificações do app (aparelhos: cfg.ativo)
   for (const [itemId, { soma: somaNova, n: nNovos }] of novos) {
     const [item] = await rest(c, `sd_estoque_itens?select=nome,unidade,minimo&ativo=eq.true&id=eq.${q(itemId)}`) || [];
     if (!item) continue;
@@ -476,7 +496,7 @@ async function avisarEstoque(c, ops, eu, req) {
     const nAntes = nivelEstoque(antes, minimo), nDepois = nivelEstoque(depois, minimo);
     if (nDepois <= nAntes) continue;
     const un = item.unidade || 'un';
-    await push.enviar(c, { para: cfg.estoque.para, tipo: 'estoque', por: eu, origem: push.origemDe(req), mensagem: nDepois === 2
+    await push.enviar(c, { para: cfg.estoque.para, tipo: 'estoque', por: eu, origem: push.origemDe(req), aparelhos: cfg.ativo, mensagem: nDepois === 2
       ? { titulo: `Sem estoque: ${item.nome}`, texto: `O saldo chegou a ${fmtQtd(depois)} ${un}. Última movimentação: ${eu.nome}.`, url: '/#/estoque', tag: `estoque-${itemId}` }
       : { titulo: `Estoque acabando: ${item.nome}`, texto: `Restam ${fmtQtd(depois)} ${un} (mínimo ${fmtQtd(minimo)}). Última movimentação: ${eu.nome}.`, url: '/#/estoque', tag: `estoque-${itemId}` } });
   }
@@ -504,10 +524,11 @@ module.exports = async (req, res) => {
     }
     // Aviso automático de estoque baixo (notificação no celular). Nunca atrapalha a gravação.
     try { await avisarEstoque(c, ops, eu, req); } catch (e) { console.error('aviso de estoque', e); }
-    // Avisos de chamado (problema relatado / resolvido): depois de gravar, respeitando "Notificações ligadas".
+    // Avisos de chamado e de veículo concluído: depois de gravar. Com "Notificações ligadas" desligado,
+    // nada vai para o celular, mas o aviso fica na aba Notificações do app.
     if (depois.length) {
-      try { if ((await push.lerConfig(c)).ativo) await Promise.all(depois.map(f => f(push.origemDe(req)).catch(e => console.error('aviso de chamado', e)))); }
-      catch (e) { console.error('aviso de chamado', e); }
+      try { const cfg = await push.lerConfig(c); await Promise.all(depois.map(f => f(push.origemDe(req), cfg).catch(e => console.error('aviso', e)))); }
+      catch (e) { console.error('aviso', e); }
     }
     return send(res, 200, { ok: true, versoes });
   } catch (e) {

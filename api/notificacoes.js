@@ -6,11 +6,12 @@
 //     sair      { endpoint }          este aparelho para de receber (desativar ou sair do sistema)
 //     testar                          manda um aviso de teste para os aparelhos da própria pessoa
 //     enviar    { titulo, texto, para }  (Controle) aviso personalizado; para = 'todos' | 'controle' | 'funcionarios' | [ids]
-//     config    { config }            (Controle) liga/desliga tudo e o aviso automático de estoque baixo
+//                                     (também fica na aba Notificações do app de quem recebe)
+//     config    { config }            (Controle) liga/desliga tudo e os avisos automáticos (estoque baixo, veículo concluído)
 //     trocar    { antigo, inscricao } SEM login: o navegador renovou a inscrição sozinho (service worker, evento
 //                                     pushsubscriptionchange). Quem prova é o endereço antigo (secreto, só o aparelho e o
 //                                     banco conhecem): a inscrição nova fica com a mesma pessoa e a antiga é desativada.
-// Com as notificações desligadas em Ajustes, nada é enviado (só o teste).
+// Com as notificações desligadas em Ajustes, nada vai para o celular (só o teste); os avisos ficam só na aba Notificações do app.
 
 const crypto = require('crypto');
 const { config, send, readJsonBody, rest, restAll, ms, usuarioDaSessao } = require('./_supabase.js');
@@ -109,16 +110,16 @@ module.exports = async (req, res) => {
       }
       case 'enviar': {
         if (!ctrl) return send(res, 403, { error: 'proibido' });
+        // Notificações desligadas: o aviso não vai para o celular, mas aparece na aba Notificações do app.
         const cfg = await push.lerConfig(c);
-        if (!cfg.ativo) return send(res, 409, { error: 'desligadas' });
         const titulo = txt(b.titulo, 80), texto = txt(b.texto, 300);
         if (!titulo && !texto) return send(res, 400, { error: 'invalido' });
         const para = Array.isArray(b.para) ? b.para.filter(x => RE_ID.test(String(x))).slice(0, 200)
           : ['todos', 'controle', 'funcionarios'].includes(b.para) ? b.para : null;
         if (!para || (Array.isArray(para) && !para.length)) return send(res, 400, { error: 'invalido' });
-        const r = await push.enviar(c, { para, tipo: 'personalizado', por: eu, origem: push.origemDe(req),
-          mensagem: { titulo: titulo || 'Strike Details', texto, url: '/#/inicio' } });
-        return send(res, 200, r);
+        const r = await push.enviar(c, { para, tipo: 'personalizado', por: eu, origem: push.origemDe(req), aparelhos: cfg.ativo,
+          mensagem: { titulo: titulo || 'Strike Details', texto, url: '/#/notificacoes' } });
+        return send(res, 200, { ...r, soNoApp: !cfg.ativo });
       }
       case 'config': {
         if (!ctrl) return send(res, 403, { error: 'proibido' });
