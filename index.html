@@ -422,14 +422,25 @@ textarea { resize: vertical; min-height: 76px; }
 .mov-qtd small { font-size: 11.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ---------- Estoque ---------- */
-.stock { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-.item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; align-content: start; }
-.item.is-low { border-color: #E6C48A; }
-.item.is-out { border-color: #E9B2AA; }
-.item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.item-name { font-weight: 600; font-size: 16px; }
-.item-min { font-size: 12px; color: var(--muted); }
-.item-qty { font: 700 40px/1 var(--cond); text-align: right; white-space: nowrap; }
+.stock { list-style: none; margin: 0; padding: 0; display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+/* Lista compacta (16/10/2026): um cartão só, materiais separados por linha. */
+.item { padding: 11px 14px; display: grid; gap: 8px; align-content: start; }
+.item + .item { border-top: 1px solid var(--line); }
+.item.is-low { box-shadow: inset 3px 0 0 #D99A2B; }
+.item.is-out { box-shadow: inset 3px 0 0 var(--danger); }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.item-info { display: grid; gap: 2px; min-width: 0; }
+.item-name { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+.item-min { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.item-min:empty { display: none; }
+.item-min .tag { font-size: 11px; padding: 1px 7px; }
+.item-qty { font: 700 26px/1 var(--cond); text-align: right; white-space: nowrap; }
+.uso-medio { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.uso-medio > div { display: grid; gap: 2px; padding: 12px; border-radius: 12px; background: var(--soft); border: 1px solid var(--line); }
+.uso-medio b { font: 700 26px/1.1 var(--cond); }
+.item-acoes { display: flex; align-items: center; gap: 8px; }
+.item-acoes .btn--sm { min-width: 84px; }
+.item-mais { margin-left: auto; font-size: 13px; padding: 4px 2px; }
 .item-qty small { font: 500 14px var(--body); color: var(--muted); margin-left: 4px; }
 .item-last { font-size: 12px; color: var(--muted); }
 .stepper { display: flex; align-items: center; gap: 8px; }
@@ -2011,7 +2022,7 @@ function cartaoChamado(x, { controle = false, autor = false, redraw } = {}) {
     el('div', { class: 'chamado-topo' },
       el('span', { text: [controle || autor ? x.porNome : '', dataHoraCurta(x.criadoEm)].filter(Boolean).join(' · ') }),
       el('span', { class: 'chamado-sit', text: aberto ? 'Aberto' : 'Resolvido' })),
-    x.destino === 'todos' ? el('span', {}, el('span', { class: 'tag', text: 'Para toda a equipe' })) : null,
+    x.destino === 'todos' ? el('span', {}, el('span', { class: 'tag', text: 'Para todos' })) : null,
     el('div', { class: 'chamado-txt', text: x.texto }),
     fotosDoChamado(x),
     controle ? el('div', { class: 'chamado-ctx' },
@@ -2072,7 +2083,7 @@ function renderChamados() {
 function renderProblema() {
   const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
   const f = S.problema = S.problema || { texto: '', fotos: [], destino: 'suporte' };
-  const rotuloEnviar = () => f.destino === 'todos' ? 'Enviar para toda a equipe' : 'Enviar para o suporte';
+  const rotuloEnviar = () => f.destino === 'todos' ? 'Enviar para todos' : 'Enviar para o suporte';
   const origem = telaDoChamado || { hash: '#/inicio', nome: 'Início' };
   const fTxt = el('textarea', { id: 'p-texto', rows: '5', maxlength: '1500', placeholder: 'Descreva o problema', oninput: e => { f.texto = e.target.value; } });
   fTxt.value = f.texto;
@@ -2093,7 +2104,7 @@ function renderProblema() {
       const contexto = { tela: origem.nome, endereco: origem.hash, aparelho: nomeAparelho(), navegador: navigator.userAgent, versao: etagInicial ? String(etagInicial).replace(/["W\/]/g, '').slice(0, 12) : '', online: navigator.onLine, erros: [...ERROS_RECENTES] };
       await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'abrir', item: { id: uid(), texto, fotos, contexto, destino: f.destino } }] } });
       f.fotos.forEach(x => URL.revokeObjectURL(x.url)); S.problema = null;
-      toast(f.destino === 'todos' ? 'Enviado para toda a equipe.' : 'Problema enviado.');
+      toast(f.destino === 'todos' ? 'Enviado para todos.' : 'Problema enviado.');
       await buscarDados({ forcar: true }).catch(() => {});
       redraw();
     } catch (e) {
@@ -2103,7 +2114,7 @@ function renderProblema() {
   } }, icon('warn'), rotuloEnviar());
   // Para quem vai (pedido de 16/10/2026): só o suporte (Controle) ou toda a equipe (aba Notificações de todos).
   const segDestino = el('div', { class: 'seg', role: 'group', 'aria-label': 'Enviar para', style: 'display:flex;width:100%' },
-    [['suporte', 'Só o suporte'], ['todos', 'Toda a equipe']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(f.destino === k),
+    [['suporte', 'Suporte'], ['todos', 'Todos']].map(([k, t]) => el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(f.destino === k),
       onclick: () => { f.destino = k; redraw(); } }, t)));
   const meus = (DB.chamados || []).filter(x => x.porId === (me() || {}).id);
   shell(el('div', { class: 'stack', style: 'max-width:640px' },
@@ -2111,8 +2122,7 @@ function renderProblema() {
     el('div', { class: 'card' },
       el('div', { class: 'field' }, el('label', { for: 'p-texto', text: 'O que aconteceu?' }), fTxt),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Prints ou fotos (opcional)' }), fotosBox),
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Enviar para' }), segDestino,
-        el('span', { class: 'hint', text: f.destino === 'todos' ? 'Aparece em Notificações para toda a equipe e chega no celular de quem ativou os avisos.' : 'Vai só para o Controle.' })),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Enviar para' }), segDestino),
       enviarBtn),
     meus.length ? el('div', { class: 'card' }, el('h2', { text: 'Seus problemas relatados' }),
       el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: 'problema' });
@@ -3023,7 +3033,7 @@ const CONC_MS = 24 * 3600e3;
 const concluidosRecentes = () => DB.atendimentos.filter(a => a.concluido && a.concluidoEm && Date.now() - a.concluidoEm < CONC_MS).sort((a, b) => b.concluidoEm - a.concluidoEm);
 /* Veículo concluído (pedido de 16/10/2026): no Início, janela no meio da tela com foto, modelo, placa, dono e quem
    concluiu. Vem dos avisos de conclusão da pessoa (DB.avisos: o Controle, ou toda a equipe se Ajustes > Notificações
-   mandar; nunca quem concluiu). Cada um aparece uma vez neste aparelho (localStorage sd:conclusao:vista:<id>) e só
+   mandar, e sempre quem concluiu, pedido de 16/10/2026). Cada um aparece uma vez neste aparelho (localStorage sd:conclusao:vista:<id>) e só
    nas 24 h depois da conclusão. Vários: um de cada vez, com "Próximo". Não abre por cima de outra janela. */
 const chaveConc = () => `sd:conclusao:vista:${(me() || {}).id}`;
 function popupConcluidos() {
@@ -4116,7 +4126,7 @@ function renderStock() {
     const toggle = mode => { S.stockOpen = open === mode ? null : { itemId: it.id, mode }; renderStock(); };
 
     let form = null;
-    if (open) {
+    if (open && open !== 'mais') {
       const qInit = open === 'ajuste' ? fmtQ(Math.max(0, s)) : open === 'minimo' ? fmtQ(it.minimo) : '1';
       const q = el('input', { type: 'text', inputmode: 'decimal', value: qInit, autocomplete: 'off', 'aria-label': 'Quantidade' });
       const bump = d => { const n = parseNum(q.value); q.value = fmtQ(Math.max(0, (isNaN(n) ? 0 : n) + d)); };
@@ -4142,10 +4152,13 @@ function renderStock() {
         open === 'minimo' ? null : obs,
         el('div', { class: 'actions' }, confirm, el('button', { class: 'btn', type: 'button', onclick: () => toggle(open) }, 'Cancelar')));
     }
-    const actions = el('div', { class: 'actions' },
-      el('button', { class: 'btn grow' + (ctrl ? '' : ' btn--primary'), type: 'button', 'aria-expanded': open === 'saida', onclick: () => toggle('saida') }, 'Retirar'),
-      ctrl ? el('button', { class: 'btn grow btn--primary', type: 'button', 'aria-expanded': open === 'entrada', onclick: () => toggle('entrada') }, 'Entrada') : null);
-    const ctrlLinks = ctrl ? el('div', { class: 'actions', style: 'gap:14px' },
+    // Lista compacta (16/10/2026): nome e quantidade numa linha, botões pequenos embaixo.
+    // Contagem, mínimo e histórico do Controle ficam no "Mais".
+    const actions = el('div', { class: 'item-acoes' },
+      el('button', { class: 'btn btn--sm' + (ctrl ? '' : ' btn--primary'), type: 'button', 'aria-expanded': String(open === 'saida'), onclick: () => toggle('saida') }, 'Retirar'),
+      ctrl ? el('button', { class: 'btn btn--sm btn--primary', type: 'button', 'aria-expanded': String(open === 'entrada'), onclick: () => toggle('entrada') }, 'Entrada') : null,
+      ctrl ? el('button', { class: 'link-btn item-mais', type: 'button', 'aria-expanded': String(!!open && open !== 'saida' && open !== 'entrada'), onclick: () => toggle(open && open !== 'saida' && open !== 'entrada' ? open : 'mais') }, 'Mais') : null);
+    const ctrlLinks = ctrl && open && open !== 'saida' && open !== 'entrada' ? el('div', { class: 'actions', style: 'gap:14px' },
       el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('ajuste') }, 'Contagem'),
       el('button', { class: 'link-btn', type: 'button', onclick: () => toggle('minimo') }, 'Estoque mínimo'),
       DB.estoque.movimentos.some(m => m.itemId === it.id) ? el('button', { class: 'link-btn', type: 'button', onclick: () => {
@@ -4154,12 +4167,12 @@ function renderStock() {
       } }, 'Histórico') : null) : null;
     return el('li', { class: 'item' + (sit.k === 'low' ? ' is-low' : sit.k !== 'ok' ? ' is-out' : '') },
       el('div', { class: 'item-top' },
-        el('div', { style: 'display:grid;gap:4px' },
+        el('div', { class: 'item-info' },
           el('span', { class: 'item-name', text: it.nome }),
-          sit.txt ? el('span', {}, el('span', { class: 'tag ' + sit.cls, text: sit.txt })) : null,
-          el('span', { class: 'item-min', text: it.minimo > 0 ? `Mínimo: ${fmtQ(it.minimo)} ${it.unidade}` : ctrl ? 'Sem mínimo definido' : '' })),
+          el('span', { class: 'item-min' }, sit.txt ? el('span', { class: 'tag ' + sit.cls, text: sit.txt }) : null,
+            it.minimo > 0 ? ` mín. ${fmtQ(it.minimo)}` : '')),
         el('span', { class: 'item-qty' }, fmtQ(s), ' ', el('small', { text: it.unidade }))),
-      ult ? el('span', { class: 'item-last', text: `Última retirada: ${fmtQ(-ult.delta)} ${it.unidade}, ${ult.porId === (u && u.id) ? 'você' : ult.porNome}, ${ago(ult.em)}` }) : null,
+      open === 'mais' && ult ? el('span', { class: 'item-last', text: `Última retirada: ${fmtQ(-ult.delta)} ${it.unidade}, ${ult.porId === (u && u.id) ? 'você' : ult.porNome}, ${ago(ult.em)}` }) : null,
       sit.k === 'neg' && ctrl ? el('span', { class: 'item-last', style: 'color:var(--danger)', text: 'Retiraram mais do que entrou. Falta registrar uma entrada ou fazer contagem.' }) : null,
       actions, ctrlLinks, form);
   });
@@ -5023,8 +5036,13 @@ function calcularRelatorio(de, ate) {
     const r = porPessoa.get(k) || { pessoa: m.porNome || 'Sem nome', material: it.nome, unidade: it.unidade, qtd: 0 };
     r.qtd = round2(r.qtd - m.delta); porPessoa.set(k, r);
   }
+  // Uso médio por veículo no Cabine Blindada (pedido de 16/10/2026): retiradas do período de manta asfáltica e espuma
+  // expansiva divididas pelos Cabine Blindada concluídos no período (a retirada não fica ligada a um veículo).
+  const cabine = concluidos.filter(a => /cabine\s*blindada/i.test(a.tipoNome || ''));
+  const usoCabine = { veiculos: cabine.length, linhas: itens.filter(i => /manta|espuma/i.test(i.nome))
+    .map(i => ({ nome: i.nome, unidade: i.unidade, saiu: i.saiu, media: cabine.length ? round2(i.saiu / cabine.length) : null })) };
   return {
-    de, ate, concluidos, comValor, faturamento, semValor: concluidos.length - comValor.length,
+    de, ate, concluidos, comValor, faturamento, semValor: concluidos.length - comValor.length, usoCabine,
     ticket: comValor.length ? round2(faturamento / comValor.length) : 0,
     porTipo: [...porTipo].map(([tipo, t]) => ({ tipo, ...t })).sort((a, b) => b.total - a.total),
     andamento: andamento.length, previsto, itens,
@@ -5095,6 +5113,14 @@ function renderRelatorios() {
           verTodos ? 'Mostrar menos' : `Mostrar todos (${linhasServ.length})`)) : null)),
     el('section', { class: 'stack' },
       el('h2', { text: 'Estoque' }),
+      r.usoCabine.linhas.length ? el('div', { class: 'card' }, el('h3', { text: 'Uso por veículo: Cabine Blindada' }),
+        el('div', { class: 'uso-medio' }, r.usoCabine.linhas.map(l => el('div', {},
+          el('span', { class: 'label', text: l.nome }),
+          el('b', { text: l.media == null ? '-' : `${fmtQ(l.media)} ${l.unidade}` }),
+          el('span', { class: 'hint', text: `por veículo · saiu ${fmtQ(l.saiu)} ${l.unidade}` })))),
+        el('p', { class: 'hint', text: r.usoCabine.veiculos
+          ? `Média de ${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'Cabine Blindada concluído' : 'Cabine Blindada concluídos'} no período (retiradas do período divididas pelos veículos).`
+          : 'Nenhum Cabine Blindada concluído no período.' })) : null,
       el('div', { class: 'card' }, el('h3', { text: 'Materiais no período' }),
         r.itens.length ? tabela(['Material', 'Entrou', 'Saiu', 'Saldo hoje'], r.itens.map(i => [i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), [1, 2, 3])
           : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
@@ -5178,6 +5204,8 @@ async function baixarRelatorioPDF(r) {
     fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', (DB.veiculos[a.placa] || {}).descricao || '', a.tipoNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']), dir([5]));
   tab('Estoque no período', ['Material', 'Entrou', 'Saiu', 'Contagem (ajuste)', 'Saldo hoje'], r.itens.map(i => [
     i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${i.ajuste > 0 ? '+' : ''}${fmtQ(i.ajuste)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), dir([1, 2, 3, 4]));
+  if (r.usoCabine.linhas.length && r.usoCabine.veiculos) tab(`Uso por veículo: Cabine Blindada (${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'veículo' : 'veículos'})`, ['Material', 'Saiu no período', 'Média por veículo'],
+    r.usoCabine.linhas.map(l => [l.nome, `${fmtQ(l.saiu)} ${l.unidade}`, `${fmtQ(l.media)} ${l.unidade}`]), dir([1, 2]));
   tab('Retiradas por pessoa', ['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), dir([2]));
   const n = doc.getNumberOfPages();
   for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Strike Details · página ${p} de ${n}`, X, 820); }

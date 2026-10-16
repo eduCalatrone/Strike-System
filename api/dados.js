@@ -44,8 +44,9 @@ async function carregar(c, eu) {
     restAll(c, ctrl
       ? `sd_chamados?select=*&excluido_em=is.null&or=(resolvido_em.is.null,criado_em.gte.${encodeURIComponent(`"${new Date(Date.now() - 60 * 864e5).toISOString()}"`)})&order=criado_em.desc`
       : `sd_chamados?select=*&excluido_em=is.null&or=(por_id.eq.${encodeURIComponent(eu.id)},destino.eq.todos)&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
-    // Aba Notificações: os avisos dos últimos 30 dias que eram para esta pessoa (menos os que ela mesma causou).
-    rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)})&em=gte.${desde30}&order=em.desc&limit=80`),
+    // Aba Notificações: os avisos dos últimos 30 dias que eram para esta pessoa (menos os que ela mesma causou,
+    // fora o de veículo concluído, que quem concluiu também recebe).
+    rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)},tipo.eq.conclusao)&em=gte.${desde30}&order=em.desc&limit=80`),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -354,13 +355,14 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (r[0].concluido && r[0].agenda_id) {
         await marcar(c, 'sd_agenda', `id=eq.${q(r[0].agenda_id)}&status=eq.em_servico`, { status: 'concluido', atualizado_em: agora() });
       }
-      // Acabou de ser concluído (16/10/2026): aviso no celular e na aba Notificações (Ajustes > Notificações decide para quem).
+      // Acabou de ser concluído (16/10/2026): aviso no celular e na aba Notificações (Ajustes > Notificações decide para quem;
+      // quem concluiu também recebe).
       if (r[0].concluido && !atual.concluido) depois.push(async (origem, cfg) => {
         if (!cfg.conclusao.ativo) return;
         const [veic] = await rest(c, `sd_veiculos?select=descricao&placa=eq.${q(r[0].placa)}`) || [];
         const modelo = String((veic && veic.descricao) || '').trim().split(/\s+/).slice(0, 2).join(' ').toUpperCase();
         const placaFmt = /^[A-Z]{3}[0-9]{4}$/.test(r[0].placa) ? `${r[0].placa.slice(0, 3)}-${r[0].placa.slice(3)}` : r[0].placa;
-        await push.enviar(c, { para: cfg.conclusao.para, tipo: 'conclusao', por: eu, origem, aparelhos: cfg.ativo, exceto: eu.id, mensagem: {
+        await push.enviar(c, { para: cfg.conclusao.para, tipo: 'conclusao', por: eu, origem, aparelhos: cfg.ativo, incluir: eu.id, mensagem: {
           titulo: `Veículo concluído: ${modelo ? `${modelo} · ` : ''}${placaFmt}`,
           texto: [r[0].cliente_nome || 'Nome pendente', r[0].tipo_nome, `concluído por ${quem}`].filter(Boolean).join(' · '),
           url: `/#/veiculo/${atId}`, tag: `conclusao-${atId}` } });
@@ -447,7 +449,7 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const chamado = { id: id(it.id), texto, fotos, contexto, destino, por_id: eu.id, por_nome: quem, criado_em: agora(), atualizado_em: agora() };
       await inserirSeNovo(c, 'sd_chamados', chamado);
       depois.push((origem, cfg) => push.enviar(c, { para: destino === 'todos' ? 'todos' : 'controle', tipo: 'chamado', por: eu, origem, aparelhos: cfg.ativo, exceto: eu.id,
-        mensagem: { titulo: destino === 'todos' ? `Chamado de ${quem} (para toda a equipe)` : `Problema relatado: ${quem}`, texto: texto.slice(0, 300), url: `/#/chamados/${chamado.id}`, tag: `chamado-${chamado.id}` } }));
+        mensagem: { titulo: destino === 'todos' ? `Chamado de ${quem} (para todos)` : `Problema relatado: ${quem}`, texto: texto.slice(0, 300), url: `/#/chamados/${chamado.id}`, tag: `chamado-${chamado.id}` } }));
       return;
     }
     // Controle marca como resolvido (com uma resposta opcional, que a pessoa vê) e quem relatou recebe o aviso.

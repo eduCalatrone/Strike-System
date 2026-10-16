@@ -120,9 +120,11 @@ async function idsDe(c, para) {
 // Envia para as pessoas e registra o envio. mensagem: { titulo, texto, url }.
 // O registro (sd_push_envios) também é a aba Notificações do app: cada pessoa vê os avisos que eram para ela.
 // aparelhos: false só registra (notificações desligadas em Ajustes: nada vai para o celular, mas fica no app).
-// exceto: id de quem não recebe (quem fez a ação, ex.: quem concluiu o veículo ou abriu o chamado).
-async function enviar(c, { para, mensagem, tipo, por, origem, registrar = true, aparelhos = true, exceto = null }) {
+// exceto: id de quem não recebe (quem fez a ação, ex.: quem abriu o chamado). incluir: id que recebe mesmo fora do grupo
+// (quem concluiu o veículo também recebe o aviso de conclusão).
+async function enviar(c, { para, mensagem, tipo, por, origem, registrar = true, aparelhos = true, exceto = null, incluir = null }) {
   const ids = (await idsDe(c, para)).filter(x => x !== exceto);
+  if (incluir && !ids.includes(incluir)) ids.push(incluir);
   const v = await chaves(c);
   const inscs = ids.length && aparelhos ? await restAll(c, `sd_push_inscricoes?select=id,endpoint,p256dh,auth,falhas&ativo=eq.true&funcionario_id=in.(${ids.map(encodeURIComponent).join(',')})`) : [];
   const sub = /^https:\/\//.test(origem || '') ? origem : 'https://example.com'; // "sub" do VAPID: o endereço do site
