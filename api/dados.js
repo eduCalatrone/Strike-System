@@ -27,7 +27,7 @@ async function carregar(c, eu) {
   const filtroAts = ctrl ? `or=(excluido_em.is.null,excluido_em.gte.${desde})`
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
-  const desde30 = encodeURIComponent(`"${new Date(Date.now() - 30 * 864e5).toISOString()}"`);
+  const desde7 = encodeURIComponent(`"${new Date(Date.now() - 7 * 864e5).toISOString()}"`);
   const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
@@ -44,9 +44,9 @@ async function carregar(c, eu) {
     restAll(c, ctrl
       ? `sd_chamados?select=*&excluido_em=is.null&or=(resolvido_em.is.null,criado_em.gte.${encodeURIComponent(`"${new Date(Date.now() - 60 * 864e5).toISOString()}"`)})&order=criado_em.desc`
       : `sd_chamados?select=*&excluido_em=is.null&or=(por_id.eq.${encodeURIComponent(eu.id)},destino.eq.todos)&criado_em=gte.${encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString())}&order=criado_em.desc`),
-    // Aba Notificações: os avisos dos últimos 30 dias que eram para esta pessoa (menos os que ela mesma causou,
+    // Aba Notificações: os avisos dos últimos 7 dias (17/10/2026; antes 30) que eram para esta pessoa (menos os que ela mesma causou,
     // fora o de veículo concluído, que quem concluiu também recebe).
-    rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)},tipo.eq.conclusao)&em=gte.${desde30}&order=em.desc&limit=80`),
+    rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)},tipo.eq.conclusao)&em=gte.${desde7}&order=em.desc&limit=80`),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.

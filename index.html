@@ -70,6 +70,10 @@ img { display: block; max-width: 100%; }
 button.who-name { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
 .notif-aparelho { display: grid; gap: 10px; }
 .notif-sit { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+.notif-linha { display: flex; align-items: center; gap: 10px; padding: 10px 2px 0; border-top: 1px solid var(--line); margin-top: 6px; }
+.notif-linha .notif-sit { flex: 1; align-items: center; font-size: 13px; color: var(--muted); }
+.notif-linha .notif-dot { margin-top: 0; width: 8px; height: 8px; }
+.notif-linha .link-btn { font-size: 13px; padding: 6px 2px; }
 .notif-dot { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: #BDBDB9; }
 .notif-sit.is-ativo .notif-dot { background: #2FBF6B; }
 .notif-sit.is-bloqueado .notif-dot { background: var(--danger); }
@@ -2129,7 +2133,7 @@ function renderProblema() {
 }
 
 /* =====================================================================
-   Aba Notificações (#/notificacoes, sino no topo; pedido de 16/10/2026). Os avisos dos últimos 30 dias que eram
+   Aba Notificações (#/notificacoes, sino no topo; pedido de 16/10/2026). Os avisos dos últimos 7 dias (17/10/2026; antes 30) que eram
    para a pessoa: veículo concluído, chamado (para o suporte ou para toda a equipe), estoque baixo e avisos do
    Controle. Vêm de api/dados (DB.avisos, o registro sd_push_envios), então aparecem no app mesmo com o celular sem
    notificação ativada. Novos: depois da última vez que a pessoa abriu a aba neste aparelho (localStorage
@@ -2208,13 +2212,27 @@ function renderAvisos() {
   shell(el('div', { class: 'stack', style: 'max-width:640px' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Notificações' }), el('span', { class: 'count', text: novos ? `${novos} ${novos === 1 ? 'nova' : 'novas'}` : '' })),
     lista.length ? dias.map(d => el('section', { class: 'avisos-dia' }, el('h3', { text: d.r }), el('ul', { class: 'avisos' }, d.itens.map(item))))
-      : el('div', { class: 'card' }, el('p', { class: 'hint', text: 'Nenhuma notificação nos últimos 30 dias.' })),
+      : el('div', { class: 'card' }, el('p', { class: 'hint', text: 'Nenhuma notificação nos últimos 7 dias.' })),
     lista.length > n ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.avisosN = n + 30; const y = window.scrollY; renderAvisos(); window.scrollTo(0, y); } }, `Mostrar mais (${lista.length - n})`) : null,
-    el('div', { class: 'card' },
-      el('div', { class: 'card-head' }, el('h3', { text: 'Receber no celular' }),
-        isCtrl() ? el('a', { class: 'link-btn', href: '#/ajustes/notificacoes' }, 'Configurar avisos') : null),
-      el('p', { class: 'hint', text: 'Os mesmos avisos chegam neste celular mesmo com o app fechado.' }),
-      blocoEsteAparelho())), { current: 'notificacoes' });
+    linhaCelular()), { current: 'notificacoes' });
+}
+// Fim da aba Notificações (17/10/2026, "simplifica e resume"): uma linha só com a situação deste aparelho,
+// "Ativar" ou "Testar" e, para o Controle, a engrenagem que leva a Ajustes > Notificações.
+const TEXTO_CELULAR = { ativo: 'Avisos chegam neste celular', inativo: 'Avisos não chegam neste celular', bloqueado: 'Bloqueadas no navegador',
+  iphone: 'No iPhone, só pelo app instalado', sem: 'Este navegador não recebe avisos' };
+function linhaCelular() {
+  const box = el('div', { class: 'notif-linha' });
+  const desenhar = async () => {
+    const sit = await situacaoNotif();
+    preencher(box,
+      el('span', { class: 'notif-sit is-' + sit }, el('span', { class: 'notif-dot', 'aria-hidden': 'true' }), el('span', { text: TEXTO_CELULAR[sit] })),
+      sit === 'ativo' ? el('button', { class: 'link-btn', type: 'button', onclick: testarNotificacao }, 'Testar')
+        : sit === 'inativo' ? el('button', { class: 'btn btn--sm btn--primary', type: 'button', onclick: async e => {
+            e.currentTarget.disabled = true; if (await ativarNotificacoes()) { toast('Notificações ativadas.'); testarNotificacao(); } desenhar(); } }, 'Ativar') : null,
+      isCtrl() ? el('a', { class: 'top-ico', href: '#/ajustes/notificacoes', title: 'Configurar avisos', 'aria-label': 'Configurar avisos' }, icon('gear')) : null);
+  };
+  desenhar();
+  return box;
 }
 
 /* =====================================================================
@@ -4878,7 +4896,7 @@ function renderAgenda() {
   // Mês
   const fer = feriados(A.y), first = new Date(A.y, A.m, 1).getDay(), total = new Date(A.y, A.m + 1, 0).getDate();
   const porDia = {}; lista.forEach(a => { (porDia[a.data] = porDia[a.data] || []).push(a); });
-  // Entregas de cada dia (anel pequeno no dia; ficam fora da contagem de entradas).
+  // Entregas de cada dia (sem marca no dia desde 17/10/2026; ficam fora da contagem de entradas).
   const entregasDia = {};
   lista.filter(a => a.prazo && a.status !== 'cancelado').forEach(a => { const k = entregaDe(a); entregasDia[k] = (entregasDia[k] || 0) + 1; });
   const cells = [];
@@ -4894,7 +4912,7 @@ function renderAgenda() {
       class: ['ag-cell', n ? 'tem' : '', k === hoje ? 'today' : '', k === A.sel ? 'sel' : '', fer[k] ? 'feriado' : '', dow === 0 || dow === 6 ? 'fim' : ''].filter(Boolean).join(' '),
       onclick: () => { A.sel = k; redraw(); },
     }, el('span', { class: 'n', text: String(d) }),
-      el('span', { class: 'ag-marcas', 'aria-hidden': 'true' }, n ? el('span', { class: 'ag-num ' + cor, text: String(n) }) : null, nEnt ? el('i', { class: 'ag-ent' }) : null)));
+      el('span', { class: 'ag-marcas', 'aria-hidden': 'true' }, n ? el('span', { class: 'ag-num ' + cor, text: String(n) }) : null)));
   }
   const doMes = lista.filter(a => a.data.startsWith(`${A.y}-${pad2(A.m + 1)}-`));
 
@@ -4928,7 +4946,6 @@ function renderAgenda() {
       el('span', {}, el('b', { style: 'background:var(--ink)' }), 'em serviço'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
       el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
-      el('span', {}, el('b', { class: 'ag-leg-ent' }), 'entrega'),
       el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` })),
     dia), { current: 'agenda' });
 }
