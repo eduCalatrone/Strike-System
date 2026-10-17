@@ -4119,7 +4119,21 @@ function renderVehicle(id) {
 function renderStock() {
   const ctrl = isCtrl(), u = me();
   const itens = DB.estoque.itens;
-  const cards = itens.map(it => {
+  // Mais usados primeiro (17/10/2026): quantas retiradas nos últimos 30 dias, depois quantas no total.
+  // Conta retiradas (não quantidade), porque as unidades são diferentes (lata, rolo...). Empate mantém a ordem de cadastro.
+  const desde = Date.now() - 30 * 864e5, uso = new Map();
+  for (const m of DB.estoque.movimentos) {
+    if (m.tipo !== 'saida') continue;
+    const c = uso.get(m.itemId) || { rec: 0, tot: 0 };
+    c.tot++; if ((m.em || 0) >= desde) c.rec++;
+    uso.set(m.itemId, c);
+  }
+  const usoDe = id => uso.get(id) || { rec: 0, tot: 0 };
+  const ordenados = itens.map((it, i) => ({ it, i })).sort((a, b) => {
+    const ua = usoDe(a.it.id), ub = usoDe(b.it.id);
+    return ub.rec - ua.rec || ub.tot - ua.tot || a.i - b.i;
+  }).map(x => x.it);
+  const cards = ordenados.map(it => {
     const s = saldo(it.id), sit = situacao(it);
     const ult = DB.estoque.movimentos.filter(m => m.itemId === it.id && m.tipo === 'saida').slice(-1)[0];
     const open = S.stockOpen && S.stockOpen.itemId === it.id ? S.stockOpen.mode : null;
