@@ -95,7 +95,8 @@ async function carregar(c, eu) {
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
       opcionais: listaOpcionais(a.opcionais), opcionaisFeitos: opcFeitos(a.opcionais_feitos, a.opcionais),
-      ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada) } : {}),
+      ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada),
+        pagamento: a.pago_em ? { em: ms(a.pago_em), porNome: a.pago_por || '', forma: a.pago_forma || '', obs: a.pago_obs || '' } : null } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
     estoque: {
@@ -164,7 +165,7 @@ function historico(v) {
   }));
 }
 // O histórico guarda textos com valores ("Valor definido: R$ ..."). O Funcionário não recebe essas linhas.
-const RE_HIST_VALOR = /^(Valor (definido|removido)|Entrada paga|A receber)/;
+const RE_HIST_VALOR = /^(Valor (definido|removido)|Entrada paga|A receber|Pagamento confirmado|Baixa do pagamento)/;
 function semValores(h) { return (Array.isArray(h) ? h : []).filter(x => !RE_HIST_VALOR.test(String(x && x.texto || ''))); }
 function feitas(v) {
   const out = {};
@@ -300,6 +301,11 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
       // Entrada paga: só quando veio (site antigo não manda e não apaga). A receber = valor - entrada.
       if (ctrl && it.entrada !== undefined) linha.valor_entrada = it.entrada == null || it.entrada === '' ? null : num(it.entrada, 'entrada');
+      // Baixa do pagamento (19/10/2026): só o Controle, só quando veio (site antigo não manda e não apaga).
+      // Hora e nome de quem deu baixa são os do servidor; se já tinha baixa, mantém (só forma e observação mudam).
+      const pag = ctrl && it.pagamento !== undefined ? (it.pagamento && typeof it.pagamento === 'object' ? it.pagamento : null) : undefined;
+      if (pag === null) Object.assign(linha, { pago_em: null, pago_por: null, pago_forma: null, pago_obs: null });
+      else if (pag) Object.assign(linha, { pago_em: agora(), pago_por: eu.nome, pago_forma: txt(pag.forma, 40), pago_obs: txt(pag.obs, 300) });
       const atId = id(it.id);
       if (op.versao == null) {
         await rest(c, 'sd_atendimentos', {
@@ -311,8 +317,9 @@ async function aplicar(c, op, eu, versoes, depois = []) {
         return;
       }
       const v = Number(op.versao); if (!Number.isInteger(v)) throw invalido('versao');
-      const [atual] = await rest(c, `sd_atendimentos?select=historico,concluido,concluido_em,cliente_nome,danos,objetos,tipo_id,tipo_nome,etapas,opcionais,opcionais_feitos,feitas&id=eq.${q(atId)}&versao=eq.${v}`) || [];
+      const [atual] = await rest(c, `sd_atendimentos?select=historico,concluido,concluido_em,cliente_nome,danos,objetos,tipo_id,tipo_nome,etapas,opcionais,opcionais_feitos,feitas,pago_em,pago_por&id=eq.${q(atId)}&versao=eq.${v}`) || [];
       if (!atual) throw erro(409, 'conflito', atId);
+      if (pag && atual.pago_em) Object.assign(linha, { pago_em: atual.pago_em, pago_por: atual.pago_por });
       // Data de conclusão pelo relógio do servidor (celular com data errada não adianta a limpeza das fotos
       // nem muda o mês do faturamento): a de agora quando conclui; a já gravada quando continua concluído.
       if (linha.concluido) linha.concluido_em = atual.concluido && atual.concluido_em ? atual.concluido_em : agora();

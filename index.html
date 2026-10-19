@@ -608,6 +608,20 @@ textarea { resize: vertical; min-height: 76px; }
 .valor-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .valor-total { font-size: 14px; color: var(--muted); }
 .valor-total b { color: var(--ink); }
+/* Baixa do pagamento (19/10/2026) */
+.pag-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.pag-box.is-col { flex-direction: column; align-items: stretch; }
+.pag-box.is-pendente { background: var(--warn-bg); border-color: #F1D5A3; }
+.pag-box.is-pendente .pag-txt b { color: var(--warn); }
+.pag-box.is-pago { background: #E8F3EC; border-color: #BFDCC9; }
+.pag-box.is-pago .pag-txt b { color: var(--ok); }
+.pag-txt { display: grid; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.pag-txt b { font: 700 16px/1.2 var(--cond); letter-spacing: .03em; text-transform: uppercase; }
+.pag-obs { color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pag-form { display: grid; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pag-form h3 { margin: 0; font: 700 16px/1.2 var(--cond); letter-spacing: .03em; text-transform: uppercase; }
+.seg.seg-grade.pag-formas { grid-template-columns: repeat(3, 1fr); }
+.car-stage--pag { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
 
 /* ---------- Agenda ---------- */
 .ag-nav { display: flex; align-items: center; gap: 6px; }
@@ -1420,7 +1434,7 @@ function podeRedesenhar() {
   if (r === 'agenda' && (parts()[1] === 'novo' || parts()[2] === 'editar')) return false; // formulário de agendamento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
-  if (r === 'veiculo' && (S.entradaEdit || S.valorAberto || S.marcandoEtapas)) return false; // editando estado na entrada, valor ou etapas
+  if (r === 'veiculo' && (S.entradaEdit || S.valorAberto || S.pagAberto || S.marcandoEtapas)) return false; // editando estado na entrada, valor, pagamento ou etapas
   const a = document.activeElement;
   if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.type !== 'search') return false;
   return !$('viewer').open;
@@ -1788,6 +1802,14 @@ function previaTotal(fEntrada, fResto, rotulo = 'Total do serviço') {
 }
 const textoValor = (valor, entrada) => valor == null ? 'Valor removido'
   : `Valor definido: ${fmtBRL(valor)} (entrada paga ${fmtBRL(entrada || 0)}, a receber ${fmtBRL(round2(valor - (entrada || 0)))})`;
+/* Baixa do pagamento (pedido de 19/10/2026; só Controle): forma e observação de como foi pago. Para o Controle, o
+   veículo concluído fica no Início até a baixa (para o Funcionário continua saindo depois de 24 h). Só vale para
+   os concluídos desde 19/10/2026, para os antigos não encherem o Início. Dados em sd_atendimentos.pago_* (at.pagamento). */
+const FORMAS_PAG = ['Pix', 'Dinheiro', 'Débito', 'Crédito', 'Transferência', 'Outro'];
+const PAGAMENTO_DESDE = Date.parse('2026-10-19T00:00:00-04:00');
+const pagPendente = at => isCtrl() && at.concluido && !at.pagamento && (at.concluidoEm || 0) >= PAGAMENTO_DESDE;
+const dataHoraBR = ts => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts);
+const textoPagamento = (at, p, editado) => `Pagamento confirmado${editado ? ' (editado)' : ''}: ${[p.forma, at.valor != null ? fmtBRL(at.valor) : '', p.obs].filter(Boolean).join(' · ')}`;
 function registrar(at, texto) {
   const u = me();
   at.historico.push({ texto, em: Date.now(), porId: u ? u.id : null, porNome: u ? u.nome : '' });
@@ -1962,7 +1984,7 @@ function trocarModo(funcionario) {
   try { if (funcionario) localStorage.setItem(MKEY, 'funcionario'); else localStorage.removeItem(MKEY); }
   catch { toast('Não deu para trocar o modo neste aparelho.', true); return; }
   document.querySelectorAll('dialog[open]').forEach(d => d.close());
-  S.notif = null; S.valorAberto = null; S.entradaEdit = null; S.marcandoEtapas = null; S.problema = null;
+  S.notif = null; S.valorAberto = null; S.pagAberto = null; S.entradaEdit = null; S.marcandoEtapas = null; S.problema = null;
   esquecerDados(); // busca de novo, já com as regras do modo escolhido
   go('#/inicio');
   toast(funcionario ? 'Modo funcionário' : 'Modo Controle');
@@ -2564,7 +2586,7 @@ function tipoAcao(t) {
   if (t === 'Serviço concluído') return 'concluido';
   if (/ concluída$|^Opcional concluído/.test(t)) return 'etapa';
   if (/^Foto/.test(t)) return 'foto';
-  if (/^Valor/.test(t)) return 'valor';
+  if (/^Valor|^Pagamento confirmado|^Baixa do pagamento/.test(t)) return 'valor';
   return 'outro';
 }
 function atividadesDe(fid) {
@@ -2687,7 +2709,7 @@ function renderFuncionario(fid) {
 /* =====================================================================
    Estado de tela e navegação
    ===================================================================== */
-const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, ag: null, rel: null, entradaAg: null };
+const S = { stream: null, onOcr: null, pending: null, homeQuery: '', histQuery: '', stockOpen: null, read: null, ocupado: false, loginAberto: null, abertos: {}, ctrlAberto: false, tipoAberto: null, valorAberto: null, pagAberto: null, ag: null, rel: null, entradaAg: null };
 function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
 function parts() { return location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent); }
 window.addEventListener('hashchange', route);
@@ -2706,6 +2728,7 @@ function route(opts) {
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
   if (r !== 'veiculo' || a !== S.entradaEdit) S.entradaEdit = null; // edição aberta não fica presa ao sair do veículo
   if (r !== 'veiculo' || a !== S.valorAberto) S.valorAberto = null;
+  if (r !== 'veiculo' || a !== S.pagAberto) S.pagAberto = null;
   if (r !== 'veiculo' || a !== S.marcandoEtapas) S.marcandoEtapas = null;
   if (r !== 'placa' && r !== 'novo') { setTimeout(avisoNovidades, 700); setTimeout(lembrarNotificacoes, 1400); }
   if (r !== 'problema') telaDoChamado = { hash: location.hash || '#/inicio', nome: telaDePresenca() }; // a tela onde o problema aconteceu
@@ -2892,7 +2915,7 @@ function tipoHist(t) {
   if (/^Etapas? ajustadas?|marcada como concluída/.test(t)) return 'controle';
   if (/ concluída( \(sem foto\))?$/.test(t)) return 'etapa';
   if (/^Foto|^Tipo da foto/.test(t)) return 'foto';
-  if (/^Valor/.test(t)) return 'valor';
+  if (/^Valor|^Pagamento confirmado|^Baixa do pagamento/.test(t)) return 'valor';
   if (/^Etapas atualizadas|^Etapa renomeada|^Tipo de serviço/.test(t)) return 'tipo';
   if (/^Placa corrigida|^Cliente:|editados$|^Descrição/.test(t)) return 'edicao';
   if (/^Opciona/.test(t)) return 'opcional';
@@ -3007,7 +3030,10 @@ function carCard(at) {
         at.clienteNome ? el('span', { class: 'car-cliente', text: at.clienteNome }) : el('span', { class: 'car-cliente is-pendente', text: `(${NOME_PENDENTE})` })),
       at.tipoNome ? el('span', { class: 'car-desc', text: at.tipoNome }) : null,
       opcionaisDe(at).length ? el('span', { class: 'car-opc', text: `+ ${opcionaisDe(at).join(', ')}` }) : null,
-      el('span', { class: 'car-stage', text: at.concluido ? `Concluído ${ago(at.concluidoEm)}` : textoEtapa(at) }),
+      at.concluido && isCtrl() && (at.pagamento || pagPendente(at))
+        ? el('span', { class: 'car-stage car-stage--pag' }, `Concluído ${ago(at.concluidoEm)}`,
+          at.pagamento ? el('span', { class: 'tag tag--ok', text: 'Pago' }) : el('span', { class: 'tag tag--warn', text: 'Pagamento pendente' }))
+        : el('span', { class: 'car-stage', text: at.concluido ? `Concluído ${ago(at.concluidoEm)}` : textoEtapa(at) }),
       el('div', { class: 'bar' + (at.concluido ? ' is-ok' : ''), role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
 }
 function renderHome() {
@@ -3026,7 +3052,9 @@ function renderHome() {
     const items = !q ? all : all.filter(bate), itemsFeitos = !q ? feitos : feitos.filter(bate);
     preencher(grid, ...items.map(carCard));
     preencher(gridFeitos, ...itemsFeitos.map(carCard));
-    preencher(secFeitos, el('div', { class: 'page-head' }, el('h2', { text: 'Concluídos nas últimas 24 h' }), el('span', { class: 'count', text: String(itemsFeitos.length) })), gridFeitos);
+    const semBaixa = itemsFeitos.filter(pagPendente).length;
+    preencher(secFeitos, el('div', { class: 'page-head' }, el('h2', { text: isCtrl() ? 'Concluídos' : 'Concluídos nas últimas 24 h' }),
+      semBaixa ? el('span', { class: 'tag tag--warn', text: `${semBaixa} sem baixa` }) : el('span', { class: 'count', text: String(itemsFeitos.length) })), gridFeitos);
     secFeitos.hidden = !itemsFeitos.length;
     empty.hidden = items.length > 0;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum veículo em serviço. Toque em Adicionar para registrar a entrada de um veículo.';
@@ -3048,7 +3076,8 @@ function renderHome() {
   setTimeout(popupConcluidos, 900);
 }
 const CONC_MS = 24 * 3600e3;
-const concluidosRecentes = () => DB.atendimentos.filter(a => a.concluido && a.concluidoEm && Date.now() - a.concluidoEm < CONC_MS).sort((a, b) => b.concluidoEm - a.concluidoEm);
+// Controle: o concluído sem baixa do pagamento continua aqui depois das 24 h (pagPendente).
+const concluidosRecentes = () => DB.atendimentos.filter(a => a.concluido && a.concluidoEm && (Date.now() - a.concluidoEm < CONC_MS || pagPendente(a))).sort((a, b) => b.concluidoEm - a.concluidoEm);
 /* Veículo concluído (pedido de 16/10/2026): no Início, janela no meio da tela com foto, modelo, placa, dono e quem
    concluiu. Vem dos avisos de conclusão da pessoa (DB.avisos: o Controle, ou toda a equipe se Ajustes > Notificações
    mandar, e sempre quem concluiu, pedido de 16/10/2026). Cada um aparece uma vez neste aparelho (localStorage sd:conclusao:vista:<id>) e só
@@ -3781,6 +3810,60 @@ function topoVeiculo(at, v) {
       ...opcionaisDe(at).map(n => el('span', { class: 'tag tag--opc', text: `+ ${n}` })),
       completo ? el('span', { class: 'veh-info-desc', text: completo }) : null));
 }
+/* Baixa do pagamento (Controle, 19/10/2026), dentro do cartão "Valor do serviço": confirmar que foi pago, com a forma
+   (Pix, Dinheiro...) e uma observação de como foi. Pode editar ou desfazer. Fica no histórico do veículo. */
+function blocoPagamento(at, redraw) {
+  const p = at.pagamento;
+  const abrir = on => { S.pagAberto = on ? at.id : null; redraw(); };
+  if (S.pagAberto !== at.id) {
+    if (p) return el('div', { class: 'pag-box is-pago' },
+      el('div', { class: 'pag-txt' },
+        el('b', { text: 'Pago' }),
+        el('span', { text: [p.forma, p.em ? dataHoraBR(p.em) : '', p.porNome ? `baixa por ${p.porNome}` : ''].filter(Boolean).join(' · ') }),
+        p.obs ? el('span', { class: 'pag-obs', text: p.obs }) : null),
+      el('button', { class: 'link-btn', type: 'button', style: 'flex:none', onclick: () => abrir(true) }, 'Editar'));
+    const pend = pagPendente(at);
+    return el('div', { class: 'pag-box is-col' + (pend ? ' is-pendente' : '') },
+      el('div', { class: 'pag-txt' },
+        el('b', { text: pend ? 'Pagamento pendente' : 'Pagamento' }),
+        el('span', { text: pend ? 'Fica no Início até a baixa.' : 'Sem baixa registrada.' })),
+      el('button', { class: 'btn btn--block' + (at.concluido ? ' btn--primary' : ''), type: 'button', onclick: () => abrir(true) }, 'Confirmar pagamento'));
+  }
+  let forma = p ? p.forma : '';
+  const formas = el('div', { class: 'seg seg-grade pag-formas', role: 'group', 'aria-label': 'Forma de pagamento' });
+  const desenharFormas = () => preencher(formas, ...FORMAS_PAG.map(f => el('button', { type: 'button', 'aria-pressed': String(forma === f), onclick: () => { forma = f; desenharFormas(); } }, f)));
+  desenharFormas();
+  const fObs = el('textarea', { id: 'p-obs', rows: '2', maxlength: '300', placeholder: 'Ex.: crédito em 3x, Pix no nome de outra pessoa, pago na retirada', text: p ? p.obs : '' });
+  const confirmar = () => {
+    if (!forma) { toast('Escolha a forma de pagamento.', true); return; }
+    const obs = fObs.value.trim();
+    if (forma === 'Outro' && !obs) { toast('Em "Outro", escreva na observação como foi pago.', true); fObs.focus(); return; }
+    if (p && p.forma === forma && (p.obs || '') === obs) { abrir(false); return; }
+    const u = me();
+    S.pagAberto = null;
+    if (commit(() => {
+      at.pagamento = { em: p ? p.em : Date.now(), porNome: p ? p.porNome : (u ? u.nome : ''), forma, obs };
+      registrar(at, textoPagamento(at, at.pagamento, !!p));
+    })) { toast(p ? 'Pagamento atualizado.' : 'Pagamento confirmado.'); redraw(); }
+  };
+  const desfazer = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
+    if (!desfazer.dataset.conf) { desfazer.dataset.conf = '1'; desfazer.textContent = 'Tocar de novo para desfazer'; setTimeout(() => { if (desfazer.isConnected) { delete desfazer.dataset.conf; desfazer.textContent = 'Desfazer baixa'; } }, 4000); return; }
+    S.pagAberto = null;
+    if (commit(() => { at.pagamento = null; registrar(at, 'Baixa do pagamento desfeita'); })) { toast('Baixa desfeita.'); redraw(); }
+  } }, 'Desfazer baixa');
+  const rec = aReceberDe(at);
+  return el('div', { class: 'pag-form' },
+    el('h3', { text: p ? 'Editar pagamento' : 'Confirmar pagamento' }),
+    at.valor != null ? el('p', { class: 'valor-total' }, 'Valor do serviço: ', el('b', { text: fmtBRL(at.valor) }), rec ? ` (a receber ${fmtBRL(rec)})` : '') : el('p', { class: 'hint', text: 'Este serviço ainda não tem valor lançado.' }),
+    el('span', { class: 'label', text: 'Como foi pago?' }),
+    formas,
+    el('div', { class: 'field' }, el('label', { for: 'p-obs', text: 'Observação (opcional)' }), fObs),
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn btn--primary grow', type: 'button', onclick: confirmar }, p ? 'Salvar' : 'Confirmar'),
+      el('button', { class: 'btn', type: 'button', onclick: () => abrir(false) }, 'Cancelar')),
+    p ? desfazer : null);
+}
+
 /* Opções do Controle > Tipo de serviço: troca o tipo de um veículo em andamento sem perder o que já foi feito.
    Antes de confirmar mostra o que continua feito, o que entra e o que sai (aplicarTipo numa cópia). */
 function campoTrocarTipo(at, redraw) {
@@ -4104,12 +4187,13 @@ function renderVehicle(id) {
           el('button', { class: 'btn' + (at.valor == null ? ' btn--primary' : ''), type: 'button', style: 'flex:none', onclick: () => abrir(true) }, at.valor == null ? 'Lançar valor' : 'Alterar')),
         at.valor == null ? null : el('div', { class: 'valor-partes' },
           el('div', { class: 'valor-parte' + (ent ? '' : ' zerado') }, el('span', { class: 'label', text: 'Entrada paga' }), el('b', { text: fmtBRL(ent) })),
-          el('div', { class: 'valor-parte receber' + (rec ? '' : ' zerado') }, el('span', { class: 'label', text: 'A receber' }), el('b', { text: rec ? fmtBRL(rec) : 'Quitado' }))));
+          el('div', { class: 'valor-parte receber' + (rec ? '' : ' zerado') }, el('span', { class: 'label', text: at.pagamento ? 'Recebido' : 'A receber' }), el('b', { text: rec ? fmtBRL(rec) : 'Quitado' }))),
+        blocoPagamento(at, redraw));
     }
   }
 
   const pct = Math.round(progresso(at) * 100);
-  const recente = at.concluido && Date.now() - (at.concluidoEm || 0) < CONC_MS;
+  const recente = at.concluido && (Date.now() - (at.concluidoEm || 0) < CONC_MS || pagPendente(at));
   const body = el('div', { class: 'stack', style: 'max-width:720px' },
     // Concluído nas últimas 24 h (ou Funcionário): volta para o Início, onde ele ainda aparece.
     at.concluido && ctrl && !recente ? backLink('#/historico', 'Histórico') : backLink('#/inicio', at.concluido ? 'Início' : 'Em serviço'),
@@ -4331,7 +4415,8 @@ function renderHistory() {
       return el('li', {}, el('a', { class: 'r', href: `#/veiculo/${esc(a.id)}`, style: 'color:inherit;text-decoration:none' },
         el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
         el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(a.placa) }), el('span', { class: 'r-sub', text: [a.clienteNome, v.descricao, a.tipoNome].filter(Boolean).join(' · ') })),
-        el('span', { class: 'r-side' }, el('div', { text: a.concluidoEm ? hora(a.concluidoEm) : '' }), a.valor != null ? el('div', { style: 'color:var(--ink);font-weight:600', text: fmtBRL(a.valor) }) : null)));
+        el('span', { class: 'r-side' }, el('div', { text: a.concluidoEm ? hora(a.concluidoEm) : '' }), a.valor != null ? el('div', { style: 'color:var(--ink);font-weight:600', text: fmtBRL(a.valor) }) : null,
+          pagPendente(a) ? el('span', { class: 'tag tag--warn', text: 'Sem baixa' }) : null)));
     };
     preencher(list, ...dias.map(d => {
       const total = d.itens.reduce((s, a) => s + (a.valor != null ? Number(a.valor) || 0 : 0), 0);
