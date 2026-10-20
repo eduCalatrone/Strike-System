@@ -15,7 +15,7 @@
   (function () {
     var t = null; try { t = localStorage.getItem('protocolos:tema'); } catch (e) {}
     var h = new Date().getHours();
-    var auto = h >= 5 && h < 12 ? 'manha' : h >= 12 && h < 15 ? 'tarde' : h >= 15 && h < 18 ? 'fim' : 'noite';
+    var auto = h >= 5 && h < 12 ? 'manha' : h >= 12 && h < 17 ? 'tarde' : h >= 17 && h < 18 ? 'fim' : 'noite';
     document.documentElement.dataset.tema = t && t !== 'auto' ? t : auto;
   })();
 </script>
@@ -26,8 +26,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* Base visual do Controle (Strike-System): fontes, botões, vidro só no topo e no menu de baixo.
-   Cores em quatro temas pelo horário (dos atalhos de mensagens): manhã (claro), tarde (claro quente),
-   fim de tarde (laranja escuro, a partir das 15 h) e noite (escuro). Toda cor passa pelos tokens abaixo. */
+   Cores em quatro temas pelo horário (dos atalhos de mensagens): manhã (claro), tarde (claro dourado),
+   fim de tarde (laranja escuro, a partir das 17 h) e noite (escuro). Toda cor passa pelos tokens abaixo. */
 :root {
   --brand: "Archivo Black", "Arial Black", sans-serif;
   --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
@@ -54,20 +54,20 @@
   color-scheme: light;
 }
 :root[data-tema="tarde"] {
-  --bg: #F6EFE6; --orb1: rgba(255, 196, 128, .42); --orb2: rgba(255, 150, 120, .18); --orb3: rgba(255, 222, 170, .45);
-  --surface: #FFFCF8; --surface-2: #FBF4EB; --thumb: #F1E6D8;
-  --ink: #1F150E; --ink-2: #4A3B30; --muted: #86705F; --faint: #B39E8C;
-  --line: #EEDFCF; --line-2: #DEC8B2;
-  --sel: #F8DFC2; --sel-ink: #5A2E0C;
-  --btn: #FFFCF8; --btn-ink: #1F150E; --field: #FFFFFF;
-  --primary: linear-gradient(180deg, #3d2a1d 0%, #22160e 55%, #140c06 100%); --primary-ink: #FFF4E8;
-  --warn: #A35200; --warn-bg: #FFEBD2; --warn-line: #F3C99A;
-  --danger: #B42318; --danger-bg: #FDE8E3; --danger-line: #F0C2B6;
-  --ok: #1D6B40; --ok-bg: #E6F2E6; --ok-line: #BFDCC2;
-  --glass-top: rgba(255, 250, 244, .78); --glass-bot: rgba(252, 240, 226, .66);
-  --glass-border: rgba(90, 50, 20, .10); --glass-hi: rgba(255, 255, 255, .9); --glass-shadow: rgba(120, 60, 20, .14);
-  --overlay: rgba(40, 20, 5, .42); --viewer-bg: rgba(24, 14, 8, .92);
-  --bar-top: rgba(255, 250, 244, .82); --bar-bot: rgba(252, 240, 226, .72);
+  --bg: #F3F1EB; --orb1: rgba(255, 204, 92, .34); --orb2: rgba(255, 232, 160, .34); --orb3: rgba(214, 198, 150, .24);
+  --surface: #FFFEFA; --surface-2: #F8F5ED; --thumb: #EEE9DC;
+  --ink: #1B170E; --ink-2: #443D2D; --muted: #7A715C; --faint: #ABA28B;
+  --line: #E8E2D2; --line-2: #D5CCB5;
+  --sel: #F5E2A8; --sel-ink: #4A3300;
+  --btn: #FFFEFA; --btn-ink: #1B170E; --field: #FFFFFF;
+  --primary: linear-gradient(180deg, #34301F 0%, #1E1B10 55%, #110F08 100%); --primary-ink: #FFF7DD;
+  --warn: #9A5600; --warn-bg: #FFF0CC; --warn-line: #EED08F;
+  --danger: #B42318; --danger-bg: #FDECEA; --danger-line: #EBC4BF;
+  --ok: #2E6B1D; --ok-bg: #EAF3E2; --ok-line: #C7DDB6;
+  --glass-top: rgba(255, 254, 246, .78); --glass-bot: rgba(248, 243, 228, .66);
+  --glass-border: rgba(80, 64, 20, .10); --glass-hi: rgba(255, 255, 255, .9); --glass-shadow: rgba(90, 70, 20, .13);
+  --overlay: rgba(30, 24, 8, .42); --viewer-bg: rgba(20, 17, 8, .92);
+  --bar-top: rgba(255, 254, 246, .84); --bar-bot: rgba(248, 243, 228, .74);
   --logo-b: block; --logo-w: none;
   color-scheme: light;
 }
@@ -198,22 +198,23 @@ h3 { margin: 0; font: 600 15px/1.3 var(--body); }
 .back { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 4px 0; margin-bottom: 4px; color: var(--muted); font-weight: 600; font-size: 14px; }
 .back svg { width: 18px; height: 18px; }
 
-/* Busca e filtros */
-.toolbar { display: grid; gap: 10px; margin-top: 16px; }
+/* Busca e filtros: uma linha só, compacta */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
 body:not([data-view=timeline]):not([data-view=clients]) .toolbar { display: none; }
-.search { position: relative; display: block; }
-.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
-.search input { width: 100%; border: 1px solid var(--line-2); background: var(--field); border-radius: 10px; padding: 11px 12px 11px 38px; font-size: 16px; color: var(--ink); }
-.filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.search { position: relative; display: block; flex: 1 1 240px; min-width: 0; }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--muted); pointer-events: none; }
+.search input { width: 100%; height: 40px; border: 1px solid var(--line-2); background: var(--field); border-radius: 10px; padding: 0 12px 0 35px; font-size: 15px; color: var(--ink); }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink) !important; box-shadow: 0 0 0 1px var(--ink); }
 .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; background: var(--btn); }
-.seg button { border: 0; background: transparent; padding: 0 14px; min-height: 42px; font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.seg button { border: 0; background: transparent; padding: 0 12px; min-height: 38px; font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line-2); }
 .seg button.on { background: var(--sel); color: var(--sel-ink); font-weight: 700; }
-.date { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--field); font-size: 13px; font-weight: 600; color: var(--muted); }
-.date input { border: 0; background: transparent; font-size: 14px; color: var(--ink); min-height: 40px; padding: 0 6px; outline: none; box-shadow: none !important; }
-.chip { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--btn); font-size: 13px; font-weight: 600; color: var(--muted); }
+.date { display: inline-flex; align-items: center; gap: 2px; height: 40px; padding: 0 4px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--field); font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.date input { border: 0; background: transparent; font-size: 13.5px; color: var(--ink); height: 36px; padding: 0 4px; outline: none; box-shadow: none !important; width: 126px; }
+.date span { padding: 0 2px; }
+.chip { min-height: 40px; padding: 0 13px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--btn); font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .chip[aria-pressed=true] { background: var(--sel); color: var(--sel-ink); font-weight: 700; }
+.toolbar .link { padding: 0 4px; font-size: 13px; }
 
 /* Aviso de imagens soltas */
 .banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 14px; margin-top: 16px;
@@ -221,9 +222,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .banner b { font-weight: 700; }
 
 /* ---------- Linha do tempo: mês, e dentro dele as semanas ---------- */
-.month { margin-top: 28px; }
-.month-h { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 12px; font: 700 24px/1.1 var(--cond); letter-spacing: .01em; }
-.month-h small { font: 500 14px var(--body); color: var(--muted); letter-spacing: 0; }
+.month { margin-top: 34px; }
+.month:first-child { margin-top: 22px; }
+.month-h { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font: 700 26px/1.1 var(--cond); letter-spacing: .01em; text-transform: uppercase; }
+.month-h small { order: 3; font: 600 13px var(--body); color: var(--muted); letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.month-h::after { content: ""; order: 2; flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--ink) 0, var(--ink) 48px, var(--line-2) 48px); }
 .weeks { display: grid; gap: 14px; }
 .week { padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border);
   background: linear-gradient(180deg, var(--glass-top), var(--glass-bot)); box-shadow: inset 0 1px 0 var(--glass-hi); }
@@ -252,6 +255,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .c-dates small { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.1; }
 .c-dates strong { font: 700 18px/1 var(--cond); letter-spacing: .04em; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .c-dates .tag { padding: 1px 8px; font-size: 11.5px; }
+.c-dates .d.dim strong { color: var(--muted); font-weight: 600; }
 .card.no-name .label { padding-top: 10px; }
 .card.no-name .c-dates { flex-direction: column; align-items: stretch; gap: 6px; border-top: 0; padding-top: 0; }
 .card.no-name .c-dates .d { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -261,8 +265,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .has-note svg { width: 15px; height: 15px; }
 
 /* ---------- Clientes ---------- */
-.cgroups { column-width: 440px; column-gap: 24px; margin-top: 4px; }
-.cgroup { break-inside: avoid; padding-top: 22px; }
+.cgroups { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 22px 24px; align-items: start; margin-top: 22px; }
+.cgroup { min-width: 0; }
 .letter { margin: 0 4px 8px; font: 700 21px/1.1 var(--cond); }
 .clist { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .client { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px 10px 10px; border: 0; background: transparent; text-align: left; color: var(--ink); transition: background-color .15s; }
@@ -332,17 +336,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .pop .pv small { font-size: 20px; font-weight: 700; color: var(--muted); margin-left: 2px; }
 .pop .ps { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-.at-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; padding: 10px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
-.at-cli { flex: 1 1 340px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-.at-cli label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-left: 4px; }
-.at-cli select, .at-cli input { min-height: 42px; border: 1px solid var(--line-2); background: var(--field); border-radius: 10px; padding: 0 12px; color: var(--ink); }
+.at-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.at-cli { flex: 1 1 300px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.at-cli label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.at-cli select, .at-cli input { height: 40px; border: 1px solid var(--line-2); background: var(--field); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 15px; }
 .at-cli select { padding-right: 8px; }
 .at-cli select option { background: var(--surface); color: var(--ink); }
 .at-cli input { flex: 1 1 140px; min-width: 0; font-size: 16px; }
 .at-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.at-opts .seg button { min-height: 40px; }
+.at-opts .seg button { min-height: 38px; }
 .chip.on { background: var(--sel); color: var(--sel-ink); font-weight: 700; }
 .chip.small { min-height: 40px; }
+.at-cli .round.small { width: 40px; height: 40px; border-radius: 10px; }
 
 .at-cols { display: grid; gap: 22px; margin-top: 8px; }
 @media (min-width: 1080px) { .at-cols { grid-template-columns: minmax(0, 1fr) 400px; align-items: start; } }
@@ -537,6 +542,47 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .btn, .round, .card, .client, .d-quick button, .key { transition: transform .12s var(--suave), background-color .15s, border-color .15s, opacity .15s; }
 .btn:not(:disabled):active, .round:not(:disabled):active, .d-quick button:active { transform: scale(.96); }
 
+
+/* ---------- Clima ---------- */
+.clima-pill { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px 0 10px; border-radius: 999px; position: relative;
+  background: var(--btn); border: 1px solid var(--glass-border); color: var(--ink); box-shadow: 0 2px 8px var(--glass-shadow), inset 0 1px 0 var(--glass-hi); font: 700 17px/1 var(--cond); }
+.clima-pill svg { width: 21px; height: 21px; }
+.clima-pill.alerta::after, .clima-at.alerta::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--surface); }
+#headSide { display: flex; align-items: center; gap: 18px; }
+.clima-at { position: relative; display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 0; border-radius: 12px; background: none; color: var(--ink); text-align: left; }
+.clima-at:hover { background: var(--surface-2); }
+.clima-at svg { width: 34px; height: 34px; }
+.clima-at span { display: grid; gap: 2px; }
+.clima-at b { font: 800 30px/.9 var(--cond); }
+.clima-at small { font-size: 11.5px; font-weight: 600; color: var(--muted); max-width: 170px; line-height: 1.2; }
+.clima-at.alerta small { color: var(--warn); }
+.clima-pop { min-width: 300px; }
+.cp-agora { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.cp-agora svg { width: 44px; height: 44px; flex: none; }
+.cp-agora .ps { max-width: 230px; }
+.cp-aviso { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn); font-size: 13px; font-weight: 600; }
+.cp-horas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.cp-horas div { display: grid; justify-items: center; gap: 3px; padding: 4px 0; border-radius: 8px; }
+.cp-horas div.molhado { background: var(--warn-bg); }
+.cp-horas small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.cp-horas svg { width: 20px; height: 20px; }
+.cp-horas b { font: 700 15px/1 var(--cond); }
+.cp-horas span { font-size: 10.5px; color: var(--muted); }
+#chuva { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+#chuva i { position: absolute; top: -40px; width: 1.5px; border-radius: 2px; background: linear-gradient(180deg, transparent, var(--gota)); animation: gota linear infinite; }
+@keyframes gota { from { transform: translateY(0); } to { transform: translateY(calc(100vh + 60px)); } }
+:root, :root[data-tema="manha"], :root[data-tema="tarde"] { --gota: rgba(70, 100, 140, .55); }
+:root[data-tema="fim"] { --gota: rgba(255, 220, 190, .55); }
+:root[data-tema="noite"] { --gota: rgba(190, 210, 255, .5); }
+@media (prefers-reduced-motion: reduce) { #chuva { display: none; } }
+@media (max-width: 600px) {
+  .clima-pill span { display: none; }
+  .clima-pill { padding: 0 9px; }
+  #headSide { gap: 8px; }
+  .clima-at small { display: none; }
+  .clima-at svg { width: 26px; height: 26px; }
+  .clima-at b { font-size: 24px; }
+}
 @media (max-width: 860px) {
   .viewer { grid-template-columns: 1fr; grid-template-rows: auto auto; align-content: start; overflow: auto; }
   .v-stage { padding: 16px 60px; min-height: auto; }
@@ -545,9 +591,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 }
 @media (max-width: 600px) {
   h1 { font-size: 28px; }
-  .filtros .date { flex: 1 1 40%; }
-  .filtros .date input { flex: 1; min-width: 0; }
-  .cgroups { columns: 1; column-width: auto; }
+  .search { flex-basis: 100%; }
+  .toolbar .seg { flex: 1 1 auto; }
+  .toolbar .seg button { flex: 1; }
+  .toolbar .date { flex: 1 1 100%; justify-content: space-between; }
+  .toolbar .date input { flex: 1; width: auto; min-width: 0; }
+  .cgroups { grid-template-columns: 1fr; gap: 18px; }
   .row { grid-template-columns: 56px minmax(0, 1fr) auto; }
   .q-thumb { width: 56px; }
   .two { grid-template-columns: 1fr; }
@@ -557,7 +606,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
   .tabbar .ico, .tabbar .pill { width: 48px; }
   .clock .tm { font-size: 30px; }
   .msgs { grid-template-columns: 1fr; }
-  .at-cli label { width: 100%; padding-left: 2px; }
   .at-opts { width: 100%; }
   .at-opts .seg { flex: 1 1 100%; }
   .at-opts .seg button { flex: 1; padding: 0 6px; }
@@ -597,6 +645,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
         <img src="/protocolos/icons/logo-branca.png" alt="Strike Details" class="wordmark-txt logo-w">
       </a>
       <div class="top-acts">
+        <button class="clima-pill" id="btnClima" type="button" aria-label="Tempo agora" hidden></button>
         <button class="round" id="btnTema" type="button" title="Tema" aria-label="Tema" aria-haspopup="menu"></button>
         <button class="round" id="btnFolder" type="button" title="Trocar pasta" aria-label="Trocar pasta">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
@@ -623,16 +672,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
         <input id="q" type="search" placeholder="Buscar cliente ou observação" autocomplete="off" aria-label="Buscar cliente ou observação">
       </label>
-      <div class="filtros">
-        <div class="seg" id="seg" role="group" aria-label="Filtrar a data por">
-          <button type="button" data-mode="entrada" class="on">Entrada</button>
-          <button type="button" data-mode="saida">Entrega</button>
-        </div>
-        <label class="date" title="Preencha só o dia para ver uma data específica">Dia<input type="date" id="from"></label>
-        <label class="date" title="Opcional, para um período">até<input type="date" id="to"></label>
-        <button class="chip" id="onlyOpen" type="button" aria-pressed="false">Sem saída</button>
-        <button class="link" id="clear" type="button" hidden>Limpar</button>
+      <div class="seg" id="seg" role="group" aria-label="Organizar pela data de">
+        <button type="button" data-mode="entrada" class="on" title="Agrupa pela data de entrada">Por entrada</button>
+        <button type="button" data-mode="saida" title="Agrupa pela data de entrega">Por entrega</button>
       </div>
+      <div class="date" title="Preencha só o primeiro para um dia específico">
+        <input type="date" id="from" aria-label="Do dia"><span>até</span><input type="date" id="to" aria-label="Até o dia">
+      </div>
+      <button class="chip" id="onlyOpen" type="button" aria-pressed="false">Sem saída</button>
+      <button class="link" id="clear" type="button" hidden>Limpar</button>
     </div>
 
     <div id="banner"></div>
@@ -1188,9 +1236,10 @@ function filtered() {
 const curtaAno = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}`; };
 function datesHTML(it, comAno) {
   const f = comAno ? curtaAno : brShort;
+  const porEntrega = S.mode === 'saida';
   return `<span class="c-dates">
-      <span class="d"><small>Entrada</small><strong>${f(it.entrada)}</strong></span>
-      <span class="d"><small>Saída</small>${it.saida ? `<strong>${f(it.saida)}</strong>` : '<em class="tag tag--warn">Sem saída</em>'}</span>
+      <span class="d${porEntrega ? ' dim' : ''}"><small>Entrada</small><strong>${f(it.entrada)}</strong></span>
+      <span class="d${porEntrega ? '' : ' dim'}"><small>Saída</small>${it.saida ? `<strong>${f(it.saida)}</strong>` : '<em class="tag tag--warn">Sem saída</em>'}</span>
     </span>`;
 }
 function cardHTML(it, inClient) {
@@ -1230,10 +1279,17 @@ function weekLabel(ini, fim) {
   return '';
 }
 function timelineHTML() {
-  const key = (S.mode === 'saida' && (S.from || S.to)) ? 'saida' : 'entrada';
-  const list = filtered().sort((a, b) => (b[key] || '').localeCompare(a[key] || '') || collator.compare(a.cliente, b.cliente));
-  S.list = list;
-  if (!list.length) return noResultsHTML();
+  // "Por entrada" agrupa pela data de entrada; "Por entrega", pela data de saída (os sem saída ficam num bloco no topo).
+  const key = S.mode === 'saida' ? 'saida' : 'entrada';
+  const todos = filtered();
+  const semSaida = key === 'saida' ? todos.filter(i => !i.saida).sort((a, b) => b.entrada.localeCompare(a.entrada)) : [];
+  const list = todos.filter(i => i[key]).sort((a, b) => b[key].localeCompare(a[key]) || collator.compare(a.cliente, b.cliente));
+  S.list = [...semSaida, ...list];
+  if (!S.list.length) return noResultsHTML();
+  const blocoSem = semSaida.length ? `<section class="month">
+      <h2 class="month-h"><span>Ainda sem entrega</span><small>${pl(semSaida.length, 'protocolo', 'protocolos')}</small></h2>
+      <div class="week"><div class="grid">${semSaida.map(it => cardHTML(it)).join('')}</div></div>
+    </section>` : '';
   const months = [];
   for (const it of list) {
     const d = it[key], mk = d.slice(0, 7), wk = weekStart(d);
@@ -1245,7 +1301,7 @@ function timelineHTML() {
     m.n++;
   }
   const palavra = key === 'saida' ? ['entrega', 'entregas'] : ['protocolo', 'protocolos'];
-  return months.map(m => {
+  return blocoSem + months.map(m => {
     const mIni = m.k + '-01', mFim = isoOf(new Date(+m.k.slice(0, 4), +m.k.slice(5, 7), 0));
     return `<section class="month">
       <h2 class="month-h"><span>${cap(fmtMonth.format(dateOf(mIni)))}</span><small>${pl(m.n, ...palavra)}</small></h2>
@@ -1550,6 +1606,7 @@ async function start() {
   await scan();
   render();
   window.scrollTo(0, 0);
+  CLIMA.desenhar(); // mostra o aviso de chuva, se tiver, agora que a galeria abriu
   // Veio do aviso do sistema (janela estava fechada): já abre o cadastro das imagens soltas.
   if (location.hash === '#organizar') {
     history.replaceState(null, '', location.pathname + location.search);
@@ -2261,13 +2318,13 @@ $('#file').addEventListener('change', e => {
 });
 
 /* ================= tema pelo horário ================= */
-// Manhã (claro) até 12 h, tarde clara até 15 h, fim de tarde (laranja escuro) até 18 h e noite depois.
+// Manhã (claro) até 12 h, tarde clara (dourada) até 17 h, fim de tarde (laranja escuro) até 18 h e noite depois.
 const TEMA = {
   nomes: { manha: 'Manhã', tarde: 'Tarde', fim: 'Fim de tarde', noite: 'Noite' },
-  horas: { manha: '5 h às 12 h', tarde: '12 h às 15 h', fim: '15 h às 18 h', noite: '18 h às 5 h' },
-  cor: { manha: '#F2F2F1', tarde: '#F6EFE6', fim: '#170C06', noite: '#0A0B0E' },
+  horas: { manha: '5 h às 12 h', tarde: '12 h às 17 h', fim: '17 h às 18 h', noite: '18 h às 5 h' },
+  cor: { manha: '#F2F2F1', tarde: '#F3F1EB', fim: '#170C06', noite: '#0A0B0E' },
   pref() { try { return localStorage.getItem('protocolos:tema') || 'auto'; } catch { return 'auto'; } },
-  agora() { const h = new Date().getHours(); return h >= 5 && h < 12 ? 'manha' : h >= 12 && h < 15 ? 'tarde' : h >= 15 && h < 18 ? 'fim' : 'noite'; },
+  agora() { const h = new Date().getHours(); return h >= 5 && h < 12 ? 'manha' : h >= 12 && h < 17 ? 'tarde' : h >= 17 && h < 18 ? 'fim' : 'noite'; },
   atual() { const p = this.pref(); return p === 'auto' ? this.agora() : p; },
   aplicar() {
     const t = this.atual();
@@ -2477,7 +2534,7 @@ const AT = {
     clearInterval(this.timer); this.timer = null;
     this.fecharPop();
     if (!on) return;
-    $('#headSide').innerHTML = `<button class="clock" type="button" id="atClock" title="Toque para ver o horário de volta do almoço ou quanto falta para sair"><span class="tm"><span id="atHm">--:--</span><small id="atSg">00</small></span><span class="dt" id="atDt"></span></button>`;
+    $('#headSide').innerHTML = CLIMA.blocoMensagens() + `<button class="clock" type="button" id="atClock" title="Toque para ver o horário de volta do almoço ou quanto falta para sair"><span class="tm"><span id="atHm">--:--</span><small id="atSg">00</small></span><span class="dt" id="atDt"></span></button>`;
     this.tick();
     this.timer = setInterval(() => this.tick(), 1000);
   },
@@ -2715,6 +2772,156 @@ setInterval(() => {
   if (S.trash.some(x => Date.now() - x.em >= LIXO_MS)) { guard(rescan); return; }
   if (S.view === 'historico' && S.histTab === 'lixeira' && !S.client) render();
 }, 60e3);
+
+/* ================= clima (Jaru/RO, Open-Meteo, sem chave) ================= */
+// Tempo agora e nas próximas horas. Avisa de chuva ou tempestade chegando e, se estiver chovendo,
+// caem gotinhas no fundo da página. Atualiza a cada 15 minutos; guarda o último no aparelho.
+const CLIMA = {
+  url: 'https://api.open-meteo.com/v1/forecast?latitude=-10.44&longitude=-62.47'
+    + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,precipitation'
+    + '&hourly=temperature_2m,precipitation_probability,weather_code&forecast_hours=12&timezone=America%2FPorto_Velho',
+  dados: null,
+  tipo(code) {
+    if (code === 0) return 'limpo';
+    if (code === 1 || code === 2) return 'parcial';
+    if (code === 3) return 'nublado';
+    if (code === 45 || code === 48) return 'neblina';
+    if (code >= 95) return 'tempestade';
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'chuva';
+    return 'nublado';
+  },
+  nome(code) {
+    return ({ 0: 'Céu limpo', 1: 'Poucas nuvens', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Neblina', 48: 'Neblina',
+      51: 'Garoa fraca', 53: 'Garoa', 55: 'Garoa forte', 56: 'Garoa', 57: 'Garoa', 61: 'Chuva fraca', 63: 'Chuva', 65: 'Chuva forte',
+      66: 'Chuva', 67: 'Chuva forte', 80: 'Pancadas de chuva', 81: 'Pancadas de chuva', 82: 'Pancadas fortes',
+      95: 'Tempestade', 96: 'Tempestade com granizo', 99: 'Tempestade com granizo' })[code] || 'Nublado';
+  },
+  icone(code, dia = true) {
+    const t = this.tipo(code);
+    const sol = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4L7 17M17 7l1.4-1.4"/>';
+    const lua = '<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>';
+    const nuvem = '<path d="M7 18.5h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 11 3.8 3.8 0 0 0 7 18.5z"/>';
+    const p = {
+      limpo: dia ? sol : lua,
+      parcial: (dia ? '<circle cx="8.5" cy="8" r="3"/><path d="M8.5 2.5v1.2M3 8h1.2M4.6 4.1l.9.9M12.4 4.1l-.9.9"/>' : '<path d="M12 9.5A4.5 4.5 0 0 1 6.5 4 4.5 4.5 0 1 0 12 9.5z"/>')
+        + '<path d="M9 19.5h8.5a3.5 3.5 0 0 0 .3-7 4.8 4.8 0 0 0-9.1 1.1A3 3 0 0 0 9 19.5z"/>',
+      nublado: nuvem,
+      neblina: '<path d="M4 9.5h16M3 13.5h18M5 17.5h14"/>',
+      chuva: '<path d="M7 15.5h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 8 3.8 3.8 0 0 0 7 15.5z"/><path d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5"/>',
+      tempestade: '<path d="M7 14.5h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 7 3.8 3.8 0 0 0 7 14.5z"/><path d="M12.5 15l-2 3.5h3l-2 3.5"/>',
+    }[t];
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  },
+  /* Próximas horas a partir de agora (a API manda a hora local de Porto Velho, igual à de Jaru). */
+  horas() {
+    const d = this.dados;
+    if (!d || !d.hourly) return [];
+    const agoraH = new Date(); agoraH.setMinutes(0, 0, 0);
+    return d.hourly.time.map((t, i) => ({ t: new Date(t), temp: d.hourly.temperature_2m[i], prob: d.hourly.precipitation_probability[i] ?? 0, code: d.hourly.weather_code[i] }))
+      .filter(h => h.t >= agoraH).slice(0, 8);
+  },
+  chovendo() {
+    const c = this.dados?.current;
+    return !!c && (['chuva', 'tempestade'].includes(this.tipo(c.weather_code)) || c.precipitation > 0);
+  },
+  /* Aviso: chuva ou tempestade nas próximas 3 horas (chance de 50% ou mais, ou a previsão já diz chuva). */
+  aviso() {
+    const c = this.dados?.current;
+    if (!c) return null;
+    if (this.chovendo()) return { tipo: this.tipo(c.weather_code) === 'tempestade' ? 'tempestade' : 'chuva', agora: true, texto: this.tipo(c.weather_code) === 'tempestade' ? 'Tempestade agora' : 'Chovendo agora' };
+    const prox = this.horas().slice(1, 4).find(h => ['chuva', 'tempestade'].includes(this.tipo(h.code)) || h.prob >= 50);
+    if (!prox) return null;
+    const temp = this.tipo(prox.code) === 'tempestade';
+    return { tipo: temp ? 'tempestade' : 'chuva', agora: false, hora: prox.t, prob: prox.prob,
+      texto: `${temp ? 'Tempestade' : 'Chuva'} prevista por volta das ${prox.t.getHours()} h${prox.prob ? ` (${prox.prob}%)` : ''}` };
+  },
+  async buscar() {
+    try {
+      const r = await fetch(this.url, { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      this.dados = await r.json();
+      try { localStorage.setItem('protocolos:clima', JSON.stringify({ em: Date.now(), dados: this.dados })); } catch {}
+    } catch {
+      if (!this.dados) {
+        try { const c = JSON.parse(localStorage.getItem('protocolos:clima')); if (c && Date.now() - c.em < 6 * 3600e3) this.dados = c.dados; } catch {}
+      }
+    }
+    this.desenhar();
+  },
+  desenhar() {
+    const c = this.dados?.current, b = $('#btnClima');
+    if (!c) { b.hidden = true; this.chuva(false); return; }
+    const av = this.aviso();
+    b.hidden = false;
+    b.innerHTML = `${this.icone(c.weather_code, c.is_day)}<span>${Math.round(c.temperature_2m)}°</span>`;
+    b.classList.toggle('alerta', !!av);
+    b.title = `${this.nome(c.weather_code)}, ${Math.round(c.temperature_2m)}°${av ? '. ' + av.texto : ''}`;
+    this.chuva(this.chovendo() || new URLSearchParams(location.search).has('chuva'), this.tipo(c.weather_code) === 'tempestade');
+    if ($('#atClima')) $('#atClima').outerHTML = this.blocoMensagens();
+    if ($('#climaPop')) this.abrir(true);
+    // Avisa uma vez por previsão (não repete a cada atualização).
+    if (av && !av.agora) {
+      const chave = `${av.tipo}-${isoOf(av.hora)}-${av.hora.getHours()}`;
+      let visto = ''; try { visto = localStorage.getItem('protocolos:clima:aviso') || ''; } catch {}
+      if (visto !== chave && S.root && !$('#app').hidden) {
+        toast(av.texto);
+        try { localStorage.setItem('protocolos:clima:aviso', chave); } catch {}
+      }
+    }
+  },
+  /* Bloco ao lado do relógio, na tela de Mensagens */
+  blocoMensagens() {
+    const c = this.dados?.current;
+    if (!c) return '<span id="atClima" hidden></span>';
+    const av = this.aviso();
+    return `<button class="clima-at${av ? ' alerta' : ''}" type="button" id="atClima" data-clima>
+      ${this.icone(c.weather_code, c.is_day)}
+      <span><b>${Math.round(c.temperature_2m)}°</b><small>${av ? av.texto : this.nome(c.weather_code)}</small></span>
+    </button>`;
+  },
+  abrir(redesenhar) {
+    const c = this.dados?.current;
+    if (!c) return;
+    let pop = $('#climaPop');
+    if (pop && !redesenhar) { pop.remove(); return; }
+    if (!pop) { pop = document.createElement('div'); pop.className = 'pop clima-pop'; pop.id = 'climaPop'; document.body.append(pop); }
+    const av = this.aviso();
+    pop.innerHTML = `<div class="pl">Jaru agora</div>
+      <div class="cp-agora">${this.icone(c.weather_code, c.is_day)}<div><div class="pv">${Math.round(c.temperature_2m)}°</div><div class="ps">${this.nome(c.weather_code)}, sensação de ${Math.round(c.apparent_temperature)}°, umidade ${c.relative_humidity_2m}%</div></div></div>
+      ${av ? `<div class="cp-aviso">${av.texto}</div>` : ''}
+      <div class="cp-horas">${this.horas().slice(1, 7).map(h => `<div class="${['chuva', 'tempestade'].includes(this.tipo(h.code)) || h.prob >= 50 ? 'molhado' : ''}">
+        <small>${h.t.getHours()} h</small>${this.icone(h.code, h.t.getHours() >= 6 && h.t.getHours() < 18)}<b>${Math.round(h.temp)}°</b><span>${h.prob}%</span></div>`).join('')}</div>`;
+    const ancora = (!$('#atClima')?.hidden && $('#atClima')) || $('#btnClima');
+    const r = ancora.getBoundingClientRect();
+    pop.style.top = `${r.bottom + 10}px`;
+    pop.style.left = `${Math.max(12, Math.min(r.right - pop.offsetWidth, innerWidth - pop.offsetWidth - 12))}px`;
+  },
+  /* Gotinhas caindo no fundo (só transform e opacity; desligado com "reduzir movimento"). */
+  chuva(on, forte) {
+    let el = $('#chuva');
+    if (!on) { el?.remove(); return; }
+    if (el && el.dataset.forte === String(!!forte)) return;
+    el?.remove();
+    el = document.createElement('div'); el.id = 'chuva'; el.dataset.forte = String(!!forte); el.setAttribute('aria-hidden', 'true');
+    const n = forte ? 90 : 55;
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      const dur = (forte ? .55 : .8) + Math.random() * .5;
+      html += `<i style="left:${(Math.random() * 100).toFixed(2)}%;animation-duration:${dur.toFixed(2)}s;animation-delay:-${(Math.random() * 2).toFixed(2)}s;opacity:${(.35 + Math.random() * .5).toFixed(2)};height:${Math.round(12 + Math.random() * 14)}px"></i>`;
+    }
+    el.innerHTML = html;
+    document.body.prepend(el);
+  },
+};
+$('#btnClima').addEventListener('click', () => CLIMA.abrir());
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-clima]')) { CLIMA.abrir(); return; }
+  if (!e.target.closest('#climaPop, #btnClima')) $('#climaPop')?.remove();
+}, true);
+try { const c = JSON.parse(localStorage.getItem('protocolos:clima')); if (c && Date.now() - c.em < 3 * 3600e3) CLIMA.dados = c.dados; } catch {}
+CLIMA.desenhar();
+CLIMA.buscar();
+setInterval(() => CLIMA.buscar(), 15 * 60e3);
 
 /* ================= controles da tela ================= */
 $('#btnAdd').addEventListener('click', () => $('#file').click());
