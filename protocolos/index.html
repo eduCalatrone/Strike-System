@@ -1,0 +1,1828 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="robots" content="noindex, nofollow">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Protocolos">
+<title>Strike Details | Protocolos</title>
+<script>
+  // Sem a barra no fim, os caminhos da página (manifest, service worker) não batem: leva para /protocolos/.
+  if (location.pathname === '/protocolos') location.replace('/protocolos/' + location.search + location.hash);
+</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/protocolos/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/protocolos/icons/apple-touch-icon.png">
+<link rel="manifest" href="/protocolos/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Mesmo sistema visual do Controle (Strike-System): branco, cinza e preto; Barlow Condensed nos títulos,
+   Inter no texto; vidro só na navegação (topo e menu de baixo), conteúdo sólido. */
+:root {
+  --bg: #F2F2F1;
+  --surface: #FFFFFF;
+  --soft: #F7F7F6;
+  --ink: #121212;
+  --ink-2: #3B3B3B;
+  --muted: #6F6F6F;
+  --line: #E2E2E0;
+  --line-2: #CDCDCA;
+  --sel: #E4E4E1;               /* cinza de selecionado (no lugar do azul) */
+  --primary-grad: linear-gradient(180deg, #242426 0%, #0d0d0e 55%, #000000 100%);
+  --warn: #9A5B00;
+  --warn-bg: #FFF3DC;
+  --warn-line: #F1D5A3;
+  --danger: #B42318;
+  --danger-bg: #FDECEA;
+  --ok: #1D6B40;
+  --brand: "Archivo Black", "Arial Black", sans-serif;
+  --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --nav-h: 64px;
+  --suave: cubic-bezier(.2, .8, .2, 1);
+  --glass-tint-top: rgba(255, 255, 255, .74);
+  --glass-tint-bottom: rgba(240, 240, 238, .66);
+  --glass-rim-top: rgba(255, 255, 255, .85);
+  --glass-rim-hairline: rgba(255, 255, 255, .35);
+  --glass-rim-bottom: rgba(255, 255, 255, .25);
+  --glass-border: rgba(18, 18, 18, .09);
+  --glass-shadow: 0 10px 30px rgba(18, 18, 18, .14);
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--body); }
+body.modal-open { overflow: hidden; }
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(34rem 28rem at 10% 0%, rgba(255, 255, 255, .9), transparent 60%),
+    radial-gradient(30rem 26rem at 100% 60%, rgba(18, 18, 18, .06), transparent 62%),
+    radial-gradient(28rem 24rem at 20% 100%, rgba(160, 160, 155, .12), transparent 62%);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+svg { display: block; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+::placeholder { color: #9A9A98; }
+
+/* ---------- Botões ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface);
+  font: 700 14px/1 var(--cond); letter-spacing: .03em; text-transform: uppercase; text-decoration: none; color: var(--ink); white-space: nowrap;
+}
+.btn svg { width: 19px; height: 19px; flex: none; }
+.btn.primary { background: var(--primary-grad); color: #fff; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
+.btn.tinted { background: var(--sel); border-color: var(--sel); color: var(--ink); }
+.btn.danger { color: var(--danger); border-color: #EBC4BF; }
+.btn.danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.plain { border-color: transparent; background: none; color: var(--muted); }
+.btn.big { min-height: 56px; font-size: 15.5px; width: 100%; }
+.btn.sm { min-height: 36px; padding: 0 12px; font-size: 12px; }
+.btn.wide { grid-column: 1 / -1; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.round { width: 38px; height: 38px; flex: none; display: grid; place-items: center; padding: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .92); border: 1px solid rgba(18, 18, 18, .08); color: var(--ink-2); box-shadow: 0 2px 8px rgba(18, 18, 18, .08), inset 0 1px 0 #fff; }
+.round svg { width: 20px; height: 20px; }
+.round.small { width: 32px; height: 32px; box-shadow: none; }
+.round.small svg { width: 15px; height: 15px; }
+.round.ghost { background: var(--soft); border-color: var(--line); }
+.round:disabled { opacity: .35; cursor: default; }
+.link { border: 0; background: none; padding: 8px 2px; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.spin svg { animation: girar .7s var(--suave); }
+
+/* ---------- Tags ---------- */
+.tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font: 600 12px/1.4 var(--body); background: var(--soft); border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; font-style: normal; }
+.tag--warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+
+/* ---------- Topo (vidro) ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, rgba(255, 255, 255, .62), rgba(236, 236, 234, .52));
+  border-bottom: 1px solid var(--glass-border); box-shadow: inset 0 -1px 0 var(--glass-rim-hairline);
+  backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+.topbar-in { max-width: 1208px; margin: 0 auto; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wordmark { display: flex; align-items: center; min-width: 0; text-decoration: none; }
+.wordmark-txt { height: auto; max-height: 15px; width: auto; max-width: 100%; object-fit: contain; object-position: left; }
+.top-acts { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* ---------- Conteúdo ---------- */
+.wrap { max-width: 1240px; margin: 0 auto;
+  padding: 20px max(16px, env(safe-area-inset-right)) calc(var(--nav-h) + 44px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left)); }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.title-block { min-width: 0; }
+h1 { margin: 0; font: 700 30px/1.05 var(--cond); letter-spacing: .01em; overflow-wrap: anywhere; }
+h2 { margin: 0; font: 700 21px/1.1 var(--cond); letter-spacing: .01em; }
+h3 { margin: 0; font: 600 15px/1.3 var(--body); }
+.count { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.back { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 4px 0; margin-bottom: 4px; color: var(--muted); font-weight: 600; font-size: 14px; }
+.back svg { width: 18px; height: 18px; }
+
+/* Busca e filtros */
+.toolbar { display: grid; gap: 10px; margin-top: 16px; }
+body[data-view=client] .toolbar { display: none; }
+.search { position: relative; display: block; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
+.search input { width: 100%; border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 11px 12px 11px 38px; font-size: 16px; }
+.filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: var(--surface); padding: 0 14px; min-height: 42px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button.on { background: var(--sel); color: var(--ink); font-weight: 700; }
+.date { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--muted); }
+.date input { border: 0; background: transparent; font-size: 14px; color: var(--ink); min-height: 40px; padding: 0 6px; outline: none; box-shadow: none; }
+.chip { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--muted); }
+.chip[aria-pressed=true] { background: var(--sel); border-color: var(--line-2); color: var(--ink); font-weight: 700; }
+
+/* Aviso de imagens soltas (mesmo jeito do .alert do Controle) */
+.banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 14px; margin-top: 16px;
+  border-radius: 12px; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn); font-size: 14px; font-weight: 500; }
+.banner b { font-weight: 700; }
+
+/* ---------- Linha do tempo ---------- */
+.month { margin-top: 28px; }
+.month-h { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 12px; font: 700 22px/1.1 var(--cond); letter-spacing: .01em; }
+.month-h small { font: 500 14px var(--body); color: var(--muted); letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (min-width: 720px) { .grid { grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 16px; } }
+.grid.roomy { margin-top: 22px; }
+
+/* Cartão do protocolo (mesmo jeito do cartão do veículo no Início) */
+.card { position: relative; display: flex; flex-direction: column; width: 100%; padding: 0; margin: 0; overflow: hidden; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; transition: transform .12s var(--suave), border-color .15s; }
+.card:hover { border-color: var(--line-2); }
+.card:active { transform: scale(.985); }
+.thumb, .c-thumb, .s-item { display: block; }
+.thumb { position: relative; flex: none; aspect-ratio: 3 / 4; overflow: hidden; background: var(--soft); border-bottom: 1px solid var(--line); }
+.thumb img, .c-thumb img, .s-item img { width: 100%; height: 100%; object-fit: cover; object-position: top center; opacity: 0; transition: opacity .3s; }
+.ready img { opacity: 1; }
+.label { flex: 1; display: grid; gap: 9px; align-content: start; padding: 10px 12px 12px; }
+.label b { font: 700 18px/1.1 var(--cond); letter-spacing: .02em; color: var(--ink); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+/* Datas em destaque: rótulo pequeno em cima e a data grande, como a placa no cartão do veículo. */
+.c-dates { display: flex; align-items: flex-end; gap: 16px; padding-top: 8px; border-top: 1px solid var(--line); }
+.c-dates .d { display: grid; gap: 2px; min-width: 0; }
+.c-dates small { font-size: 11.5px; font-weight: 600; color: var(--muted); line-height: 1.1; }
+.c-dates strong { font: 700 22px/1 var(--cond); letter-spacing: .04em; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.c-dates .tag { padding: 2px 8px; font-size: 11.5px; }
+.card.no-name .label { padding-top: 10px; }
+/* Na tela do cliente as datas têm o ano: uma embaixo da outra, rótulo à esquerda e data à direita. */
+.card.no-name .c-dates { flex-direction: column; align-items: stretch; gap: 6px; border-top: 0; padding-top: 0; }
+.card.no-name .c-dates .d { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.card.no-name .c-dates small { font-size: 12.5px; }
+.has-note { position: absolute; bottom: 8px; right: 8px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%;
+  background: rgba(255, 255, 255, .94); border: 1px solid var(--line); color: var(--ink); box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
+.has-note svg { width: 15px; height: 15px; }
+
+/* ---------- Clientes ---------- */
+.cgroups { column-width: 440px; column-gap: 24px; margin-top: 4px; }
+.cgroup { break-inside: avoid; padding-top: 22px; }
+.letter { margin: 0 4px 8px; font: 700 21px/1.1 var(--cond); }
+.clist { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.client { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px 10px 10px; border: 0; background: transparent; text-align: left; transition: background-color .15s; }
+.client + .client::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--line); }
+.client:hover { background: var(--soft); }
+.c-thumb { width: 44px; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: var(--soft); border: 1px solid var(--line); flex: none; }
+.c-body { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.c-body b { font: 700 18px/1.15 var(--cond); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-body span { font-size: 13px; color: var(--muted); }
+.c-open { padding: 3px 9px; border-radius: 999px; font: 600 12px/1.4 var(--body); background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn); white-space: nowrap; }
+.chev { color: #A9A9A6; }
+.chev svg { width: 16px; height: 16px; }
+
+.empty { margin: 28px 0 0; padding: 36px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line-2); border-radius: 14px; background: var(--surface); }
+.empty svg { margin: 0 auto; }
+.empty h2 { color: var(--ink); margin: 14px 0 6px; }
+.empty p { margin: 0 auto 18px; max-width: 46ch; }
+
+/* ---------- Menu de baixo (vidro, igual ao Controle) ---------- */
+.tabbar {
+  position: fixed; z-index: 20; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 460px; margin: 0 auto; padding: 0 6px; border-radius: 30px;
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom)); border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-rim-top), inset 0 0 0 1px var(--glass-rim-hairline), inset 0 -1px 0 var(--glass-rim-bottom);
+  backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
+}
+.nav-in { height: var(--nav-h); display: flex; align-items: center; justify-content: space-around; gap: 4px; }
+.tabbar button { flex: 1; display: grid; justify-items: center; gap: 3px; padding: 6px 2px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-size: 11px; font-weight: 600; }
+.tabbar .ico, .tabbar .pill { position: relative; display: grid; place-items: center; width: 56px; height: 32px; border-radius: 999px; transition: transform .12s var(--suave), background-color .15s; }
+.tabbar svg { width: 22px; height: 22px; }
+.tabbar button.on { color: var(--ink); font-weight: 800; }
+.tabbar button.on .ico { background: rgba(18, 18, 18, .08); }
+.tabbar .pill { background: var(--primary-grad); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 10px rgba(0, 0, 0, .25); }
+.tabbar button:active .ico, .tabbar button:active .pill { transform: scale(.9); }
+
+/* ---------- Protocolo aberto ---------- */
+.viewer { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: minmax(0, 1fr) 380px; background: rgba(12, 12, 12, .92); }
+.v-stage { position: relative; display: grid; place-items: center; padding: 24px 76px; min-height: 0; min-width: 0; }
+.v-stage img { max-width: 100%; max-height: calc(100vh - 48px); border-radius: 10px; background: #fff; box-shadow: 0 30px 80px rgba(0, 0, 0, .45); object-fit: contain; }
+.v-nav { position: absolute; top: 50%; transform: translateY(-50%); }
+.v-nav.prev { left: 18px; }
+.v-nav.next { right: 18px; }
+.v-panel { position: relative; margin: 14px 14px 14px 0; padding: 22px 20px 20px; overflow: auto; display: flex; flex-direction: column; gap: 14px;
+  background: var(--surface); border-radius: 18px; box-shadow: 0 20px 50px rgba(0, 0, 0, .35); }
+.v-close { position: absolute; top: 14px; right: 14px; }
+.v-panel h2 { font-size: 28px; line-height: 1.05; margin: 2px 46px 0 0; overflow-wrap: anywhere; }
+.v-panel .inline { align-self: flex-start; margin-top: -8px; padding: 2px 0; font-size: 13px; }
+.dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 0; }
+.dates div { padding: 11px 13px; border-radius: 12px; background: var(--soft); border: 1px solid var(--line); }
+.dates dt { font-size: 12px; font-weight: 600; color: var(--muted); }
+.dates dd { margin: 3px 0 0; font: 700 24px/1 var(--cond); white-space: nowrap; letter-spacing: .04em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dates dd.none { font: 600 14px/26px var(--body); letter-spacing: 0; color: var(--warn); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.others h3 { font-size: 14px; color: var(--ink-2); margin: 4px 0 10px; }
+.strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.s-item { position: relative; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; aspect-ratio: 3 / 4; background: var(--soft); }
+.s-item span { position: absolute; left: 3px; right: 3px; bottom: 3px; padding: 2px 0; border-radius: 6px; background: rgba(255, 255, 255, .94); color: var(--ink); text-align: center; font: 700 13px/1.2 var(--cond); letter-spacing: .04em; }
+
+/* ---------- Formulários ---------- */
+.form { display: flex; flex-direction: column; gap: 12px; }
+.field { display: grid; gap: 6px; min-width: 0; font-weight: 600; font-size: 13px; color: var(--ink-2); }
+.field small { font-size: 12px; font-weight: 400; color: var(--muted); }
+.field input, .field textarea { width: 100%; border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-size: 16px; font-weight: 400; color: var(--ink); min-height: 46px; }
+.field textarea { resize: none; overflow: hidden; line-height: 1.4; font-size: 15px; }
+.field input.bad, .field textarea.bad { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hint { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+.hint.ok { color: var(--ok); }
+.hint.bad { color: var(--danger); }
+.note-status { margin-left: 6px; font-size: 12px; font-weight: 600; color: var(--ok); }
+
+/* Data rápida: digitar ou tocar nos atalhos */
+.dfield { gap: 6px; }
+.d-box { position: relative; }
+.field .d-box input[type=text] { padding-right: 44px; font: 700 20px/1 var(--cond); letter-spacing: .04em; }
+.field .d-box input[type=text]::placeholder { font: 400 16px var(--body); letter-spacing: 0; }
+.d-cal { position: absolute; right: 4px; top: 4px; width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--muted); }
+.d-cal:hover { background: var(--soft); color: var(--ink); }
+.d-cal svg { width: 18px; height: 18px; }
+.field .d-native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.d-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.d-quick button { min-height: 30px; padding: 0 11px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.d-quick button:hover { background: var(--soft); }
+.d-quick button.on { background: var(--sel); border-color: var(--line-2); color: var(--ink); font-weight: 700; }
+
+/* ---------- Janela de cadastro (de baixo no celular, no meio no computador) ---------- */
+.sheet-wrap { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, .45); }
+.sheet { width: 100%; max-width: 760px; max-height: 92dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border-radius: 18px 18px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, .18); animation: folha .28s var(--suave); }
+@media (min-width: 760px) { .sheet-wrap { align-items: center; padding: 24px; } .sheet { border-radius: 18px; max-height: calc(100dvh - 48px); } }
+.sheet header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 16px 10px 20px; }
+.dropzone { margin: 0 16px 4px; padding: 14px; border: 1px dashed var(--line-2); border-radius: 12px; background: var(--soft); text-align: center; color: var(--muted); font-size: 14px; }
+.dropzone .link { padding: 0; }
+.queue { overflow: auto; padding: 10px 16px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.q-fields { display: grid; gap: 10px; }
+.q-thumb { width: 72px; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid var(--line); background: var(--soft); }
+.q-open { position: relative; display: block; padding: 0; border: 0; background: none; border-radius: 8px; cursor: zoom-in; }
+.q-open .zoom { position: absolute; right: 4px; bottom: 4px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .95); border: 1px solid var(--line); color: var(--ink); }
+.q-open .zoom svg { width: 14px; height: 14px; }
+.sheet footer { display: flex; align-items: center; gap: 10px; padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.sheet footer .note { flex: 1; font-size: 13px; color: var(--muted); }
+.qview { z-index: 70; }
+.qview .two { grid-template-columns: 1fr; gap: 14px; }
+.v-sub { margin: -8px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* ---------- Aviso de imagem nova ---------- */
+.alert { position: fixed; z-index: 45; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom, 0px));
+  width: min(360px, calc(100vw - 32px)); display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 14px 34px rgba(0, 0, 0, .18); animation: aviso-sobe .28s var(--suave); }
+.a-thumb { width: 44px; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; border-radius: 6px; border: 1px solid var(--line); background: var(--soft); }
+.a-text b { display: block; font: 700 18px/1.1 var(--cond); }
+.a-text span { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-actions { grid-column: 1 / -1; display: grid; gap: 2px; justify-items: center; }
+.a-actions .btn { width: 100%; }
+.a-actions .link { font-size: 13px; color: var(--muted); }
+
+/* ---------- Diálogo, arrastar e aviso curto ---------- */
+.dialog-wrap { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, .45); }
+.dialog { width: min(400px, 100%); padding: 22px 18px 16px; border-radius: 18px; background: var(--surface); text-align: center; animation: folha .22s var(--suave); }
+.dialog h3 { margin: 0 0 6px; font: 700 22px/1.1 var(--cond); }
+.dialog p { margin: 0 0 18px; color: var(--ink-2); font-size: 14px; }
+.d-actions { display: grid; gap: 8px; }
+.drop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(18, 18, 18, .28); pointer-events: none; }
+.drop-card { padding: 28px 44px; border-radius: 18px; background: var(--surface); border: 2px dashed var(--ink-2); font: 700 24px var(--cond); letter-spacing: .02em; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom, 0px)); z-index: 100; max-width: calc(100vw - 32px);
+  padding: 12px 16px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 14px; font-weight: 500; text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18); opacity: 0; transform: translate(-50%, 10px); transition: opacity .24s var(--suave), transform .24s var(--suave); pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.toast.error { background: var(--danger); }
+
+/* ---------- Abertura (escolher a pasta) ---------- */
+.gate { min-height: 100dvh; display: grid; align-content: center; justify-items: center; padding: 32px 16px; }
+.login-box { width: 100%; max-width: 420px; display: grid; gap: 22px; }
+.gate-logo { height: 24px; width: auto; max-width: 100%; object-fit: contain; object-position: left; }
+.gate-txt { display: grid; gap: 8px; }
+.gate-txt h1 { font-size: 34px; }
+.gate-txt p { margin: 0; color: var(--muted); }
+.gate-actions { display: grid; gap: 6px; justify-items: center; }
+
+@keyframes folha { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes aviso-sobe { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.btn, .round, .card, .client, .d-quick button { transition: transform .12s var(--suave), background-color .15s, border-color .15s, opacity .15s; }
+.btn:not(:disabled):active, .round:not(:disabled):active, .d-quick button:active { transform: scale(.96); }
+
+@media (max-width: 860px) {
+  .viewer { grid-template-columns: 1fr; grid-template-rows: auto auto; align-content: start; overflow: auto; }
+  .v-stage { padding: 16px 60px; min-height: auto; }
+  .v-stage img { max-height: 62vh; }
+  .v-panel { margin: 0 12px 12px; overflow: visible; }
+}
+@media (max-width: 600px) {
+  h1 { font-size: 28px; }
+  .filtros .date { flex: 1 1 40%; }
+  .filtros .date input { flex: 1; min-width: 0; }
+  .cgroups { columns: 1; column-width: auto; }
+  .row { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .q-thumb { width: 56px; }
+  .two { grid-template-columns: 1fr; }
+  .c-dates { gap: 12px; }
+  .c-dates strong { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate" hidden>
+  <div class="login-box">
+    <img src="/logo-letras.png" alt="Strike Details" class="gate-logo">
+    <div class="gate-txt">
+      <h1>Protocolos</h1>
+      <p id="gateText"></p>
+    </div>
+    <div class="gate-actions" id="gateActions"></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="wordmark" href="/protocolos/" aria-label="Strike Details, Protocolos"><img src="/logo-letras.png" alt="Strike Details" class="wordmark-txt"></a>
+      <div class="top-acts">
+        <button class="round" id="btnFolder" type="button" title="Trocar pasta" aria-label="Trocar pasta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
+        </button>
+        <button class="round" id="btnRefresh" type="button" title="Atualizar lista" aria-label="Atualizar lista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="page-head">
+      <div class="title-block">
+        <button class="back" id="back" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Clientes</button>
+        <h1 id="pageTitle">Protocolos</h1>
+        <p class="count" id="stats"></p>
+      </div>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+        <input id="q" type="search" placeholder="Buscar cliente ou observação" autocomplete="off" aria-label="Buscar cliente ou observação">
+      </label>
+      <div class="filtros">
+        <div class="seg" id="seg" role="group" aria-label="Filtrar a data por">
+          <button type="button" data-mode="entrada" class="on">Entrada</button>
+          <button type="button" data-mode="saida">Entrega</button>
+        </div>
+        <label class="date" title="Preencha só o dia para ver uma data específica">Dia<input type="date" id="from"></label>
+        <label class="date" title="Opcional, para um período">até<input type="date" id="to"></label>
+        <button class="chip" id="onlyOpen" type="button" aria-pressed="false">Sem saída</button>
+        <button class="link" id="clear" type="button" hidden>Limpar</button>
+      </div>
+    </div>
+
+    <div id="banner"></div>
+    <div id="main"></div>
+  </div>
+
+  <nav class="tabbar" aria-label="Menu">
+    <div class="nav-in">
+      <button type="button" data-view="timeline" class="on">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
+        <span class="lbl">Linha do tempo</span>
+      </button>
+      <button type="button" id="btnAdd" aria-label="Adicionar protocolo">
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="lbl">Adicionar</span>
+      </button>
+      <button type="button" data-view="clients">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.3A6.5 6.5 0 0 1 21.5 20"/></svg></span>
+        <span class="lbl">Clientes</span>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<div id="viewer" class="viewer" role="dialog" aria-modal="true" aria-label="Protocolo" hidden>
+  <div class="v-stage" id="vStage">
+    <button class="round v-nav prev" id="vPrev" type="button" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <img id="vImg" alt="">
+    <button class="round v-nav next" id="vNext" type="button" aria-label="Próximo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+  <aside class="v-panel">
+    <button class="round ghost small v-close" id="vClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div id="vInfo" class="form"></div>
+  </aside>
+</div>
+
+<div id="sheet" class="sheet-wrap" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <header>
+      <h2 id="sheetTitle">Adicionar protocolos</h2>
+      <button class="round ghost small" type="button" data-act="close" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </header>
+    <div class="dropzone" id="dz">Arraste mais imagens para cá, cole com Ctrl+V ou <button class="link" type="button" data-act="pick">escolha arquivos</button></div>
+    <div class="queue" id="queue"></div>
+    <footer>
+      <span class="note" id="sheetNote"></span>
+      <button class="btn" type="button" data-act="close">Cancelar</button>
+      <button class="btn primary" type="button" id="saveAll">Salvar</button>
+    </footer>
+  </div>
+</div>
+
+<div id="qview" class="viewer qview" role="dialog" aria-modal="true" aria-label="Conferir protocolo" hidden>
+  <div class="v-stage" id="qvStage">
+    <button class="round v-nav prev" id="qvPrev" type="button" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <img id="qvImg" alt="">
+    <button class="round v-nav next" id="qvNext" type="button" aria-label="Próxima"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+  <aside class="v-panel">
+    <button class="round ghost small v-close" id="qvClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="form">
+      <h2>Conferir protocolo</h2>
+      <p class="v-sub" id="qvSub"></p>
+      <label class="field">Cliente<input data-f="cliente" id="qvCliente" list="clientList" autocomplete="off" placeholder="Nome completo"></label>
+      <div class="two" id="qvDates"></div>
+      <label class="field"><span>Observação <small>opcional</small></span><textarea data-f="obs" id="qvObs" rows="2" placeholder="Detalhe do serviço"></textarea></label>
+      <p class="hint" id="qvHint"></p>
+      <div class="actions"><button class="btn primary wide" type="button" id="qvDone"></button></div>
+    </div>
+  </aside>
+</div>
+
+<div id="alert" class="alert" role="alert" hidden>
+  <img class="a-thumb" id="aThumb" alt="">
+  <div class="a-text"><b id="aTitle"></b><span id="aName"></span></div>
+  <button class="round ghost small" type="button" data-act="dismiss" aria-label="Dispensar aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="a-actions">
+    <button class="btn primary sm" type="button" data-act="register">Cadastrar agora</button>
+    <button class="link" type="button" data-act="notify" id="aNotify" hidden>Avisar também com a janela minimizada</button>
+  </div>
+</div>
+
+<div id="dialog" class="dialog-wrap" hidden>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dTitle">
+    <h3 id="dTitle"></h3>
+    <p id="dText"></p>
+    <div class="d-actions" id="dActions"></div>
+  </div>
+</div>
+
+<div id="drop" class="drop" hidden><div class="drop-card">Solte para adicionar</div></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<input type="file" id="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+<datalist id="clientList"></datalist>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= utilidades ================= */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const collator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+const IMG_RE = /\.(png|jpe?g|webp)$/i;
+const NAME_RE = /^(\d{4}-\d{2}-\d{2})(?: a (\d{4}-\d{2}-\d{2}))?(?: \((\d+)\))?\.(png|jpe?g|webp)$/i;
+const PARTICLES = new Set(['da', 'das', 'de', 'do', 'dos', 'e', 'di', 'du']);
+const isImgFile = f => /^image\/(png|jpeg|webp)$/.test(f.type) || IMG_RE.test(f.name || '');
+
+function titleCase(s) {
+  return String(s).trim().replace(/\s+/g, ' ').split(' ').map((w, i) => {
+    const lw = w.toLocaleLowerCase('pt-BR');
+    if (i > 0 && PARTICLES.has(lw)) return lw;
+    return lw.replace(/(^|[-'’])(\p{L})/gu, (m, a, b) => a + b.toLocaleUpperCase('pt-BR'));
+  }).join(' ');
+}
+const cleanName = s => String(s).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').replace(/[.\s]+$/, '').trim();
+const folderName = s => cleanName(titleCase(s));
+
+function nameFromFile(fname) {
+  let s = String(fname).replace(/\.[^.]+$/, '').replace(/_+/g, ' ');
+  s = s.replace(/\s*\(\d+\)\s*$/, '').replace(/\s*-\s*c[oó]pia.*$/i, '').replace(/\s+copy.*$/i, '').trim();
+  if (!s || /^(image|imagem|img|screenshot|captura|whatsapp|unnamed|download|foto|photo|pasted|clipboard)/i.test(s)) return '';
+  if (!/\p{L}{2}/u.test(s) || /\d{4}/.test(s)) return '';
+  return titleCase(s);
+}
+
+const pad = n => String(n).padStart(2, '0');
+const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => isoOf(new Date());
+const dateOf = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const br = iso => iso ? iso.split('-').reverse().join('/') : '';
+const brShort = iso => { const [, m, d] = iso.split('-'); return `${d}/${m}`; };
+const fmtMonth = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+const baseName = (entrada, saida) => saida ? `${entrada} a ${saida}` : entrada;
+const extOf = name => { const m = String(name).match(IMG_RE); const e = (m ? m[1] : 'png').toLowerCase(); return e === 'jpeg' ? 'jpg' : e; };
+const extForFile = f => IMG_RE.test(f.name || '') ? extOf(f.name) : ({ 'image/jpeg': 'jpg', 'image/webp': 'webp' }[f.type] || 'png');
+
+function check(cliente, entrada, saida) {
+  if (!String(cliente).trim()) return 'Informe o nome do cliente.';
+  if (!entrada) return 'Informe a data de entrada.';
+  if (saida && saida < entrada) return 'A saída não pode ser antes da entrada.';
+  return '';
+}
+
+const ICON = {
+  chevR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="3"/><path d="M15 9V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v5a3 3 0 0 0 3 3h2"/></svg>',
+  down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  zoom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M10.5 8v5M8 10.5h5"/></svg>',
+  note: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M8.5 9h7M8.5 12.5h4"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+};
+
+/* ================= IndexedDB (lembrar a pasta + cache de miniaturas) ================= */
+let dbP;
+function openDB() {
+  return dbP ??= new Promise((res, rej) => {
+    const r = indexedDB.open('protocolos-galeria', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('kv'); r.result.createObjectStore('thumbs'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(store, key) {
+  try {
+    const d = await openDB();
+    return await new Promise((res, rej) => { const q = d.transaction(store).objectStore(store).get(key); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  } catch { return undefined; }
+}
+async function idbSet(store, key, val) {
+  try {
+    const d = await openDB();
+    await new Promise((res, rej) => { const tx = d.transaction(store, 'readwrite'); tx.objectStore(store).put(val, key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  } catch { /* sem cache, segue normal */ }
+}
+
+/* ================= estado ================= */
+const S = {
+  root: null, pending: null,
+  items: [], byId: new Map(), clients: new Map(), loose: [], extra: new Set(),
+  view: 'timeline', client: null, list: [],
+  q: '', mode: 'entrada', from: '', to: '', onlyOpen: false,
+};
+const filtersActive = () => !!(S.q.trim() || S.from || S.to || S.onlyOpen);
+const byNewest = (a, b) => b.entrada.localeCompare(a.entrada) || (b.saida || '').localeCompare(a.saida || '') || b.n - a.n;
+
+/* ================= pasta ================= */
+async function scan() {
+  const items = [], loose = [];
+  for await (const h of S.root.values()) {
+    if (h.kind === 'directory') {
+      if (/^[_.]/.test(h.name)) continue;
+      const files = new Map();
+      for await (const f of h.values()) if (f.kind === 'file') files.set(f.name, f);
+      for (const f of files.values()) {
+        if (!IMG_RE.test(f.name)) continue;
+        const m = f.name.match(NAME_RE);
+        let entrada, saida = null;
+        if (m) { entrada = m[1]; saida = m[2] || null; }
+        else { const file = await f.getFile(); entrada = isoOf(new Date(file.lastModified)); }
+        items.push({ id: `${h.name}/${f.name}`, cliente: h.name, dir: h, fname: f.name, handle: f, entrada, saida, n: m && m[3] ? +m[3] : 1,
+          noteH: files.get(noteName(f.name)) || null, note: '' });
+      }
+    } else if (IMG_RE.test(h.name)) {
+      loose.push(h);
+    }
+  }
+  await Promise.all(items.filter(i => i.noteH).map(async i => {
+    try { i.note = (await (await i.noteH.getFile()).text()).trim(); } catch { /* sem observação */ }
+  }));
+  S.items = items;
+  updateLoose(loose);
+  S.extra.clear();
+  S.byId = new Map(items.map(i => [i.id, i]));
+  const clients = new Map();
+  for (const it of items) {
+    if (!clients.has(it.cliente)) clients.set(it.cliente, { name: it.cliente, items: [] });
+    clients.get(it.cliente).items.push(it);
+  }
+  for (const c of clients.values()) c.items.sort(byNewest);
+  S.clients = clients;
+  $('#clientList').innerHTML = [...clients.keys()].sort(collator.compare).map(n => `<option value="${esc(n)}">`).join('');
+}
+
+function existingFolder(name, includeBatch) {
+  const k = norm(cleanName(name));
+  if (!k) return null;
+  for (const n of S.clients.keys()) if (norm(n) === k) return n;
+  if (includeBatch) for (const n of S.extra) if (norm(n) === k) return n;
+  return null;
+}
+const folderFor = cliente => existingFolder(cliente, true) || folderName(cliente);
+
+async function exists(dir, name) { try { await dir.getFileHandle(name); return true; } catch { return false; } }
+async function uniqueName(dir, base, ext, ignore) {
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? `${base}.${ext}` : `${base} (${n}).${ext}`;
+    if (name === ignore || !(await exists(dir, name))) return name;
+  }
+}
+async function moveFile(srcDir, srcName, fh, dstDir, dstName) {
+  if (typeof fh.move === 'function') {
+    try { await fh.move(dstDir, dstName); return; } catch (e) { console.warn('Movendo por cópia:', e); }
+  }
+  const file = await fh.getFile();
+  const nh = await dstDir.getFileHandle(dstName, { create: true });
+  const w = await nh.createWritable();
+  await w.write(file);
+  await w.close();
+  await srcDir.removeEntry(srcName);
+}
+async function removeIfEmpty(dir) {
+  for await (const _ of dir.values()) return; // ainda tem arquivo
+  try { await S.root.removeEntry(dir.name); } catch { /* deixa a pasta */ }
+}
+
+async function relocate(it, cliente, entrada, saida) {
+  const folder = folderFor(cliente);
+  const sameDir = norm(folder) === norm(it.cliente);
+  const dstDir = sameDir ? it.dir : await S.root.getDirectoryHandle(folder, { create: true });
+  const m = it.fname.match(NAME_RE);
+  if (sameDir && m && m[1] === entrada && (m[2] || null) === (saida || null)) return it.id;
+  const dstName = await uniqueName(dstDir, baseName(entrada, saida), extOf(it.fname), sameDir ? it.fname : null);
+  if (sameDir && dstName === it.fname) return it.id;
+  await moveFile(it.dir, it.fname, it.handle, dstDir, dstName);
+  await moveNote(it, dstDir, dstName);
+  if (!sameDir) await removeIfEmpty(it.dir);
+  return `${dstDir.name}/${dstName}`;
+}
+
+async function trash(it) {
+  const t = await S.root.getDirectoryHandle('_lixeira', { create: true });
+  const name = await uniqueName(t, `${it.cliente} ${it.fname.replace(IMG_RE, '')}`, extOf(it.fname));
+  await moveFile(it.dir, it.fname, it.handle, t, name);
+  await moveNote(it, t, name);
+  await removeIfEmpty(it.dir);
+}
+
+/* observação: arquivo .txt com o mesmo nome da imagem, na mesma pasta */
+const noteName = imgName => imgName.replace(IMG_RE, '.txt');
+async function writeNote(dir, imgName, text) {
+  const name = noteName(imgName);
+  text = String(text || '').trim();
+  if (!text) { try { await dir.removeEntry(name); } catch { /* não existia */ } return; }
+  const fh = await dir.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+  await w.close();
+}
+async function moveNote(it, dstDir, dstImgName) {
+  if (!it.noteH && !it.note) return;
+  await writeNote(dstDir, dstImgName, it.note);
+  try { await it.dir.removeEntry(noteName(it.fname)); } catch { /* já saiu */ }
+}
+
+async function saveOne(q) {
+  const folder = folderFor(q.cliente);
+  const dir = await S.root.getDirectoryHandle(folder, { create: true });
+  S.extra.add(dir.name);
+  const name = await uniqueName(dir, baseName(q.entrada, q.saida || null), extForFile(q.file));
+  if (q.loose) {
+    await moveFile(S.root, q.loose.name, q.loose, dir, name);
+  } else {
+    const fh = await dir.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(q.file);
+    await w.close();
+  }
+  if (q.obs && q.obs.trim()) await writeNote(dir, name, q.obs);
+}
+
+/* ================= miniaturas ================= */
+const thumbMem = new Map();
+const tq = [];
+let tActive = 0;
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    io.unobserve(e.target);
+    const it = S.byId.get(e.target.dataset.id);
+    if (it) queueThumb(e.target, it);
+  }
+}, { rootMargin: '700px 0px' });
+const observeThumbs = root => $$('img[data-id]', root).forEach(img => io.observe(img));
+
+function queueThumb(img, it) { tq.push([img, it]); pump(); }
+function pump() {
+  while (tActive < 4 && tq.length) {
+    const [img, it] = tq.shift();
+    if (!img.isConnected) continue;
+    tActive++;
+    loadThumb(it)
+      .then(url => { img.src = url; img.parentElement.classList.add('ready'); })
+      .catch(() => {})
+      .finally(() => { tActive--; pump(); });
+  }
+}
+async function loadThumb(it) {
+  const file = await it.handle.getFile();
+  const key = `${it.id}|${file.lastModified}|${file.size}`;
+  if (thumbMem.has(key)) return thumbMem.get(key);
+  let blob = await idbGet('thumbs', key);
+  if (!blob) {
+    try {
+      const bmp = await createImageBitmap(file, { resizeWidth: 420, resizeQuality: 'medium' });
+      const c = document.createElement('canvas');
+      c.width = bmp.width; c.height = bmp.height;
+      c.getContext('2d').drawImage(bmp, 0, 0);
+      bmp.close();
+      blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.82));
+      if (blob) idbSet('thumbs', key, blob);
+    } catch { blob = null; }
+  }
+  const url = URL.createObjectURL(blob || file);
+  thumbMem.set(key, url);
+  return url;
+}
+
+/* ================= filtros ================= */
+function filtered() {
+  const q = norm(S.q);
+  let lo = '', hi = '';
+  if (S.from || S.to) {
+    const a = S.from || S.to, b = S.to || S.from;
+    lo = a < b ? a : b; hi = a < b ? b : a;
+  }
+  return S.items.filter(it => {
+    if (q && !norm(it.cliente).includes(q) && !norm(it.note).includes(q)) return false;
+    if (S.onlyOpen && it.saida) return false;
+    if (lo) {
+      const d = S.mode === 'entrada' ? it.entrada : it.saida;
+      if (!d || d < lo || d > hi) return false;
+    }
+    return true;
+  });
+}
+
+/* ================= desenho da tela ================= */
+/* Datas em destaque no cartão: na linha do tempo dd/mm (o mês já está no título); no cliente, com o ano. */
+const curtaAno = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}`; };
+function datesHTML(it, comAno) {
+  const f = comAno ? curtaAno : brShort;
+  return `<span class="c-dates">
+      <span class="d"><small>Entrada</small><strong>${f(it.entrada)}</strong></span>
+      <span class="d"><small>Saída</small>${it.saida ? `<strong>${f(it.saida)}</strong>` : '<em class="tag tag--warn">Sem saída</em>'}</span>
+    </span>`;
+}
+function cardHTML(it, inClient) {
+  const noteMark = it.note ? `<i class="has-note" title="${esc(it.note)}">${ICON.note}</i>` : '';
+  const label = inClient ? datesHTML(it, true) : `<b>${esc(it.cliente)}</b>${datesHTML(it, false)}`;
+  return `<button class="card${inClient ? ' no-name' : ''}" type="button" data-open="${esc(it.id)}" aria-label="${esc(it.cliente)}, entrada ${br(it.entrada)}${it.saida ? ', saída ' + br(it.saida) : ', sem saída'}${it.note ? ', com observação' : ''}">
+    <span class="thumb"><img alt="" data-id="${esc(it.id)}">${noteMark}</span>
+    <span class="label">${label}</span>
+  </button>`;
+}
+
+const emptyArt = `<svg width="120" height="104" viewBox="0 0 120 104" aria-hidden="true">
+  <rect x="20" y="10" width="44" height="78" rx="9" fill="#E2E2E0" transform="rotate(-10 42 49)"/>
+  <rect x="56" y="10" width="44" height="78" rx="9" fill="#E2E2E0" transform="rotate(10 78 49)"/>
+  <rect x="38" y="6" width="44" height="80" rx="9" fill="#fff" stroke="#9A9A98" stroke-width="2" stroke-dasharray="5 5"/>
+  <path d="M60 36v24M48 48h24" stroke="#121212" stroke-width="3.5" stroke-linecap="round"/></svg>`;
+
+function emptyHTML() {
+  return `<div class="empty">${emptyArt}
+    <h2>Nenhum protocolo ainda</h2>
+    <p>Arraste a imagem de um protocolo para esta janela, cole com Ctrl+V ou use o botão +.</p>
+    <button class="btn primary" data-act="add">Adicionar protocolo</button></div>`;
+}
+function noResultsHTML() {
+  return `<div class="empty"><h2>Nada encontrado</h2>
+    <p>Nenhum protocolo corresponde à busca e aos filtros atuais.</p>
+    <button class="btn" data-act="clear">Limpar filtros</button></div>`;
+}
+
+function timelineHTML() {
+  const key = (S.mode === 'saida' && (S.from || S.to)) ? 'saida' : 'entrada';
+  const list = filtered().sort((a, b) => (b[key] || '').localeCompare(a[key] || '') || collator.compare(a.cliente, b.cliente));
+  S.list = list;
+  if (!list.length) return noResultsHTML();
+  const months = [];
+  for (const it of list) {
+    const mk = it[key].slice(0, 7);
+    let m = months[months.length - 1];
+    if (!m || m.k !== mk) { m = { k: mk, items: [] }; months.push(m); }
+    m.items.push(it);
+  }
+  return months.map(m => `<section class="month">
+      <h2 class="month-h glass"><span>${cap(fmtMonth.format(dateOf(m.k + '-01')))}</span><small>${pl(m.items.length, key === 'saida' ? 'entrega' : 'protocolo', key === 'saida' ? 'entregas' : 'protocolos')}</small></h2>
+      <div class="grid">${m.items.map(it => cardHTML(it)).join('')}</div>
+    </section>`).join('');
+}
+
+function clientsHTML() {
+  const list = filtered();
+  S.list = list;
+  const names = [...new Set(list.map(i => i.cliente))].sort(collator.compare);
+  if (!names.length) return noResultsHTML();
+  const groups = [];
+  for (const n of names) {
+    const ch = norm(n).charAt(0).toUpperCase();
+    const L = /[A-Z]/.test(ch) ? ch : '#';
+    if (!groups.length || groups[groups.length - 1].L !== L) groups.push({ L, names: [] });
+    groups[groups.length - 1].names.push(n);
+  }
+  return `<div class="cgroups">${groups.map(g => `<section class="cgroup"><h2 class="letter">${g.L}</h2><div class="clist glass">${g.names.map(n => {
+    const c = S.clients.get(n), last = c.items[0], open = c.items.filter(i => !i.saida).length;
+    return `<button class="client" data-client="${esc(n)}">
+      <span class="c-thumb"><img alt="" data-id="${esc(last.id)}"></span>
+      <span class="c-body"><b>${esc(n)}</b><span>${pl(c.items.length, 'protocolo', 'protocolos')}, último em ${br(last.entrada)}</span></span>
+      ${open ? `<span class="c-open">${open} sem saída</span>` : ''}
+      <span class="chev">${ICON.chevR}</span></button>`;
+  }).join('')}</div></section>`).join('')}</div>`;
+}
+
+function clientHTML() {
+  const c = S.clients.get(S.client);
+  S.list = c.items;
+  return `<div class="grid roomy">${c.items.map(it => cardHTML(it, true)).join('')}</div>`;
+}
+
+function render() {
+  if (S.client && !S.clients.has(S.client)) S.client = null;
+  document.body.dataset.view = S.client ? 'client' : S.view;
+  $$('.tabbar [data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === (S.client ? 'clients' : S.view)));
+  $('#back').hidden = !S.client;
+  if (S.client) {
+    const c = S.clients.get(S.client), open = c.items.filter(i => !i.saida).length;
+    $('#pageTitle').textContent = c.name;
+    $('#stats').textContent = pl(c.items.length, 'protocolo', 'protocolos') + (open ? `, ${open} sem saída` : '');
+  } else {
+    const open = S.items.filter(i => !i.saida).length;
+    $('#pageTitle').textContent = 'Protocolos';
+    $('#stats').textContent = S.items.length
+      ? `${pl(S.items.length, 'protocolo', 'protocolos')}, ${pl(S.clients.size, 'cliente', 'clientes')}${open ? `, ${open} sem saída` : ''}`
+      : `Pasta conectada: ${S.root.name}`;
+  }
+  $('#clear').hidden = !filtersActive();
+  renderBanner();
+  const main = $('#main');
+  main.innerHTML = S.client ? clientHTML() : !S.items.length ? emptyHTML() : S.view === 'timeline' ? timelineHTML() : clientsHTML();
+  observeThumbs(main);
+}
+
+function renderBanner() {
+  $('#banner').innerHTML = (!S.client && S.loose.length)
+    ? `<div class="banner glass"><div><b>${pl(S.loose.length, 'imagem solta', 'imagens soltas')}</b> na pasta, ainda sem cliente e data.</div><button class="btn primary sm" data-act="organize">Organizar</button></div>`
+    : '';
+}
+
+async function rescan() {
+  const y = window.scrollY;
+  await scan();
+  render();
+  window.scrollTo(0, y);
+}
+
+/* ================= avisos ================= */
+let toastT;
+function toast(msg, kind) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast' + (kind ? ' ' + kind : '');
+  t.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { t.classList.remove('show'); setTimeout(() => { t.hidden = true; }, 260); }, 2800);
+}
+function errMsg(e) {
+  if (e?.name === 'NotAllowedError') return 'Sem permissão para mexer na pasta. Clique em atualizar e permita o acesso.';
+  if (e?.name === 'NotFoundError') return 'Arquivo não encontrado. A pasta mudou por fora; a lista foi atualizada.';
+  if (e?.name === 'NoModificationAllowedError' || e?.name === 'InvalidModificationError') return 'O arquivo está em uso por outro programa. Feche-o e tente de novo.';
+  return 'Algo deu errado: ' + (e?.message || e);
+}
+async function guard(fn) {
+  try { await fn(); }
+  catch (e) {
+    console.error(e);
+    toast(errMsg(e), 'error');
+    if (e?.name === 'NotFoundError' && S.root) { try { await rescan(); } catch {} }
+  }
+}
+const syncModal = () => document.body.classList.toggle('modal-open', !$('#viewer').hidden || !$('#sheet').hidden || !$('#dialog').hidden || !$('#qview').hidden);
+
+function ask(title, text, buttons) {
+  return new Promise(res => {
+    const d = $('#dialog'), box = $('#dActions');
+    $('#dTitle').textContent = title;
+    $('#dText').textContent = text;
+    box.innerHTML = buttons.map((b, i) => `<button class="btn ${b.kind || ''}" data-i="${i}">${esc(b.label)}</button>`).join('');
+    d.hidden = false; syncModal();
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(null); } };
+    const done = v => { d.hidden = true; syncModal(); box.onclick = null; document.removeEventListener('keydown', onKey, true); res(v); };
+    document.addEventListener('keydown', onKey, true);
+    box.onclick = e => { const b = e.target.closest('button'); if (b) done(buttons[+b.dataset.i].value); };
+    (box.querySelector('.primary,.danger-solid') || box.querySelector('button'))?.focus();
+  });
+}
+
+/* ================= abertura / conexão ================= */
+function showGate(kind) {
+  $('#app').hidden = true;
+  $('#gate').hidden = false;
+  const t = $('#gateText'), a = $('#gateActions');
+  if (kind === 'unsupported') {
+    t.textContent = 'Abra este arquivo no Google Chrome ou no Microsoft Edge do computador. São eles que conseguem acessar a pasta protocolos direto da área de trabalho.';
+    a.innerHTML = '';
+  } else if (kind === 'resume') {
+    t.innerHTML = `Permita o acesso à pasta <b>${esc(S.pending.name)}</b> para ver seus protocolos.`;
+    a.innerHTML = `<button class="btn primary big" data-g="resume">Abrir a pasta ${esc(S.pending.name)}</button><button class="link" data-g="pick">Escolher outra pasta</button>`;
+  } else {
+    t.textContent = 'Escolha a pasta protocolos na sua área de trabalho. Cada cliente ganha uma pasta lá dentro, com os protocolos nomeados pela data.';
+    a.innerHTML = '<button class="btn primary big" data-g="pick">Escolher pasta</button>';
+  }
+  a.querySelector('button')?.focus();
+}
+
+async function pickFolder() {
+  let dir;
+  try { dir = await window.showDirectoryPicker({ id: 'protocolos', mode: 'readwrite', startIn: 'desktop' }); }
+  catch (e) { if (e.name === 'AbortError') return; throw e; }
+  if (dir.name.toLowerCase() !== 'protocolos') {
+    let sub = null;
+    for await (const h of dir.values()) if (h.kind === 'directory' && h.name.toLowerCase() === 'protocolos') { sub = h; break; }
+    if (sub) dir = sub;
+    else {
+      const v = await ask('Usar esta pasta?', `A pasta escolhida se chama "${dir.name}". Você pode criar a pasta protocolos dentro dela ou usar "${dir.name}" mesmo.`, [
+        { label: 'Criar pasta protocolos aqui', value: 'create', kind: 'primary' },
+        { label: `Usar "${dir.name}"`, value: 'use' },
+        { label: 'Cancelar', value: null, kind: 'plain' },
+      ]);
+      if (!v) return;
+      if (v === 'create') dir = await dir.getDirectoryHandle('protocolos', { create: true });
+    }
+  }
+  S.root = dir;
+  await idbSet('kv', 'root', dir);
+  await start();
+}
+
+async function start() {
+  $('#gate').hidden = true;
+  $('#app').hidden = false;
+  S.client = null;
+  seenLoose = null;
+  hideAlert();
+  await scan();
+  render();
+  window.scrollTo(0, 0);
+  // Veio do aviso do sistema (janela estava fechada): já abre o cadastro das imagens soltas.
+  if (location.hash === '#organizar') {
+    history.replaceState(null, '', location.pathname + location.search);
+    if (S.loose.length) guard(organizeLoose);
+  }
+}
+
+async function refresh() {
+  if (!S.root) return;
+  if (await S.root.queryPermission({ mode: 'readwrite' }) !== 'granted'
+      && await S.root.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+    S.pending = S.root; return showGate('resume');
+  }
+  await rescan();
+}
+
+async function init() {
+  if (!('showDirectoryPicker' in window)) return showGate('unsupported');
+  const h = await idbGet('kv', 'root');
+  if (h) {
+    S.pending = h;
+    let state = 'prompt';
+    try { state = await h.queryPermission({ mode: 'readwrite' }); } catch {}
+    if (state === 'granted') { S.root = h; return start(); }
+    return showGate('resume');
+  }
+  showGate('first');
+}
+
+$('#gateActions').addEventListener('click', e => {
+  const b = e.target.closest('[data-g]');
+  if (!b) return;
+  if (b.dataset.g === 'pick') guard(pickFolder);
+  if (b.dataset.g === 'resume') guard(async () => {
+    if (await S.pending.requestPermission({ mode: 'readwrite' }) === 'granted') { S.root = S.pending; await start(); }
+  });
+});
+
+/* ================= visualizador ================= */
+const V = { list: [], i: 0, url: null, edit: false };
+const cur = () => S.byId.get(V.list[V.i]);
+
+function openViewer(id, list) {
+  V.list = list.map(x => x.id);
+  V.i = Math.max(0, V.list.indexOf(id));
+  V.edit = false;
+  $('#viewer').hidden = false;
+  syncModal();
+  showCurrent();
+}
+/* observação no visualizador: salva sozinha ao parar de digitar */
+const autoGrow = t => { if (!t) return; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+const NOTE = { timer: null, pending: null, chain: Promise.resolve() };
+function noteStatus(it, text) { if (cur() === it) { const s = $('#vNoteStatus'); if (s) s.textContent = text; } }
+function scheduleNote(it, text) {
+  clearTimeout(NOTE.timer);
+  NOTE.pending = { it, text };
+  noteStatus(it, '');
+  NOTE.timer = setTimeout(flushNote, 800);
+}
+function flushNote() {
+  clearTimeout(NOTE.timer);
+  const p = NOTE.pending;
+  NOTE.pending = null;
+  if (p) NOTE.chain = NOTE.chain.then(async () => {
+    const text = p.text.trim();
+    if ((p.it.note || '') === text) return;
+    noteStatus(p.it, 'salvando…');
+    try {
+      await writeNote(p.it.dir, p.it.fname, text);
+      p.it.note = text;
+      p.it.noteH = text ? true : null;
+      noteStatus(p.it, 'salva');
+      render();
+    } catch (e) { console.error(e); noteStatus(p.it, ''); toast(errMsg(e), 'error'); }
+  });
+  return NOTE.chain;
+}
+
+function closeViewer() {
+  flushNote();
+  $('#viewer').hidden = true;
+  if (V.url) URL.revokeObjectURL(V.url);
+  V.url = null;
+  $('#vImg').removeAttribute('src');
+  syncModal();
+}
+async function showCurrent() {
+  await flushNote();
+  const it = cur();
+  if (!it) return closeViewer();
+  const file = await it.handle.getFile();
+  if (V.url) URL.revokeObjectURL(V.url);
+  V.url = URL.createObjectURL(file);
+  const img = $('#vImg');
+  img.src = V.url;
+  img.alt = `Protocolo de ${it.cliente}`;
+  $('#vPrev').disabled = V.i <= 0;
+  $('#vNext').disabled = V.i >= V.list.length - 1;
+  renderPanel();
+}
+function step(d) {
+  const n = V.i + d;
+  if (n < 0 || n >= V.list.length) return;
+  V.i = n; V.edit = false;
+  guard(showCurrent);
+}
+
+function renderPanel() {
+  const it = cur();
+  if (!it) return;
+  const p = $('#vInfo');
+  if (V.edit) {
+    p.innerHTML = `<h2>Editar protocolo</h2>
+      <form id="editForm" class="form" novalidate>
+        <label class="field">Cliente<input name="cliente" list="clientList" autocomplete="off" value="${esc(it.cliente)}"></label>
+        <div class="two">
+          <label class="field">Entrada<input type="date" name="entrada" value="${it.entrada}"></label>
+          <label class="field"><span>Saída <small>opcional</small></span><input type="date" name="saida" value="${it.saida || ''}"></label>
+        </div>
+        <p class="hint" id="editHint"></p>
+        <div class="actions">
+          <button type="button" class="btn" data-act="cancel-edit">Cancelar</button>
+          <button type="submit" class="btn primary">Salvar</button>
+        </div>
+      </form>`;
+    const form = $('#editForm');
+    form.cliente.focus();
+    form.onsubmit = e => {
+      e.preventDefault();
+      const cliente = form.cliente.value.trim(), entrada = form.entrada.value, saida = form.saida.value || null;
+      const err = check(cliente, entrada, saida);
+      if (err) { const h = $('#editHint'); h.className = 'hint bad'; h.textContent = err; return; }
+      guard(async () => {
+        const newId = await relocate(it, cliente, entrada, saida);
+        await rescan();
+        V.list[V.i] = newId;
+        V.edit = false;
+        await showCurrent();
+        toast('Alterações salvas');
+      });
+    };
+    return;
+  }
+  const c = S.clients.get(it.cliente);
+  const total = c ? c.items.length : 1;
+  const others = c ? c.items.filter(x => x.id !== it.id) : [];
+  const firstName = it.cliente.split(' ')[0];
+  p.innerHTML = `
+    <h2>${esc(it.cliente)}</h2>
+    ${total > 1 && S.client !== it.cliente ? `<button class="link inline" data-act="history">Ver os ${total} protocolos deste cliente</button>` : ''}
+    <dl class="dates">
+      <div><dt>Entrada</dt><dd>${br(it.entrada)}</dd></div>
+      <div><dt>Saída</dt>${it.saida ? `<dd>${br(it.saida)}</dd>` : '<dd class="none">Sem saída</dd>'}</div>
+    </dl>
+    <label class="field"><span>Observação<span class="note-status" id="vNoteStatus"></span></span><textarea id="vNote" rows="2" placeholder="Detalhe do serviço">${esc(it.note)}</textarea></label>
+    ${it.saida ? '' : `<button class="btn tinted" data-act="deliver">${ICON.check}Marcar entrega hoje</button>`}
+    <div class="actions">
+      <button class="btn primary wide" data-act="copy">${ICON.copy}Copiar imagem</button>
+      <button class="btn" data-act="download">${ICON.down}Baixar</button>
+      <button class="btn" data-act="edit">${ICON.edit}Editar</button>
+      <button class="btn danger wide" data-act="delete">${ICON.trash}Excluir</button>
+    </div>
+    ${others.length ? `<section class="others"><h3>Outros protocolos de ${esc(firstName)}</h3><div class="strip">${others.slice(0, 8).map(o =>
+      `<button class="s-item" data-goto="${esc(o.id)}" title="Entrada ${br(o.entrada)}"><img alt="" data-id="${esc(o.id)}"><span>${o.entrada.slice(0, 4) === today().slice(0, 4) ? brShort(o.entrada) : br(o.entrada).slice(3)}</span></button>`).join('')}</div></section>` : ''}`;
+  $$('img[data-id]', p).forEach(img => { const o = S.byId.get(img.dataset.id); if (o) queueThumb(img, o); });
+  const ta = $('#vNote');
+  autoGrow(ta);
+  ta.addEventListener('input', () => { autoGrow(ta); scheduleNote(it, ta.value); });
+  ta.addEventListener('blur', () => { flushNote(); });
+}
+
+async function copyImage(it) {
+  const file = await it.handle.getFile();
+  let blob = file;
+  if (file.type !== 'image/png') {
+    const bmp = await createImageBitmap(file);
+    const c = document.createElement('canvas');
+    c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0);
+    bmp.close();
+    blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  }
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+  toast('Imagem copiada');
+}
+
+$('#vInfo').addEventListener('click', e => {
+  const goto = e.target.closest('[data-goto]');
+  if (goto) {
+    const it = cur(), c = S.clients.get(it.cliente);
+    V.list = c.items.map(x => x.id);
+    V.i = V.list.indexOf(goto.dataset.goto);
+    V.edit = false;
+    return guard(showCurrent);
+  }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const it = cur();
+  if (!it) return;
+  switch (b.dataset.act) {
+    case 'copy':
+      guard(() => copyImage(it).catch(err => { throw new Error('não foi possível copiar (' + (err.message || err.name) + ')'); }));
+      break;
+    case 'download': {
+      const a = document.createElement('a');
+      a.href = V.url;
+      a.download = `${it.cliente}.${extOf(it.fname)}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      break;
+    }
+    case 'edit': flushNote().then(() => { V.edit = true; renderPanel(); }); break;
+    case 'cancel-edit': V.edit = false; renderPanel(); break;
+    case 'history':
+      S.client = it.cliente;
+      closeViewer();
+      render();
+      window.scrollTo(0, 0);
+      break;
+    case 'deliver':
+      guard(async () => {
+        await flushNote();
+        const newId = await relocate(it, it.cliente, it.entrada, today() < it.entrada ? it.entrada : today());
+        await rescan();
+        V.list[V.i] = newId;
+        await showCurrent();
+        toast('Entrega marcada');
+      });
+      break;
+    case 'delete':
+      guard(async () => {
+        await flushNote();
+        const v = await ask('Excluir este protocolo?', 'A imagem vai para a pasta _lixeira, dentro de protocolos. Dá para recuperar por lá.', [
+          { label: 'Excluir', value: true, kind: 'danger-solid' },
+          { label: 'Cancelar', value: false, kind: 'plain' },
+        ]);
+        if (!v) return;
+        await trash(it);
+        await rescan();
+        V.list.splice(V.i, 1);
+        V.list = V.list.filter(id => S.byId.has(id));
+        if (!V.list.length) closeViewer();
+        else { V.i = Math.min(V.i, V.list.length - 1); await showCurrent(); }
+        toast('Protocolo excluído');
+      });
+      break;
+  }
+});
+$('#vPrev').addEventListener('click', () => step(-1));
+$('#vNext').addEventListener('click', () => step(1));
+$('#vClose').addEventListener('click', closeViewer);
+$('#vStage').addEventListener('click', e => { if (e.target.id === 'vStage') closeViewer(); });
+
+/* ================= adicionar / organizar ================= */
+const Q = { items: [], mode: 'add', saving: false };
+let qseq = 0;
+
+function openSheet(mode) {
+  Q.mode = mode;
+  $('#sheetTitle').textContent = mode === 'loose' ? 'Organizar imagens soltas' : 'Adicionar protocolos';
+  $('#sheet').hidden = false;
+  syncModal();
+  renderQueue();
+}
+function closeSheet() {
+  if (Q.saving) return;
+  for (const q of Q.items) URL.revokeObjectURL(q.url);
+  Q.items = [];
+  $('#sheet').hidden = true;
+  syncModal();
+}
+function addFiles(files) {
+  const added = [];
+  for (const f of files) {
+    const q = { qid: ++qseq, file: f, cliente: nameFromFile(f.name || ''), entrada: isoOf(new Date(f.lastModified || Date.now())), saida: '', url: URL.createObjectURL(f), err: '', bad: {}, txt: {}, obs: '' };
+    Q.items.push(q);
+    added.push(q);
+  }
+  if ($('#sheet').hidden) openSheet('add'); else appendRows(added);
+}
+async function addLooseToQueue(handles) {
+  const added = [];
+  for (const h of handles) {
+    if (Q.items.some(q => q.loose && q.loose.name === h.name)) continue;
+    const f = await h.getFile();
+    const q = { qid: ++qseq, file: f, loose: h, cliente: nameFromFile(h.name), entrada: isoOf(new Date(f.lastModified)), saida: '', url: URL.createObjectURL(f), err: '', bad: {}, txt: {}, obs: '' };
+    Q.items.push(q);
+    added.push(q);
+  }
+  return added;
+}
+async function organizeLoose() {
+  hideAlert();
+  if ($('#sheet').hidden) {
+    for (const q of Q.items) URL.revokeObjectURL(q.url);
+    Q.items = [];
+    await addLooseToQueue(S.loose);
+    openSheet('loose');
+  } else {
+    appendRows(await addLooseToQueue(S.loose));
+  }
+}
+
+/* ---------- data rápida: digitar 20, 2010, 20/10, 20/10/26 ou usar os atalhos ---------- */
+const addDays = (iso, n) => { const d = dateOf(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+const QUICK = {
+  entrada: [['Hoje', 0], ['Ontem', -1], ['Anteontem', -2]],
+  saida: [['Hoje', 0], ['Amanhã', 1], ['Limpar', 'clear']],
+};
+const BAD_DATE = f => `Data de ${f === 'entrada' ? 'entrada' : 'saída'} inválida. Digite assim: 20, 20/10 ou 20/10/2026.`;
+
+function parseBR(v) {
+  v = String(v).trim();
+  if (!v) return '';
+  let d, m, y;
+  if (/[\/\-.\s]/.test(v)) {
+    const p = v.split(/[\/\-.\s]+/).filter(Boolean);
+    if (!p.length || p.length > 3 || p.some(x => !/^\d+$/.test(x))) return null;
+    [d, m, y] = p;
+  } else {
+    if (!/^\d+$/.test(v)) return null;
+    if (v.length <= 2) d = v;
+    else if (v.length === 4) { d = v.slice(0, 2); m = v.slice(2); }
+    else if (v.length === 6 || v.length === 8) { d = v.slice(0, 2); m = v.slice(2, 4); y = v.slice(4); }
+    else return null;
+  }
+  const now = new Date();
+  const day = +d, mon = m ? +m : now.getMonth() + 1;
+  let yr = now.getFullYear();
+  if (y) { if (y.length === 2) yr = 2000 + +y; else if (y.length === 4) yr = +y; else return null; }
+  const dt = new Date(yr, mon - 1, day);
+  if (dt.getFullYear() !== yr || dt.getMonth() !== mon - 1 || dt.getDate() !== day) return null;
+  // dia/mês sem ano muito à frente = ano passado (ex.: digitar 28/12 em janeiro)
+  if (m && !y) { const lim = new Date(); lim.setDate(lim.getDate() + 60); if (dt > lim) dt.setFullYear(yr - 1); }
+  return isoOf(dt);
+}
+function maskDate(v) {
+  const slashes = [...v].map((c, i) => c === '/' ? i : -1).filter(i => i >= 0);
+  if (/[^\d\/]/.test(v) || slashes.some(i => i !== 2 && i !== 5)) return v; // digitou do seu jeito (ex.: 5/10)
+  const d = v.replace(/\D/g, '').slice(0, 8);
+  let out = d.length <= 2 ? d : d.length <= 4 ? `${d.slice(0, 2)}/${d.slice(2)}` : `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+  if (v.endsWith('/') && (d.length === 2 || d.length === 4)) out += '/';
+  return out;
+}
+const shownDate = (q, f) => q.txt[f] ?? br(q[f]);
+function quickOn(f, iso, n) { return n !== 'clear' && !!iso && addDays(today(), n) === iso; }
+function dateFieldHTML(q, f) {
+  const iso = q[f];
+  return `<div class="field dfield">
+    <span>${f === 'entrada' ? 'Entrada' : 'Saída <small>opcional</small>'}</span>
+    <div class="d-box">
+      <input type="text" inputmode="numeric" maxlength="10" data-f="${f}" placeholder="dd/mm" value="${esc(shownDate(q, f))}" autocomplete="off" aria-label="Data de ${f === 'entrada' ? 'entrada' : 'saída'}" title="Digite 20, 2010 ou 20/10. Setas ↑ ↓ mudam um dia.">
+      <button type="button" class="d-cal" data-cal="${f}" aria-label="Abrir calendário" title="Abrir calendário">${ICON.cal}</button>
+      <input type="date" class="d-native" data-native="${f}" tabindex="-1" aria-hidden="true" value="${iso || ''}">
+    </div>
+    <div class="d-quick">${QUICK[f].map(([label, n]) => `<button type="button" data-quick="${n}" data-for="${f}" class="${quickOn(f, iso, n) ? 'on' : ''}">${label}</button>`).join('')}</div>
+  </div>`;
+}
+
+/* onde o item aparece: a linha da lista e, se aberta, a tela de conferir */
+function qFrom(el) {
+  const row = el.closest('.row');
+  if (row) return Q.items.find(x => x.qid === +row.dataset.qid);
+  if (el.closest('#qview')) return Q.items[QV.i];
+  return null;
+}
+function placesFor(q) {
+  const out = [];
+  const row = $(`.row[data-qid="${q.qid}"]`);
+  if (row) out.push(row);
+  if (!$('#qview').hidden && Q.items[QV.i] === q) out.push($('#qview'));
+  return out;
+}
+function paintDate(q, f, skip) {
+  for (const root of placesFor(q)) {
+    const t = $(`input[type=text][data-f=${f}]`, root);
+    if (t && t !== skip) t.value = shownDate(q, f);
+    const nat = $(`[data-native=${f}]`, root);
+    if (nat) nat.value = q[f] || '';
+    $$(`[data-for=${f}]`, root).forEach(b => b.classList.toggle('on', quickOn(f, q[f], b.dataset.quick === 'clear' ? 'clear' : +b.dataset.quick)));
+  }
+}
+function setDate(q, f, iso) {
+  q[f] = iso || '';
+  q.bad[f] = false;
+  q.txt[f] = br(q[f]);
+  q.err = '';
+  paintDate(q, f);
+  updateHint(q);
+}
+function onFieldInput(e) {
+  const t = e.target, f = t.dataset.f, q = qFrom(t);
+  if (!f || !q) return;
+  q.err = '';
+  if (f === 'cliente') {
+    q.cliente = t.value;
+    for (const root of placesFor(q)) { const o = $('input[data-f=cliente]', root); if (o !== t) o.value = t.value; }
+  } else if (f === 'obs') {
+    q.obs = t.value;
+    autoGrow(t);
+    for (const root of placesFor(q)) { const o = $('textarea[data-f=obs]', root); if (o && o !== t) { o.value = t.value; autoGrow(o); } }
+  } else if (t.type === 'text') {
+    if (!String(e.inputType || '').startsWith('delete') && t.selectionStart === t.value.length) {
+      const m = maskDate(t.value);
+      if (m !== t.value) t.value = m;
+    }
+    const iso = parseBR(t.value);
+    q[f] = iso || '';
+    q.bad[f] = iso === null;
+    q.txt[f] = t.value;
+    paintDate(q, f, t);
+  }
+  updateHint(q);
+}
+function onDateClick(e) {
+  const quick = e.target.closest('[data-quick]');
+  if (quick) {
+    const q = qFrom(quick), n = quick.dataset.quick;
+    if (q) setDate(q, quick.dataset.for, n === 'clear' ? '' : addDays(today(), +n));
+    return true;
+  }
+  const cal = e.target.closest('[data-cal]');
+  if (cal) {
+    const nat = $(`[data-native=${cal.dataset.cal}]`, cal.closest('.d-box'));
+    try { nat.showPicker(); } catch { nat.style.pointerEvents = 'auto'; nat.focus(); nat.click(); nat.style.pointerEvents = ''; }
+    return true;
+  }
+  return false;
+}
+function onDateChange(e) {
+  const f = e.target.dataset.native, q = f && qFrom(e.target);
+  if (q) setDate(q, f, e.target.value);
+}
+function onDateKey(e) {
+  const t = e.target;
+  if (t.type !== 'text' || !/^(entrada|saida)$/.test(t.dataset.f || '') || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  const q = qFrom(t);
+  if (!q) return;
+  e.preventDefault();
+  const f = t.dataset.f;
+  setDate(q, f, addDays(q[f] || today(), e.key === 'ArrowUp' ? 1 : -1));
+}
+function onDateBlur(e) {
+  const t = e.target;
+  if (t.type !== 'text' || !/^(entrada|saida)$/.test(t.dataset.f || '')) return;
+  const q = qFrom(t), f = t.dataset.f;
+  if (!q) return;
+  if (q.bad[f]) { q.err = BAD_DATE(f); updateHint(q); return; }
+  q.txt[f] = br(q[f]);
+  paintDate(q, f);
+}
+for (const box of [$('#queue'), $('#qview')]) {
+  box.addEventListener('input', onFieldInput);
+  box.addEventListener('change', onDateChange);
+  box.addEventListener('keydown', onDateKey);
+  box.addEventListener('focusout', onDateBlur);
+  box.addEventListener('click', e => { if (onDateClick(e)) e.stopPropagation(); });
+}
+
+const rowHTML = q => `<div class="row" data-qid="${q.qid}">
+      <button class="q-open" data-act="view" title="Abrir imagem para conferir" aria-label="Abrir imagem para conferir"><img class="q-thumb" src="${q.url}" alt=""><span class="zoom">${ICON.zoom}</span></button>
+      <div class="q-fields">
+        <label class="field">Cliente<input data-f="cliente" list="clientList" autocomplete="off" placeholder="Nome completo" value="${esc(q.cliente)}"></label>
+        <div class="two">${dateFieldHTML(q, 'entrada')}${dateFieldHTML(q, 'saida')}</div>
+        <label class="field"><span>Observação <small>opcional</small></span><textarea data-f="obs" rows="1" placeholder="Detalhe do serviço">${esc(q.obs)}</textarea></label>
+        <p class="hint"></p>
+      </div>
+      <button class="round ghost small" data-act="rm" aria-label="Tirar da lista">${ICON.close}</button>
+    </div>`;
+
+function updateSaveBtn() {
+  const btn = $('#saveAll');
+  btn.disabled = !Q.items.length;
+  btn.textContent = Q.items.length > 1 ? `Salvar ${Q.items.length}` : 'Salvar';
+  $('#sheetNote').textContent = Q.items.some(q => q.loose) ? 'Cada imagem vai para a pasta do cliente.' : '';
+}
+function renderQueue() {
+  const box = $('#queue');
+  $('#dz').hidden = Q.mode === 'loose';
+  box.innerHTML = Q.items.map(rowHTML).join('');
+  Q.items.forEach(updateHint);
+  updateSaveBtn();
+  const firstEmpty = $$('input[data-f=cliente]', box).find(i => !i.value);
+  (firstEmpty || $('input[data-f=cliente]', box))?.focus();
+}
+/* acrescenta linhas sem redesenhar as outras (não atrapalha quem está digitando) */
+function appendRows(items) {
+  if (!items.length) return;
+  $('#queue').insertAdjacentHTML('beforeend', items.map(rowHTML).join(''));
+  items.forEach(updateHint);
+  updateSaveBtn();
+}
+function hintFor(q) {
+  if (q.err) return ['hint bad', q.err];
+  const name = q.cliente.trim();
+  if (!name) return ['hint', ''];
+  const ex = existingFolder(name);
+  if (ex) return ['hint ok', `Entra no histórico de ${ex} (${pl(S.clients.get(ex).items.length, 'protocolo', 'protocolos')}).`];
+  return ['hint', `Cliente novo: ${folderName(name)}`];
+}
+function markBad(q, root) {
+  $('input[data-f=cliente]', root).classList.toggle('bad', !!q.err && !q.cliente.trim());
+  $('input[data-f=entrada]', root).classList.toggle('bad', !!q.err && (!q.entrada || !!q.bad?.entrada));
+  $('input[data-f=saida]', root).classList.toggle('bad', !!q.err && (!!q.bad?.saida || (!!q.saida && q.saida < q.entrada)));
+}
+function updateHint(q) {
+  const row = $(`.row[data-qid="${q.qid}"]`);
+  if (row) {
+    const h = $('.hint', row);
+    [h.className, h.textContent] = hintFor(q);
+    markBad(q, row);
+  }
+  if (!$('#qview').hidden && Q.items[QV.i] === q) {
+    const h = $('#qvHint');
+    [h.className, h.textContent] = hintFor(q);
+    markBad(q, $('#qview'));
+  }
+}
+
+$('#sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) { if (e.target.id === 'sheet') closeSheet(); return; }
+  if (b.dataset.act === 'close') closeSheet();
+  if (b.dataset.act === 'pick') $('#file').click();
+  if (b.dataset.act === 'view') openQView(+b.closest('.row').dataset.qid);
+  if (b.dataset.act === 'rm') {
+    const row = b.closest('.row');
+    const q = Q.items.find(x => x.qid === +row.dataset.qid);
+    URL.revokeObjectURL(q.url);
+    Q.items = Q.items.filter(x => x !== q);
+    row.remove();
+    if (!Q.items.length) closeSheet(); else updateSaveBtn();
+  }
+});
+
+/* ================= conferir imagem ao organizar ================= */
+const QV = { i: -1 };
+function openQView(qid) {
+  QV.i = Q.items.findIndex(x => x.qid === qid);
+  if (QV.i < 0) return;
+  $('#qview').hidden = false;
+  syncModal();
+  showQV();
+}
+function closeQView() {
+  $('#qview').hidden = true;
+  QV.i = -1;
+  syncModal();
+}
+function showQV() {
+  const q = Q.items[QV.i];
+  if (!q) return closeQView();
+  const last = QV.i >= Q.items.length - 1;
+  $('#qvImg').src = q.url;
+  $('#qvImg').alt = `Imagem ${q.loose?.name || q.file.name || ''}`;
+  $('#qvSub').textContent = `${Q.items.length > 1 ? `${QV.i + 1} de ${Q.items.length}. ` : ''}Arquivo: ${q.loose?.name || q.file.name || 'imagem colada'}`;
+  $('#qvCliente').value = q.cliente;
+  $('#qvObs').value = q.obs;
+  autoGrow($('#qvObs'));
+  $('#qvDates').innerHTML = dateFieldHTML(q, 'entrada') + dateFieldHTML(q, 'saida');
+  $('#qvPrev').disabled = QV.i <= 0;
+  $('#qvNext').disabled = last;
+  $('#qvDone').textContent = last ? 'Pronto' : 'Próxima';
+  updateHint(q);
+}
+function qvStep(d) {
+  const n = QV.i + d;
+  if (n < 0 || n >= Q.items.length) return;
+  QV.i = n;
+  showQV();
+}
+$('#qvPrev').addEventListener('click', () => qvStep(-1));
+$('#qvNext').addEventListener('click', () => qvStep(1));
+$('#qvClose').addEventListener('click', closeQView);
+$('#qvDone').addEventListener('click', () => { if (QV.i >= Q.items.length - 1) closeQView(); else qvStep(1); });
+$('#qvStage').addEventListener('click', e => { if (e.target.id === 'qvStage') closeQView(); });
+
+/* ================= aviso de imagem nova na pasta ================= */
+let seenLoose = null;           // nomes já vistos na raiz da pasta
+const A = { names: [], url: null };
+
+function updateLoose(handles) {
+  const fresh = seenLoose ? handles.filter(h => !seenLoose.has(h.name)) : [];
+  seenLoose = new Set(handles.map(h => h.name));
+  S.loose = handles;
+  document.title = `${handles.length ? `(${handles.length}) ` : ''}Strike Details | Protocolos`;
+  A.names = A.names.filter(n => seenLoose.has(n));
+  if (!A.names.length) hideAlert();
+  if (fresh.length) notifyNew(fresh);
+}
+
+async function notifyNew(fresh) {
+  const names = fresh.map(h => h.name);
+  if (!$('#sheet').hidden && !Q.saving) {
+    appendRows(await addLooseToQueue(fresh));
+    toast(fresh.length === 1 ? 'Imagem nova entrou na lista' : `${fresh.length} imagens novas entraram na lista`);
+    return;
+  }
+  A.names = [...new Set([...A.names, ...names])];
+  showAlert(fresh[fresh.length - 1]);
+  if ((document.hidden || !document.hasFocus()) && 'Notification' in window && Notification.permission === 'granted') {
+    const titulo = fresh.length === 1 ? 'Nova imagem na pasta protocolos' : `${fresh.length} imagens novas na pasta protocolos`;
+    const opcoes = { body: names.join('\n') + '\nClique para cadastrar.', tag: 'protocolos-novas', renotify: true,
+      icon: '/protocolos/icons/icon-192.png', lang: 'pt-BR' };
+    try {
+      // Pelo service worker quando tiver (o clique abre a galeria mesmo com a janela fechada); senão, aviso da página.
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration('/protocolos/') : null;
+      if (reg) await reg.showNotification(titulo, opcoes);
+      else {
+        const n = new Notification(titulo, opcoes);
+        n.onclick = () => { window.focus(); n.close(); guard(organizeLoose); };
+      }
+    } catch { /* sem aviso do sistema */ }
+  }
+}
+
+async function showAlert(h) {
+  const n = A.names.length;
+  $('#aTitle').textContent = n === 1 ? 'Nova imagem na pasta' : `${n} imagens novas na pasta`;
+  $('#aName').textContent = n <= 2 ? A.names.join(', ') : `${A.names.slice(0, 2).join(', ')} e mais ${n - 2}`;
+  $('#aNotify').hidden = !('Notification' in window) || Notification.permission !== 'default';
+  try {
+    const f = await h.getFile();
+    if (A.url) URL.revokeObjectURL(A.url);
+    A.url = URL.createObjectURL(f);
+    $('#aThumb').src = A.url;
+  } catch { /* sem miniatura */ }
+  $('#alert').hidden = false;
+}
+function hideAlert() {
+  $('#alert').hidden = true;
+  A.names = [];
+  if (A.url) { URL.revokeObjectURL(A.url); A.url = null; }
+  $('#aThumb').removeAttribute('src');
+}
+$('#alert').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  if (b.dataset.act === 'dismiss') hideAlert();
+  if (b.dataset.act === 'register') guard(organizeLoose);
+  if (b.dataset.act === 'notify') {
+    Promise.resolve(Notification.requestPermission()).then(p => {
+      $('#aNotify').hidden = true;
+      toast(p === 'granted' ? 'Pronto, o aviso aparece mesmo com a janela minimizada' : 'O navegador não liberou o aviso; ele continua aparecendo só aqui');
+    }).catch(() => { $('#aNotify').hidden = true; });
+  }
+});
+
+/* olha a raiz da pasta a cada 4 segundos */
+let polling = false;
+async function pollLoose() {
+  if (!S.root || $('#app').hidden || Q.saving || polling) return;
+  polling = true;
+  try {
+    if (await S.root.queryPermission({ mode: 'readwrite' }) !== 'granted') return;
+    const loose = [];
+    for await (const h of S.root.values()) if (h.kind === 'file' && IMG_RE.test(h.name)) loose.push(h);
+    const before = S.loose.map(h => h.name).sort().join('|');
+    updateLoose(loose);
+    if (loose.map(h => h.name).sort().join('|') !== before) renderBanner();
+  } catch { /* tenta de novo no próximo ciclo */ }
+  finally { polling = false; }
+}
+setInterval(pollLoose, 4000);
+$('#saveAll').addEventListener('click', async () => {
+  let bad = false;
+  for (const q of Q.items) {
+    q.err = q.bad.entrada ? BAD_DATE('entrada') : q.bad.saida ? BAD_DATE('saida') : check(q.cliente, q.entrada, q.saida || null);
+    if (q.err) bad = true;
+    updateHint(q);
+  }
+  if (bad) return;
+  const btn = $('#saveAll');
+  Q.saving = true; btn.disabled = true; btn.textContent = 'Salvando…';
+  let done = 0;
+  try {
+    for (const q of [...Q.items]) {
+      await saveOne(q);
+      done++;
+      URL.revokeObjectURL(q.url);
+      Q.items = Q.items.filter(x => x !== q);
+    }
+  } catch (e) {
+    console.error(e);
+    toast(errMsg(e), 'error');
+  } finally {
+    Q.saving = false;
+  }
+  await guard(rescan);
+  if (!Q.items.length) closeSheet(); else renderQueue();
+  if (done) toast(done === 1 ? 'Protocolo salvo' : `${done} protocolos salvos`);
+});
+
+$('#file').addEventListener('change', e => {
+  const files = [...e.target.files].filter(isImgFile);
+  e.target.value = '';
+  if (files.length) addFiles(files);
+});
+
+/* ================= controles da tela ================= */
+$('#btnAdd').addEventListener('click', () => $('#file').click());
+$('#btnRefresh').addEventListener('click', e => {
+  const b = e.currentTarget;
+  b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin');
+  guard(refresh);
+});
+$('#btnFolder').addEventListener('click', () => guard(pickFolder));
+$('#back').addEventListener('click', () => { S.client = null; render(); window.scrollTo(0, 0); });
+$$('.tabbar [data-view]').forEach(b => b.addEventListener('click', () => {
+  S.view = b.dataset.view; S.client = null; render(); window.scrollTo(0, 0);
+}));
+
+$('#q').addEventListener('input', e => { S.q = e.target.value; render(); });
+$('#seg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  S.mode = b.dataset.mode;
+  $$('#seg button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+$('#from').addEventListener('change', e => { S.from = e.target.value; render(); });
+$('#to').addEventListener('change', e => { S.to = e.target.value; render(); });
+$('#onlyOpen').addEventListener('click', e => {
+  S.onlyOpen = !S.onlyOpen;
+  e.currentTarget.setAttribute('aria-pressed', S.onlyOpen);
+  render();
+});
+function clearFilters() {
+  S.q = ''; S.from = ''; S.to = ''; S.onlyOpen = false;
+  $('#q').value = ''; $('#from').value = ''; $('#to').value = '';
+  $('#onlyOpen').setAttribute('aria-pressed', 'false');
+  render();
+}
+$('#clear').addEventListener('click', clearFilters);
+
+document.addEventListener('click', e => {
+  if (e.target.closest('#viewer, #sheet, #dialog, #gate, #qview, #alert')) return;
+  const card = e.target.closest('[data-open]');
+  if (card) return openViewer(card.dataset.open, S.list);
+  const cl = e.target.closest('[data-client]');
+  if (cl) { S.client = cl.dataset.client; render(); window.scrollTo(0, 0); return; }
+  const a = e.target.closest('#main [data-act], #banner [data-act]');
+  if (!a) return;
+  if (a.dataset.act === 'add') $('#file').click();
+  if (a.dataset.act === 'clear') clearFilters();
+  if (a.dataset.act === 'organize') guard(organizeLoose);
+});
+
+new ResizeObserver(([e]) => {
+  document.documentElement.style.setProperty('--tb-h', e.target.offsetHeight + 'px');
+}).observe($('#toolbar'));
+
+/* arrastar, colar e teclado */
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+let dragDepth = 0;
+window.addEventListener('dragenter', e => {
+  if (!S.root || $('#app').hidden || !hasFiles(e)) return;
+  e.preventDefault(); dragDepth++; $('#drop').hidden = false;
+});
+window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('dragleave', e => {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) $('#drop').hidden = true;
+});
+window.addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0; $('#drop').hidden = true;
+  if (!S.root || $('#app').hidden) return;
+  const files = [...e.dataTransfer.files].filter(isImgFile);
+  if (files.length) addFiles(files); else toast('Use imagens PNG, JPG ou WEBP', 'error');
+});
+document.addEventListener('paste', e => {
+  if (!S.root || $('#app').hidden) return;
+  const files = [...(e.clipboardData?.files || [])].filter(isImgFile);
+  if (!files.length) return;
+  e.preventDefault();
+  addFiles(files);
+});
+const typing = e => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+document.addEventListener('keydown', e => {
+  if (!$('#dialog').hidden) return;
+  if (!$('#qview').hidden) {
+    if (e.key === 'Escape') { closeQView(); return; }
+    if (typing(e)) return;
+    if (e.key === 'ArrowLeft') qvStep(-1);
+    if (e.key === 'ArrowRight') qvStep(1);
+    return;
+  }
+  if (!$('#sheet').hidden) { if (e.key === 'Escape') closeSheet(); return; }
+  if (!$('#viewer').hidden) {
+    if (e.key === 'Escape') { if (V.edit) { V.edit = false; renderPanel(); } else closeViewer(); return; }
+    if (V.edit || typing(e)) return;
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+    return;
+  }
+  if (e.key === '/' && !typing(e)) { e.preventDefault(); $('#q').focus(); }
+  if (e.key === 'Escape' && S.client) { S.client = null; render(); }
+});
+
+/* ao voltar para a janela, relê a pasta (pega mudanças feitas pelo Explorer) */
+let focusT;
+window.addEventListener('focus', () => {
+  clearTimeout(focusT);
+  focusT = setTimeout(async () => {
+    if (!S.root || $('#app').hidden || document.body.classList.contains('modal-open')) return;
+    try { if (await S.root.queryPermission({ mode: 'readwrite' }) === 'granted') await rescan(); } catch {}
+  }, 400);
+});
+
+/* App instalável: service worker só de /protocolos/ (abre sem internet e recebe o clique do aviso). */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('/protocolos/sw.js', { scope: '/protocolos/' }).catch(() => {});
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.tipo === 'organizar' && S.root && !$('#app').hidden) guard(organizeLoose);
+  });
+}
+
+init().catch(e => { console.error(e); showGate('first'); });
+})();
+</script>
+</body>
+</html>
+

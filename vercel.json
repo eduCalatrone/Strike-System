@@ -1,12 +1,18 @@
 {
   "regions": ["pdx1"],
   "crons": [{ "path": "/api/limpeza", "schedule": "0 9 * * *" }],
+  "redirects": [
+    { "source": "/", "has": [{ "type": "host", "value": "protocolos-strike.vercel.app" }], "destination": "/protocolos/", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/cliente", "destination": "/index.html" },
     { "source": "/cliente/", "destination": "/index.html" }
   ],
   "headers": [
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
-    { "source": "/manifest.webmanifest", "headers": [{ "key": "Content-Type", "value": "application/manifest+json" }] }
+    { "source": "/manifest.webmanifest", "headers": [{ "key": "Content-Type", "value": "application/manifest+json" }] },
+    { "source": "/protocolos/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/protocolos/manifest.webmanifest", "headers": [{ "key": "Content-Type", "value": "application/manifest+json" }] },
+    { "source": "/protocolos/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
   ]
 }

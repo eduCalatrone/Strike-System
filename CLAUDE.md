@@ -38,6 +38,7 @@ Sistema interno da **Strike Details Estética Automotiva** (matriz em Jaru/RO) p
 | `dev-server.js` | Servidor local sem dependências (`node dev-server.js`, porta 3000). Serve o site e roteia `/api/<nome>` para `api/<nome>.js`. A Vercel ignora. |
 | `.env.exemplo` | Modelo de variáveis para rodar local. O `.env` real nunca vai para o Git. |
 | `manifest.webmanifest`, `sw.js`, `icons/` | App na tela inicial (PWA) do acesso interno. Ícones gerados da logo de setas. O `sw.js` guarda a página e as imagens da marca (`sd-app-vN`, hoje v5); `/api` nunca passa pelo cache. As **fotos do banco** (Supabase Storage) ficam guardadas no aparelho no cache `sd-fotos-v1` (as últimas 250; nomes nunca mudam), para não baixar a mesma miniatura de novo a cada tela (o iPhone baixava dezenas de vezes por dia e isso gastava o tráfego do plano grátis). Também mostra as notificações (`push`) e abre a tela certa ao tocar (`notificationclick`). Ao mudar o `sw.js`, trocar o nome do cache `sd-app-vN` (o de fotos fica). |
+| `protocolos/` | **Galeria de protocolos** (pedido de 20/10/2026), página separada em `/protocolos/`, ver seção abaixo. Não usa login, banco nem `/api`. |
 
 Variáveis na Vercel: `PLATE_RECOGNIZER_TOKEN` (secreta), `SUPABASE_URL`, `SUPABASE_KEY` (chave publicável), `SD_CHAVE_BANCO` (secreta), `CRON_SECRET` (secreta, usada pela limpeza) e `ACCESS_CODE` (opcional, só do leitor de placa).
 
@@ -127,6 +128,17 @@ Login próprio (tabela `sd_funcionarios`: `usuario`, `senha_hash` com scrypt), s
  (Google/FCM, Apple, Mozilla, Microsoft) e chaves do tamanho certo; no máximo 5 aparelhos ativos por pessoa (os mais antigos saem).
   - Chaves VAPID criadas sozinhas no primeiro uso e guardadas em `sd_ajustes` chave `vapid` (a privada nunca sai das funções). Aparelhos em `sd_push_inscricoes` (id = hash do endereço; `ativo = false` ao desativar, sair ou quando o navegador cancela (404/410) ou depois de 10 falhas; nunca apaga). Envios em `sd_push_envios` (o teste não é registrado).
 - Fora do escopo por enquanto: cadastro de clientes (já existe no Supabase), site de registro de autorizados (outro projeto).
+
+## Galeria de protocolos (`/protocolos/`)
+
+Ferramenta pessoal do Eduardo para organizar as imagens dos protocolos que ele gera para os clientes. Mora neste repositório só para ter endereço e virar app instalável no computador; **não toca no banco, no login nem nas funções**.
+
+- `protocolos/index.html` (página inteira, sem build), `protocolos/sw.js` (service worker só do escopo `/protocolos/`, cache `sd-protocolos-vN`; ao mudar, trocar o N), `protocolos/manifest.webmanifest` (id e escopo `/protocolos/`) e `protocolos/icons/` (folha com as setas da marca).
+- **Os dados ficam só no computador**: a página usa a File System Access API (Chrome/Edge no computador) na pasta `protocolos` da área de trabalho. Nada sobe para a internet. Por isso só funciona no aparelho onde a pasta está.
+- Estrutura da pasta: uma pasta por cliente (nome com iniciais maiúsculas) e um arquivo por protocolo com as datas no nome: `2026-10-20.png` (sem saída) ou `2026-10-20 a 2026-10-24.png`. Mesmo dia repetido vira `(2)`. Observação: `.txt` com o mesmo nome da imagem. Excluir move para `_lixeira/`. Imagens soltas na raiz da pasta aparecem para "Organizar" e geram aviso (a pasta é conferida a cada 4 s).
+- Visual igual ao do Controle (tokens, fontes, botões, vidro só no topo e no menu de baixo). Datas em Barlow Condensed grande nos cartões; selecionado em cinza (`--sel`), sem azul.
+- App instalado mantém a permissão da pasta (o Chrome só pergunta de novo se a pessoa tirar). Aberta como arquivo (`file://`) a página também funciona, mas pede permissão toda vez.
+- `vercel.json`: `X-Robots-Tag: noindex` em `/protocolos/` e um redirecionamento de `/` para `/protocolos/` só quando o endereço for `protocolos-strike.vercel.app` (precisa adicionar esse domínio no projeto para valer).
 
 ## Leitor de placa
 

@@ -1,0 +1,17 @@
+{
+  "id": "/protocolos/",
+  "name": "Strike Details | Protocolos",
+  "short_name": "Protocolos",
+  "description": "Galeria dos protocolos dos clientes da Strike Details, guardados na pasta protocolos do computador.",
+  "lang": "pt-BR",
+  "start_url": "/protocolos/",
+  "scope": "/protocolos/",
+  "display": "standalone",
+  "background_color": "#F2F2F1",
+  "theme_color": "#FFFFFF",
+  "icons": [
+    { "src": "/protocolos/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/protocolos/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/protocolos/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
