@@ -3032,7 +3032,7 @@ function carCard(at) {
       opcionaisDe(at).length ? el('span', { class: 'car-opc', text: `+ ${opcionaisDe(at).join(', ')}` }) : null,
       at.concluido && isCtrl() && (at.pagamento || pagPendente(at))
         ? el('span', { class: 'car-stage car-stage--pag' }, `Concluído ${ago(at.concluidoEm)}`,
-          at.pagamento ? el('span', { class: 'tag tag--ok', text: 'Pago' }) : el('span', { class: 'tag tag--warn', text: 'Pagamento pendente' }))
+          at.pagamento ? el('span', { class: 'tag tag--ok', text: 'Pago' }) : el('span', { class: 'tag tag--warn', text: 'Pendente' }))
         : el('span', { class: 'car-stage', text: at.concluido ? `Concluído ${ago(at.concluidoEm)}` : textoEtapa(at) }),
       el('div', { class: 'bar' + (at.concluido ? ' is-ok' : ''), role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Progresso' }, el('i', { style: `width:${pct}%` })))));
 }
@@ -3054,7 +3054,7 @@ function renderHome() {
     preencher(gridFeitos, ...itemsFeitos.map(carCard));
     const semBaixa = itemsFeitos.filter(pagPendente).length;
     preencher(secFeitos, el('div', { class: 'page-head' }, el('h2', { text: isCtrl() ? 'Concluídos' : 'Concluídos nas últimas 24 h' }),
-      semBaixa ? el('span', { class: 'tag tag--warn', text: `${semBaixa} sem baixa` }) : el('span', { class: 'count', text: String(itemsFeitos.length) })), gridFeitos);
+      semBaixa ? el('span', { class: 'tag tag--warn', text: `${semBaixa} ${semBaixa === 1 ? 'pendente' : 'pendentes'}` }) : el('span', { class: 'count', text: String(itemsFeitos.length) })), gridFeitos);
     secFeitos.hidden = !itemsFeitos.length;
     empty.hidden = items.length > 0;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum veículo em serviço. Toque em Adicionar para registrar a entrada de um veículo.';
@@ -3819,25 +3819,23 @@ function blocoPagamento(at, redraw) {
     if (p) return el('div', { class: 'pag-box is-pago' },
       el('div', { class: 'pag-txt' },
         el('b', { text: 'Pago' }),
-        el('span', { text: [p.forma, p.em ? dataHoraBR(p.em) : '', p.porNome ? `baixa por ${p.porNome}` : ''].filter(Boolean).join(' · ') }),
+        el('span', { text: [p.forma, p.em ? dataHoraBR(p.em) : '', p.porNome].filter(Boolean).join(' · ') }),
         p.obs ? el('span', { class: 'pag-obs', text: p.obs }) : null),
       el('button', { class: 'link-btn', type: 'button', style: 'flex:none', onclick: () => abrir(true) }, 'Editar'));
     const pend = pagPendente(at);
     return el('div', { class: 'pag-box is-col' + (pend ? ' is-pendente' : '') },
-      el('div', { class: 'pag-txt' },
-        el('b', { text: pend ? 'Pagamento pendente' : 'Pagamento' }),
-        el('span', { text: pend ? 'Fica no Início até a baixa.' : 'Sem baixa registrada.' })),
-      el('button', { class: 'btn btn--block' + (at.concluido ? ' btn--primary' : ''), type: 'button', onclick: () => abrir(true) }, 'Confirmar pagamento'));
+      el('div', { class: 'pag-txt' }, el('b', { text: pend ? 'Pagamento pendente' : 'Pagamento' })),
+      el('button', { class: 'btn btn--block' + (at.concluido ? ' btn--primary' : ''), type: 'button', onclick: () => abrir(true) }, 'Dar baixa'));
   }
   let forma = p ? p.forma : '';
   const formas = el('div', { class: 'seg seg-grade pag-formas', role: 'group', 'aria-label': 'Forma de pagamento' });
   const desenharFormas = () => preencher(formas, ...FORMAS_PAG.map(f => el('button', { type: 'button', 'aria-pressed': String(forma === f), onclick: () => { forma = f; desenharFormas(); } }, f)));
   desenharFormas();
-  const fObs = el('textarea', { id: 'p-obs', rows: '2', maxlength: '300', placeholder: 'Ex.: crédito em 3x, Pix no nome de outra pessoa, pago na retirada', text: p ? p.obs : '' });
+  const fObs = el('textarea', { id: 'p-obs', rows: '2', maxlength: '300', placeholder: 'Ex.: crédito em 3x', text: p ? p.obs : '' });
   const confirmar = () => {
     if (!forma) { toast('Escolha a forma de pagamento.', true); return; }
     const obs = fObs.value.trim();
-    if (forma === 'Outro' && !obs) { toast('Em "Outro", escreva na observação como foi pago.', true); fObs.focus(); return; }
+    if (forma === 'Outro' && !obs) { toast('Descreva na observação.', true); fObs.focus(); return; }
     if (p && p.forma === forma && (p.obs || '') === obs) { abrir(false); return; }
     const u = me();
     S.pagAberto = null;
@@ -3847,17 +3845,14 @@ function blocoPagamento(at, redraw) {
     })) { toast(p ? 'Pagamento atualizado.' : 'Pagamento confirmado.'); redraw(); }
   };
   const desfazer = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
-    if (!desfazer.dataset.conf) { desfazer.dataset.conf = '1'; desfazer.textContent = 'Tocar de novo para desfazer'; setTimeout(() => { if (desfazer.isConnected) { delete desfazer.dataset.conf; desfazer.textContent = 'Desfazer baixa'; } }, 4000); return; }
+    if (!desfazer.dataset.conf) { desfazer.dataset.conf = '1'; desfazer.textContent = 'Tocar de novo'; setTimeout(() => { if (desfazer.isConnected) { delete desfazer.dataset.conf; desfazer.textContent = 'Desfazer baixa'; } }, 4000); return; }
     S.pagAberto = null;
     if (commit(() => { at.pagamento = null; registrar(at, 'Baixa do pagamento desfeita'); })) { toast('Baixa desfeita.'); redraw(); }
   } }, 'Desfazer baixa');
-  const rec = aReceberDe(at);
   return el('div', { class: 'pag-form' },
-    el('h3', { text: p ? 'Editar pagamento' : 'Confirmar pagamento' }),
-    at.valor != null ? el('p', { class: 'valor-total' }, 'Valor do serviço: ', el('b', { text: fmtBRL(at.valor) }), rec ? ` (a receber ${fmtBRL(rec)})` : '') : el('p', { class: 'hint', text: 'Este serviço ainda não tem valor lançado.' }),
-    el('span', { class: 'label', text: 'Como foi pago?' }),
+    el('h3', { text: p ? 'Editar pagamento' : 'Dar baixa' }),
     formas,
-    el('div', { class: 'field' }, el('label', { for: 'p-obs', text: 'Observação (opcional)' }), fObs),
+    el('div', { class: 'field' }, el('label', { for: 'p-obs', text: 'Observação' }), fObs),
     el('div', { class: 'actions' },
       el('button', { class: 'btn btn--primary grow', type: 'button', onclick: confirmar }, p ? 'Salvar' : 'Confirmar'),
       el('button', { class: 'btn', type: 'button', onclick: () => abrir(false) }, 'Cancelar')),
@@ -4416,7 +4411,7 @@ function renderHistory() {
         el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
         el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(a.placa) }), el('span', { class: 'r-sub', text: [a.clienteNome, v.descricao, a.tipoNome].filter(Boolean).join(' · ') })),
         el('span', { class: 'r-side' }, el('div', { text: a.concluidoEm ? hora(a.concluidoEm) : '' }), a.valor != null ? el('div', { style: 'color:var(--ink);font-weight:600', text: fmtBRL(a.valor) }) : null,
-          pagPendente(a) ? el('span', { class: 'tag tag--warn', text: 'Sem baixa' }) : null)));
+          pagPendente(a) ? el('span', { class: 'tag tag--warn', text: 'Pendente' }) : null)));
     };
     preencher(list, ...dias.map(d => {
       const total = d.itens.reduce((s, a) => s + (a.valor != null ? Number(a.valor) || 0 : 0), 0);
