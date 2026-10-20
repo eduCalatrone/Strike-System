@@ -3,15 +3,18 @@
 // Guarda a página, os ícones e as fontes para o app abrir mesmo sem internet.
 // Os protocolos não passam por aqui: ficam na pasta do computador e são lidos direto pelo navegador.
 // Ao mudar este arquivo, trocar o número de CACHE.
-const CACHE = 'sd-protocolos-v1';
+const CACHE = 'sd-protocolos-v2';
 const FONTES = 'sd-protocolos-fontes-v1';
 const ARQUIVOS = [
   '/protocolos/',
   '/protocolos/manifest.webmanifest',
   '/protocolos/icons/icon-192.png',
   '/protocolos/icons/favicon-32.png',
+  '/protocolos/icons/logo-branca.png',
   '/logo-letras.png',
 ];
+// Imagens dos atalhos de mensagem (catálogo e protocolos padrão): guardadas na primeira vez que aparecem.
+const ATALHOS = 'sd-protocolos-atalhos-v1';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQUIVOS)).catch(() => {}).then(() => self.skipWaiting()));
@@ -20,7 +23,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   // Só apaga caches antigos desta galeria (os do Controle, sd-app-* e sd-fotos-*, ficam).
   e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => k.startsWith('sd-protocolos-') && k !== CACHE && k !== FONTES).map(k => caches.delete(k))))
+    .then(ks => Promise.all(ks.filter(k => k.startsWith('sd-protocolos-') && k !== CACHE && k !== FONTES && k !== ATALHOS).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -50,6 +53,18 @@ self.addEventListener('fetch', e => {
         return r;
       })
       .catch(async () => (await caches.match('/protocolos/')) || Response.error()));
+    return;
+  }
+
+  // Imagens dos atalhos: do cache quando já tiver (os nomes só mudam se a imagem mudar).
+  if (url.pathname.startsWith('/protocolos/atalhos/')) {
+    e.respondWith(caches.open(ATALHOS).then(async c => {
+      const guardada = await c.match(req);
+      if (guardada) return guardada;
+      const r = await fetch(req);
+      if (r.ok) c.put(req, r.clone()).catch(() => {});
+      return r;
+    }));
     return;
   }
 
