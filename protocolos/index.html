@@ -570,9 +570,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .cp-horas b { font: 700 15px/1 var(--cond); }
 .cp-horas span { font-size: 10.5px; color: var(--muted); }
 #chuva { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-#chuva i { position: absolute; top: -40px; width: 1.5px; border-radius: 2px; background: linear-gradient(180deg, transparent, var(--gota)); animation: gota linear infinite; }
+#chuva i { position: absolute; top: -40px; width: var(--gota-w, 1.5px); border-radius: 2px; background: linear-gradient(180deg, transparent 0, var(--gota) 60%); animation: gota linear infinite; }
 @keyframes gota { from { transform: translateY(0); } to { transform: translateY(calc(100vh + 60px)); } }
-:root, :root[data-tema="manha"], :root[data-tema="tarde"] { --gota: rgba(70, 100, 140, .55); }
+:root, :root[data-tema="manha"] { --gota: rgba(45, 75, 120, .7); --gota-w: 2px; }
+/* Tarde: fundo dourado claro, então a gota é azul-acinzentada escura e mais grossa para aparecer. */
+:root[data-tema="tarde"] { --gota: rgba(30, 58, 105, .8); --gota-w: 2px; }
 :root[data-tema="fim"] { --gota: rgba(255, 220, 190, .55); }
 :root[data-tema="noite"] { --gota: rgba(190, 210, 255, .5); }
 @media (prefers-reduced-motion: reduce) { #chuva { display: none; } }
