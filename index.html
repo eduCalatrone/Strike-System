@@ -920,15 +920,39 @@ body::before {
 .cta-alerta { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 99, 88, .18); color: #FF9A92; font: 600 10px/1 var(--body); letter-spacing: .06em; text-transform: uppercase; }
 .chamado-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: #B4231B; color: #fff; font: 700 11px/1 var(--body); }
 .chamados { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.chamado { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.chamado.aberto { border-color: rgba(180, 35, 27, .35); }
-.chamado-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.chamado { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.chamado-topo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chamado-av { width: 36px; height: 36px; font-size: 14px; }
+.chamado-quem { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.25; }
+.chamado-quem b { font-size: 15px; font-weight: 600; }
+.chamado-quem span { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chamado-tags { flex: none; display: flex; align-items: center; gap: 6px; }
 .chamado-sit { font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 999px; background: #EDEDEB; color: var(--ink-2); }
 .chamado.aberto .chamado-sit { background: rgba(180, 35, 27, .1); color: #B4231B; }
 .chamado-txt { white-space: pre-wrap; word-break: break-word; font-size: 15px; }
-.chamado-ctx { font-size: 12px; color: var(--muted); display: grid; gap: 2px; }
-.chamado-ctx code { font-size: 11px; word-break: break-all; }
-.chamado-resp { font-size: 14px; padding: 8px 10px; border-radius: 10px; background: #F2F2F0; }
+.chamado-resp { display: grid; gap: 4px; font-size: 14px; padding: 10px 12px; border-radius: 10px; background: #F2F2F0; }
+.chamado-resp-quem { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ok); }
+.chamado-resp-quem svg { width: 15px; height: 15px; flex: none; }
+.chamado-ctx { font-size: 12px; color: var(--muted); }
+.chamado-ctx > summary { cursor: pointer; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 2px 0; font-size: 12px; }
+.chamado-ctx[open] { display: grid; gap: 6px; }
+.chamado-ctx > summary { list-style: none; }
+.chamado-ctx > summary::-webkit-details-marker { display: none; }
+.chamado-ctx > summary::before { content: ""; width: 0; height: 0; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform .15s; }
+.chamado-ctx[open] > summary::before { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .chamado-ctx > summary::before { transition: none; } }
+.chamado-alerta { padding: 1px 7px; border-radius: 999px; background: var(--danger-bg); color: var(--danger); font-weight: 600; font-size: 11px; }
+.chamado-erros { display: grid; gap: 2px; }
+.chamado-erros code { font-size: 11px; word-break: break-all; }
+.chamado-acoes { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.chamado-resp-campo { min-height: 44px; font-size: 15px; padding: 10px 12px; resize: none; }
+.chamado-resp-campo:focus { min-height: 84px; }
+.chamado-botoes { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.chamado-botoes .btn { min-width: 120px; }
+.chamado-excluir { color: var(--danger); font-size: 13px; }
+.seg-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: rgba(0, 0, 0, .08); font-size: 12px; font-weight: 700; }
+.seg button[aria-pressed="true"] .seg-n { background: rgba(255, 255, 255, .2); }
+.seg-n.is-alerta, .seg button[aria-pressed="true"] .seg-n.is-alerta { background: #B4231B; color: #fff; }
 .chamado-fotos { display: flex; gap: 8px; flex-wrap: wrap; }
 .chamado-fotos button { width: 72px; height: 72px; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #EEE; }
 .chamado-fotos img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2042,62 +2066,95 @@ function fotosDoChamado(x) {
     photoImg(f, `Foto ${i + 1}`))));
 }
 const dataHoraCurta = ts => ts ? `${fmtData(ts)} ${new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '';
+// "Hoje 11:46", "Ontem 09:59", "20/10 14:59" (ano só quando não é o atual). Usado nos chamados.
+function quandoCurto(ts) {
+  if (!ts) return '';
+  const d = new Date(ts), hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const dia = new Date(d); dia.setHours(0, 0, 0, 0);
+  const dif = Math.round((hoje - dia) / 86400000), hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (dif === 0) return `Hoje ${hora}`;
+  if (dif === 1) return `Ontem ${hora}`;
+  const dm = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', ...(d.getFullYear() !== hoje.getFullYear() ? { year: 'numeric' } : {}) });
+  return `${dm} ${hora}`;
+}
+// Cartão do chamado (reorganizado em 22/10/2026, "muito bagunçado"): quem e quando no topo (com a tela onde estava),
+// texto e fotos, os dados técnicos do aparelho recolhidos numa linha só e as ações do Controle numa linha embaixo.
 function cartaoChamado(x, { controle = false, autor = false, redraw } = {}) {
   const aberto = !x.resolvidoEm, ctx = x.contexto || {};
+  const comNome = controle || autor;
+  const sub = [quandoCurto(x.criadoEm), controle && ctx.tela ? ctx.tela : ''].filter(Boolean).join(' · ');
+  const erros = ctx.erros || [];
   const li = el('li', { class: 'chamado' + (aberto ? ' aberto' : '') },
     el('div', { class: 'chamado-topo' },
-      el('span', { text: [controle || autor ? x.porNome : '', dataHoraCurta(x.criadoEm)].filter(Boolean).join(' · ') }),
-      el('span', { class: 'chamado-sit', text: aberto ? 'Aberto' : 'Resolvido' })),
-    x.destino === 'todos' ? el('span', {}, el('span', { class: 'tag', text: 'Para todos' })) : null,
+      comNome ? el('span', { class: 'pres-av chamado-av', 'aria-hidden': 'true', text: iniciais(x.porNome) }) : null,
+      el('div', { class: 'chamado-quem' },
+        comNome ? el('b', { text: x.porNome || 'Equipe' }) : null,
+        el('span', { text: sub })),
+      el('div', { class: 'chamado-tags' },
+        x.destino === 'todos' ? el('span', { class: 'tag', text: 'Para todos' }) : null,
+        // No Controle a aba já diz se está aberto ou resolvido.
+        controle ? null : el('span', { class: 'chamado-sit', text: aberto ? 'Aberto' : 'Resolvido' }))),
     el('div', { class: 'chamado-txt', text: x.texto }),
     fotosDoChamado(x),
-    controle ? el('div', { class: 'chamado-ctx' },
-      ctx.tela ? el('span', { text: `Tela: ${ctx.tela}` }) : null,
-      el('span', { text: [ctx.aparelho, ctx.versao ? `versão ${ctx.versao}` : '', ctx.online === false ? 'sem internet' : ''].filter(Boolean).join(' · ') }),
-      (ctx.erros || []).length ? el('details', {}, el('summary', { text: `Erros do sistema no aparelho (${ctx.erros.length})` }), ...ctx.erros.map(e => el('code', { text: e }))) : null,
-      ctx.navegador ? el('details', {}, el('summary', { text: 'Navegador' }), el('code', { text: ctx.navegador })) : null) : null,
-    !aberto ? el('div', { class: 'chamado-resp' }, el('b', { text: `Resolvido${x.resolvidoPor ? ` por ${x.resolvidoPor}` : ''} em ${dataHoraCurta(x.resolvidoEm)}` }), x.resposta ? el('div', { text: x.resposta }) : null) : null);
-  if (controle) {
-    if (aberto) {
-      const fResp = el('textarea', { rows: '2', maxlength: '600', placeholder: 'Resposta (opcional)', 'aria-label': 'Resposta' });
-      const btn = el('button', { class: 'btn btn--primary grow', type: 'button', onclick: async () => {
-        btn.disabled = true;
-        try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'resolver', id: x.id, resposta: fResp.value.trim() }] } }); toast('Resolvido.'); }
-        catch { toast('Não deu para salvar agora.', true); }
-        await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
-      } }, icon('check'), 'Marcar como resolvido');
-      li.append(fResp, el('div', { class: 'actions' }, btn));
-    } else {
-      li.append(el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: async () => {
-        try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'reabrir', id: x.id }] } }); } catch { toast('Não deu para salvar agora.', true); }
-        await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
-      } }, 'Reabrir'));
-    }
-    // Excluir: some da lista (no banco só fica marcado). Pede confirmação com um segundo toque.
-    const excluir = el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start;color:var(--danger)', onclick: async () => {
-      if (!excluir.dataset.conf) { excluir.dataset.conf = '1'; excluir.textContent = 'Tocar de novo para excluir'; setTimeout(() => { if (excluir.isConnected) { delete excluir.dataset.conf; excluir.textContent = 'Excluir'; } }, 4000); return; }
-      excluir.disabled = true;
-      try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'excluir', id: x.id }] } }); toast('Chamado excluído.'); }
-      catch { toast('Não deu para excluir agora.', true); }
+    !aberto ? el('div', { class: 'chamado-resp' },
+      el('span', { class: 'chamado-resp-quem' }, icon('check'), `Resolvido${x.resolvidoPor ? ` por ${x.resolvidoPor}` : ''} · ${quandoCurto(x.resolvidoEm)}`),
+      x.resposta ? el('div', { text: x.resposta }) : null) : null,
+    controle && (ctx.aparelho || ctx.versao || ctx.navegador || erros.length || ctx.online === false) ? el('details', { class: 'chamado-ctx' },
+      el('summary', {},
+        el('span', { text: ctx.aparelho || 'Aparelho' }),
+        ctx.online === false ? el('span', { class: 'chamado-alerta', text: 'sem internet' }) : null,
+        erros.length ? el('span', { class: 'chamado-alerta', text: `${erros.length} ${erros.length === 1 ? 'erro' : 'erros'}` }) : null),
+      ctx.versao ? el('span', { text: `Versão do site: ${ctx.versao}` }) : null,
+      erros.length ? el('div', { class: 'chamado-erros' }, el('span', { text: 'Erros do sistema no aparelho' }), ...erros.map(e => el('code', { text: e }))) : null,
+      ctx.navegador ? el('div', { class: 'chamado-erros' }, el('span', { text: 'Navegador' }), el('code', { text: ctx.navegador })) : null) : null);
+  if (!controle) return li;
+  // Excluir: some da lista (no banco só fica marcado). Pede confirmação com um segundo toque.
+  const excluir = el('button', { class: 'link-btn chamado-excluir', type: 'button', onclick: async () => {
+    if (!excluir.dataset.conf) { excluir.dataset.conf = '1'; excluir.textContent = 'Tocar de novo para excluir'; setTimeout(() => { if (excluir.isConnected) { delete excluir.dataset.conf; excluir.textContent = 'Excluir'; } }, 4000); return; }
+    excluir.disabled = true;
+    try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'excluir', id: x.id }] } }); toast('Chamado excluído.'); }
+    catch { toast('Não deu para excluir agora.', true); }
+    await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
+  } }, 'Excluir');
+  if (aberto) {
+    const fResp = el('textarea', { class: 'chamado-resp-campo', rows: '1', maxlength: '600', placeholder: 'Resposta (opcional)', 'aria-label': 'Resposta' });
+    const btn = el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async () => {
+      btn.disabled = true;
+      try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'resolver', id: x.id, resposta: fResp.value.trim() }] } }); toast('Resolvido.'); }
+      catch { toast('Não deu para salvar agora.', true); }
       await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
-    } }, 'Excluir');
-    li.append(excluir);
+    } }, icon('check'), 'Resolver');
+    li.append(el('div', { class: 'chamado-acoes' }, fResp, el('div', { class: 'chamado-botoes' }, excluir, btn)));
+  } else {
+    const reabrir = el('button', { class: 'btn btn--sm', type: 'button', onclick: async () => {
+      reabrir.disabled = true;
+      try { await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'reabrir', id: x.id }] } }); } catch { toast('Não deu para salvar agora.', true); }
+      await buscarDados({ forcar: true }).catch(() => {}); redraw && redraw();
+    } }, 'Reabrir');
+    li.append(el('div', { class: 'chamado-acoes' }, el('div', { class: 'chamado-botoes' }, excluir, reabrir)));
   }
   return li;
 }
-// Ajustes > Chamados (Controle)
+// #/chamados (Controle, pelo cartão em Relatórios): abas Abertos e Resolvidos (22/10/2026), sem cartão dentro de cartão.
 function secaoChamados(redraw) {
   const todos = DB.chamados || [], abertos = todos.filter(x => !x.resolvidoEm), feitos = todos.filter(x => x.resolvidoEm);
-  const mostrar = S.chamadosTodos ? feitos : feitos.slice(0, 5);
-  return el('section', { class: 'stack' },
-    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h3', { text: 'Problemas em aberto' }), el('span', { class: 'count', text: String(abertos.length) })),
+  const aba = S.chamadosAba === 'resolvidos' ? 'resolvidos' : 'abertos';
+  const abas = el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Chamados', style: 'display:flex;width:100%' },
+    [['abertos', 'Abertos', abertos.length], ['resolvidos', 'Resolvidos', feitos.length]].map(([k, t, n]) =>
+      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k),
+        onclick: () => { S.chamadosAba = k; redraw(); } }, t, el('span', { class: 'seg-n' + (k === 'abertos' && n ? ' is-alerta' : ''), text: String(n) }))));
+  if (aba === 'abertos') {
+    return el('section', { class: 'stack' }, abas,
       abertos.length ? el('ul', { class: 'chamados' }, abertos.map(x => cartaoChamado(x, { controle: true, redraw })))
-        : el('p', { class: 'hint', text: 'Nenhum problema em aberto.' })),
-    feitos.length ? el('div', { class: 'card' }, el('h3', { text: 'Resolvidos (últimos 60 dias)' }),
-      el('ul', { class: 'chamados' }, mostrar.map(x => cartaoChamado(x, { controle: true, redraw }))),
-      feitos.length > mostrar.length ? el('button', { class: 'link-btn', type: 'button', onclick: () => { S.chamadosTodos = true; redraw(); } }, `Mostrar mais (${feitos.length - mostrar.length})`) : null) : null);
+        : el('p', { class: 'empty', text: 'Nenhum problema em aberto.' }));
+  }
+  const mostrar = S.chamadosTodos ? feitos : feitos.slice(0, 5);
+  return el('section', { class: 'stack' }, abas,
+    feitos.length ? el('p', { class: 'hint', text: 'Resolvidos nos últimos 60 dias.' }) : null,
+    feitos.length ? el('ul', { class: 'chamados' }, mostrar.map(x => cartaoChamado(x, { controle: true, redraw })))
+      : el('p', { class: 'empty', text: 'Nenhum chamado resolvido nos últimos 60 dias.' }),
+    feitos.length > mostrar.length ? el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: () => { S.chamadosTodos = true; redraw(); } }, `Mostrar mais (${feitos.length - mostrar.length})`) : null);
 }
-// #/chamados (Controle, pelo cartão em Relatórios)
 function renderChamados() {
   const redraw = () => { const y = window.scrollY; renderChamados(); window.scrollTo(0, y); };
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
