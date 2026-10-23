@@ -5232,8 +5232,14 @@ function calcularRelatorio(de, ate) {
   // O veículo conta no dia em que as etapas de vedação (isolamento interno e externo) ficaram feitas, mesmo ainda em
   // serviço; sem essas etapas (ou sem data), conta pela conclusão. Assim cada veículo entra uma vez só.
   const cabine = DB.atendimentos.filter(a => /cabine\s*blindada/i.test(a.tipoNome || '') && dentro(diaDoUso(a)));
+  // Manta asfáltica (pedido de 23/10/2026): a conta é invertida, veículos por rolo (veículos ÷ rolos retirados) em vez de rolo por veículo.
+  // Sem retirada no período não há média (null). A espuma continua em retirada por veículo.
   const usoCabine = { veiculos: cabine.length, emServico: cabine.filter(a => !a.concluido).length, linhas: itens.filter(i => /manta|espuma/i.test(i.nome))
-    .map(i => ({ nome: i.nome, unidade: i.unidade, saiu: i.saiu, media: cabine.length ? round2(i.saiu / cabine.length) : null })) };
+    .map(i => {
+      const inverso = /manta/i.test(i.nome);
+      const media = inverso ? (cabine.length && i.saiu > 0 ? round2(cabine.length / i.saiu) : null) : (cabine.length ? round2(i.saiu / cabine.length) : null);
+      return { nome: i.nome, unidade: i.unidade, saiu: i.saiu, media, inverso };
+    }) };
   return {
     de, ate, concluidos, comValor, faturamento, semValor: concluidos.length - comValor.length, usoCabine,
     ticket: comValor.length ? round2(faturamento / comValor.length) : 0,
@@ -5309,10 +5315,10 @@ function renderRelatorios() {
       r.usoCabine.linhas.length ? el('div', { class: 'card' }, el('h3', { text: 'Uso por veículo: Cabine Blindada' }),
         el('div', { class: 'uso-medio' }, r.usoCabine.linhas.map(l => el('div', {},
           el('span', { class: 'label', text: l.nome }),
-          el('b', { text: l.media == null ? '-' : `${fmtQ(l.media)} ${l.unidade}` }),
-          el('span', { class: 'hint', text: `por veículo · saiu ${fmtQ(l.saiu)} ${l.unidade}` })))),
+          el('b', { text: l.media == null ? '-' : l.inverso ? `${fmtQ(l.media)} ${l.media === 1 ? 'veículo' : 'veículos'}` : `${fmtQ(l.media)} ${l.unidade}` }),
+          el('span', { class: 'hint', text: `${l.inverso ? `por ${l.unidade}` : 'por veículo'} · saiu ${fmtQ(l.saiu)} ${l.unidade}` })))),
         el('p', { class: 'hint', text: r.usoCabine.veiculos
-          ? `Média de ${r.usoCabine.veiculos} Cabine Blindada com a vedação feita no período${r.usoCabine.emServico ? ` (${r.usoCabine.emServico} ainda em serviço)` : ''}. Retiradas do período divididas pelos veículos.`
+          ? `Média de ${r.usoCabine.veiculos} Cabine Blindada com a vedação feita no período${r.usoCabine.emServico ? ` (${r.usoCabine.emServico} ainda em serviço)` : ''}. Manta: veículos por rolo retirado. Espuma: retirada por veículo.`
           : 'Nenhum Cabine Blindada com a vedação feita no período.' })) : null,
       el('div', { class: 'card' }, el('h3', { text: 'Materiais no período' }),
         r.itens.length ? tabela(['Material', 'Entrou', 'Saiu', 'Saldo hoje'], r.itens.map(i => [i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), [1, 2, 3])
@@ -5397,8 +5403,8 @@ async function baixarRelatorioPDF(r) {
     fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', (DB.veiculos[a.placa] || {}).descricao || '', a.tipoNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']), dir([5]));
   tab('Estoque no período', ['Material', 'Entrou', 'Saiu', 'Contagem (ajuste)', 'Saldo hoje'], r.itens.map(i => [
     i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${i.ajuste > 0 ? '+' : ''}${fmtQ(i.ajuste)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), dir([1, 2, 3, 4]));
-  if (r.usoCabine.linhas.length && r.usoCabine.veiculos) tab(`Uso por veículo: Cabine Blindada (${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'veículo' : 'veículos'})`, ['Material', 'Saiu no período', 'Média por veículo'],
-    r.usoCabine.linhas.map(l => [l.nome, `${fmtQ(l.saiu)} ${l.unidade}`, `${fmtQ(l.media)} ${l.unidade}`]), dir([1, 2]));
+  if (r.usoCabine.linhas.length && r.usoCabine.veiculos) tab(`Uso por veículo: Cabine Blindada (${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'veículo' : 'veículos'})`, ['Material', 'Saiu no período', 'Média'],
+    r.usoCabine.linhas.map(l => [l.nome, `${fmtQ(l.saiu)} ${l.unidade}`, l.media == null ? '-' : l.inverso ? `${fmtQ(l.media)} ${l.media === 1 ? 'veículo' : 'veículos'} por ${l.unidade}` : `${fmtQ(l.media)} ${l.unidade} por veículo`]), dir([1, 2]));
   tab('Retiradas por pessoa', ['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), dir([2]));
   const n = doc.getNumberOfPages();
   for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Strike Details · página ${p} de ${n}`, X, 820); }
