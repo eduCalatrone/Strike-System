@@ -4981,6 +4981,10 @@ function diasMarcados(y) {
   for (const e of eventosAtivos()) for (let k = e.de; k <= e.ate; k = somaDias(k, 1)) if (k.startsWith(`${y}-`)) f[k] = f[k] ? `${f[k]} · ${e.titulo}` : e.titulo;
   return f;
 }
+// "Agendar" (Controle): no topo do formulário novo escolhe se é cliente ou evento (pedido de 04/11/2026).
+const escolhaNovoAgenda = atual => el('div', { class: 'seg', role: 'group', 'aria-label': 'O que agendar', style: 'display:flex;width:100%' },
+  [['cliente', 'Cliente', '#/agenda/novo'], ['evento', 'Evento', '#/agenda/evento/novo']].map(([k, t, h]) =>
+    el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(atual === k), onclick: () => { if (atual !== k) go(h); } }, t)));
 const periodoEvento = e => (e.de === e.ate ? brData(e.de) : `${brDia(e.de)} a ${brData(e.ate)}`);
 function linhaEvento(e) {
   const abrir = isCtrl() ? () => go(`#/agenda/evento/${esc(e.id)}`) : null;
@@ -5099,8 +5103,7 @@ function renderAgenda() {
       doDia.length ? doDia.map(a => linhaAgendamento(a)) : el('p', { class: 'hint', text: 'Nenhuma entrada neste dia.' })) : null,
     entregas.length ? el('div', { class: 'ag-sec' },
       el('h3', {}, 'Entregas', el('span', { class: 'count', text: String(entregas.length) })),
-      entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null,
-    ctrl ? el('div', {}, el('a', { class: 'link-btn', href: '#/agenda/evento/novo' }, '+ Evento (loja fechada, reforma...)')) : null);
+      entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null);
 
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     topo, nav,
@@ -5200,6 +5203,7 @@ function renderAgendaItem(idRaw) {
   const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
   shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
     el('h1', { text: a ? 'Editar agendamento' : 'Novo agendamento' }),
+    a ? null : escolhaNovoAgenda('cliente'),
     el('div', { class: 'card' },
       campo('ag-cli', 'Cliente', fCli), campo('ag-tel', 'WhatsApp', fTel), campo('ag-serv', 'Serviço', fServ),
       campo('ag-marca', 'Marca ou modelo do carro', fMarca), el('datalist', { id: 'ag-marcas' }, MARCAS.map(m => el('option', { value: m }))),
@@ -5247,7 +5251,8 @@ function renderEvento(idRaw) {
   } }, 'Excluir evento') : null;
   const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
   shell(el('div', { class: 'stack', style: 'max-width:640px' }, backLink('#/agenda', 'Agenda'),
-    el('h1', { text: e ? 'Editar evento' : 'Novo evento' }),
+    el('h1', { text: e ? 'Editar evento' : 'Novo agendamento' }),
+    e ? null : escolhaNovoAgenda('evento'),
     el('p', { class: 'hint', text: 'Dias que não são de cliente, como reforma ou loja fechada. Aparecem na agenda como feriado.' }),
     el('div', { class: 'card' },
       campo('ev-tit', 'Nome do evento', fTit),
