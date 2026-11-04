@@ -5002,8 +5002,9 @@ function conversaoPara(para) {
   const x = c.tipo === 'evento' ? eventosAtivos().find(e => e.id === c.id) : agendaAtiva().find(a => a.id === c.id);
   return x ? { ...c, x } : null;
 }
-// Só agendamento ainda não usado (agendado ou cancelado) pode virar evento: em serviço e concluído estão ligados a um veículo.
-const podeVirarEvento = a => a.status === 'agendado' || a.status === 'cancelado';
+// Agendamento ligado a um veículo (deu entrada por ele) não vira evento. A situação não importa: pode ter sido
+// marcada "Em serviço" à mão sem veículo nenhum (ex.: reforma da loja agendada como cliente).
+const podeVirarEvento = a => !DB.atendimentos.some(x => x.agendaId === a.id) && !(DB.lixeira || []).some(x => x.agendaId === a.id);
 const periodoEvento = e => (e.de === e.ate ? brData(e.de) : `${brDia(e.de)} a ${brData(e.ate)}`);
 function linhaEvento(e) {
   const abrir = isCtrl() ? () => go(`#/agenda/evento/${esc(e.id)}`) : null;
