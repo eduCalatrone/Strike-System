@@ -2217,12 +2217,9 @@ function resumoConvites() {
   return { padrinhos, teste, padConf, convidados, nPad, nConv, pessoas: nPad + nConv };
 }
 function botaoConvites() {
-  const r = resumoConvites();
-  return el('a', { class: 'rel-convite', href: '#/convites', 'aria-label': `Convites do casamento, ${r.pessoas} pessoas confirmadas` },
+  return el('a', { class: 'rel-convite', href: '#/convites' },
     el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICONE_ALIANCAS }),
-    el('span', { class: 'rc-txt' }, el('span', { class: 'rt-tit', text: 'Convites do casamento' }),
-      el('span', { class: 'rc-sub', text: `Padrinhos ${r.padConf.length}/${r.padrinhos.length} · Convidados ${r.convidados.length}` })),
-    el('span', { class: 'rc-num' }, el('b', { text: String(r.pessoas) }), el('span', { text: r.pessoas === 1 ? 'pessoa' : 'pessoas' })),
+    el('span', { class: 'rc-txt' }, el('span', { class: 'rt-tit', text: 'Convites do casamento' })),
     el('span', { class: 'rc-chev', 'aria-hidden': 'true', html: ICON.chev }));
 }
 async function copiarTexto(texto, ok) {
