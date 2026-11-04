@@ -2267,6 +2267,7 @@ function renderConvites() {
   const acoesLink = (link, msg) => [
     el('button', { class: 'btn btn--sm', type: 'button', onclick: () => copiarTexto(link, 'Link copiado.') }, 'Copiar link'),
     el('a', { class: 'btn btn--sm', href: `https://wa.me/?text=${encodeURIComponent(msg)}`, target: '_blank', rel: 'noopener' }, icon('wa'), 'WhatsApp')];
+  const botaoAbrir = link => el('a', { class: 'btn btn--sm btn--primary', href: link, target: '_blank', rel: 'noopener' }, 'Abrir');
   const nomePad = slug => { const v = (DB.convites || []).find(x => x.slug === slug); return v ? v.convidados : 'Padrinhos'; };
 
   // Lista de presença: padrinhos e convidados (por quem convidou).
@@ -2322,7 +2323,7 @@ function renderConvites() {
           el('div', { class: 'cv-nome' }, el('b', { text: v.convidados }), el('span', { text: sub })),
           el('span', { class: 'cv-sit', text: v.teste ? 'Teste' : ok ? 'Confirmado' : 'Aguardando' })),
         ok ? el('div', { class: 'cv-pessoas' }, v.pessoas.map(n => el('span', { class: 'tag', text: n }))) : null,
-        el('div', { class: 'cv-acoes' }, acoesLink(link, `${v.convidados}, Petherson & Anna têm um convite especial para vocês: ${link}`),
+        el('div', { class: 'cv-acoes' }, v.teste ? botaoAbrir(link) : null, acoesLink(link, `${v.convidados}, Petherson & Anna têm um convite especial para vocês: ${link}`),
           el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(S.convDet === v.slug), onclick: () => { S.convDet = S.convDet === v.slug ? null : v.slug; S.convEdit = null; redraw(); } }, S.convDet === v.slug ? 'Fechar' : 'Detalhes')),
         det);
     };
@@ -2349,7 +2350,7 @@ function renderConvites() {
       el('div', { class: 'card cv-form' },
         el('b', { text: 'Link dos convidados' }),
         el('span', { class: 'cv-link', text: SITE_CONVITE.replace('https://', '') }),
-        el('div', { class: 'cv-acoes' }, acoesLink(SITE_CONVITE, `Petherson & Anna convidam você para o casamento. Confirme sua presença: ${SITE_CONVITE}`))),
+        el('div', { class: 'cv-acoes' }, botaoAbrir(SITE_CONVITE), acoesLink(SITE_CONVITE, `Petherson & Anna convidam você para o casamento. Confirme sua presença: ${SITE_CONVITE}`))),
       r.convidados.length ? ordem.map(k => el('section', { class: 'stack', style: 'gap:8px' },
         el('h3', { class: 'cv-grupo', text: `${k ? nomePad(k) : 'Noivos'} · ${grupos.get(k).reduce((t, x) => t + x.pessoas.length, 0)}` }),
         el('ul', { class: 'cv-lista' }, grupos.get(k).map(item))))
