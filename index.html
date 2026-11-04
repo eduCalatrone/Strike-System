@@ -4982,9 +4982,28 @@ function diasMarcados(y) {
   return f;
 }
 // "Agendar" (Controle): no topo do formulário novo escolhe se é cliente ou evento (pedido de 04/11/2026).
-const escolhaNovoAgenda = atual => el('div', { class: 'seg', role: 'group', 'aria-label': 'O que agendar', style: 'display:flex;width:100%' },
-  [['cliente', 'Cliente', '#/agenda/novo'], ['evento', 'Evento', '#/agenda/evento/novo']].map(([k, t, h]) =>
-    el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(atual === k), onclick: () => { if (atual !== k) go(h); } }, t)));
+// Também no "Editar" (pedido de 04/11/2026): trocar converte um no outro. S.converterDe = { tipo, id } guarda de onde veio;
+// o formulário do outro tipo abre preenchido e, ao salvar, cria o novo e exclui (só marca) o antigo.
+// origem: { tipo: 'cliente' | 'evento', id } quando está editando um que já existe (ou convertendo).
+function escolhaNovoAgenda(atual, origem = null) {
+  const destino = k => {
+    if (!origem) return k === 'cliente' ? '#/agenda/novo' : '#/agenda/evento/novo';
+    if (k === origem.tipo) { S.converterDe = null; return origem.tipo === 'cliente' ? `#/agenda/${esc(origem.id)}/editar` : `#/agenda/evento/${esc(origem.id)}`; }
+    S.converterDe = { tipo: origem.tipo, id: origem.id };
+    return k === 'cliente' ? '#/agenda/novo' : '#/agenda/evento/novo';
+  };
+  return el('div', { class: 'seg', role: 'group', 'aria-label': 'Cliente ou evento', style: 'display:flex;width:100%' },
+    [['cliente', 'Cliente'], ['evento', 'Evento']].map(([k, t]) =>
+      el('button', { type: 'button', style: 'flex:1', 'aria-pressed': String(atual === k), onclick: () => { if (atual !== k) go(destino(k)); } }, t)));
+}
+// Conversão em andamento para o formulário do tipo 'para' (null se não houver ou se o original sumiu).
+function conversaoPara(para) {
+  const c = S.converterDe; if (!c || c.tipo === para) return null;
+  const x = c.tipo === 'evento' ? eventosAtivos().find(e => e.id === c.id) : agendaAtiva().find(a => a.id === c.id);
+  return x ? { ...c, x } : null;
+}
+// Só agendamento ainda não usado (agendado ou cancelado) pode virar evento: em serviço e concluído estão ligados a um veículo.
+const podeVirarEvento = a => a.status === 'agendado' || a.status === 'cancelado';
 const periodoEvento = e => (e.de === e.ate ? brData(e.de) : `${brDia(e.de)} a ${brData(e.ate)}`);
 function linhaEvento(e) {
   const abrir = isCtrl() ? () => go(`#/agenda/evento/${esc(e.id)}`) : null;
@@ -5020,6 +5039,7 @@ function linhaAgendamento(a, { entrega = false } = {}) {
       wa ? el('a', { class: 'wa-btn', href: wa, target: '_blank', rel: 'noopener', 'aria-label': `WhatsApp de ${a.cliente}`, onclick: e => e.stopPropagation() }, icon('wa')) : null));
 }
 function renderAgenda() {
+  S.converterDe = null;
   const A = estadoAgenda(), ctrl = isCtrl(), hoje = hojeISO();
   const redraw = () => { const y = window.scrollY; renderAgenda(); window.scrollTo(0, y); };
   const mover = d => { if (A.modo === 'ano') A.y += d; else { A.m += d; if (A.m < 0) { A.m = 11; A.y--; } if (A.m > 11) { A.m = 0; A.y++; } } redraw(); };
@@ -5152,20 +5172,23 @@ function renderAgendaItem(idRaw) {
     return;
   }
 
-  const voltar = backLink(a ? `#/agenda/${esc(a.id)}` : '#/agenda', a ? 'Voltar' : 'Agenda');
-  const fCli = el('input', { id: 'ag-cli', type: 'text', maxlength: '80', autocapitalize: 'words', autocomplete: 'off', placeholder: 'Nome do cliente', value: a ? a.cliente : '' });
+  if (a) S.converterDe = null;
+  const conv = a ? null : conversaoPara('cliente'), ev = conv ? conv.x : null; // evento virando agendamento
+  const voltar = backLink(a ? `#/agenda/${esc(a.id)}` : ev ? `#/agenda/evento/${esc(ev.id)}` : '#/agenda', a || ev ? 'Voltar' : 'Agenda');
+  const fCli = el('input', { id: 'ag-cli', type: 'text', maxlength: '80', autocapitalize: 'words', autocomplete: 'off', placeholder: 'Nome do cliente', value: a ? a.cliente : ev ? ev.titulo : '' });
   const fTel = el('input', { id: 'ag-tel', type: 'tel', maxlength: '30', inputmode: 'tel', placeholder: '(69) 99999-9999', value: a ? a.tel : '' });
   const fServ = el('input', { id: 'ag-serv', type: 'text', maxlength: '120', placeholder: 'O que vai ser feito', value: a ? a.servico : '' });
   const fMarca = el('input', { id: 'ag-marca', type: 'text', maxlength: '40', list: 'ag-marcas', placeholder: 'Fiat, Volkswagen, Toyota...', value: a ? a.marca : '' });
-  const fData = el('input', { id: 'ag-data', type: 'date', value: a ? a.data : A.sel });
-  const fPrazo = el('input', { id: 'ag-prazo', type: 'number', min: '0', max: '90', step: '1', inputmode: 'numeric', placeholder: '0', value: a && a.prazo ? String(a.prazo) : '' });
+  const fData = el('input', { id: 'ag-data', type: 'date', value: a ? a.data : ev ? ev.de : A.sel });
+  const prazoEv = ev ? Math.min(90, Math.round((dataDe(ev.ate) - dataDe(ev.de)) / 864e5)) : 0;
+  const fPrazo = el('input', { id: 'ag-prazo', type: 'number', min: '0', max: '90', step: '1', inputmode: 'numeric', placeholder: '0', value: a && a.prazo ? String(a.prazo) : prazoEv ? String(prazoEv) : '' });
   // Valor: Entrada e A pagar (como na entrada do veículo), com o total embaixo.
   const temValor = a && a.valor != null;
   const fEnt = el('input', { id: 'ag-entrada', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: '0,00', value: temValor && entradaDe(a) ? fmtQ(entradaDe(a)) : '' });
   const fPagar = el('input', { id: 'ag-pagar', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: '0,00', value: temValor ? fmtQ(aReceberDe(a)) : '' });
   const total = previaTotal(fEnt, fPagar, 'Valor total');
   const fObs = el('textarea', { id: 'ag-obs', rows: '3', maxlength: '600', placeholder: 'Veículo, cor, combinados...' });
-  fObs.value = a ? a.obs : '';
+  fObs.value = a ? a.obs : ev ? ev.obs : '';
   const entrega = el('p', { class: 'hint' });
   const calc = () => {
     const n = Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0));
@@ -5189,12 +5212,16 @@ function renderAgendaItem(idRaw) {
     const v = lerValorPartes(fEnt, fPagar, 'Valor a pagar'); if (!v) return;
     const reg = { id: a ? a.id : uid(), cliente, tel: fTel.value.trim(), servico: fServ.value.trim(), data: fData.value, marca: fMarca.value.trim(),
       prazo: Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0)), valor: v.valor, entrada: v.valor == null ? null : v.entrada, obs: fObs.value.trim(), status };
-    if (commit(() => { DB.agenda = a ? agendaAtiva().map(x => x.id === a.id ? reg : x) : [...agendaAtiva(), reg]; })) {
+    if (commit(() => {
+      DB.agenda = a ? agendaAtiva().map(x => x.id === a.id ? reg : x) : [...agendaAtiva(), reg];
+      if (ev) DB.eventos = eventosAtivos().filter(x => x.id !== ev.id); // o evento virou este agendamento
+    })) {
+      S.converterDe = null;
       const dt = dataDe(reg.data); Object.assign(A, { sel: reg.data, y: dt.getFullYear(), m: dt.getMonth(), modo: 'mes' });
-      toast(a ? 'Agendamento atualizado.' : 'Cliente agendado.');
-      go(a ? `#/agenda/${esc(a.id)}` : '#/agenda');
+      toast(a ? 'Agendamento atualizado.' : ev ? 'Evento trocado para agendamento de cliente.' : 'Cliente agendado.');
+      go(a || ev ? `#/agenda/${esc(reg.id)}` : '#/agenda');
     }
-  } }, a ? 'Salvar alterações' : 'Agendar');
+  } }, a ? 'Salvar alterações' : ev ? 'Salvar como agendamento' : 'Agendar');
   const excluir = a ? el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
     if (!window.confirm(`Excluir o agendamento de ${a.cliente}? Ele sai da agenda, mas fica guardado no banco. Para só desmarcar, use "Cancelado".`)) return;
     if (commit(() => { DB.agenda = agendaAtiva().filter(x => x.id !== a.id); })) { toast('Agendamento excluído.'); go('#/agenda'); }
@@ -5202,8 +5229,10 @@ function renderAgendaItem(idRaw) {
 
   const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
   shell(el('div', { class: 'stack', style: 'max-width:640px' }, voltar,
-    el('h1', { text: a ? 'Editar agendamento' : 'Novo agendamento' }),
-    a ? null : escolhaNovoAgenda('cliente'),
+    el('h1', { text: a || ev ? 'Editar agendamento' : 'Novo agendamento' }),
+    a ? (podeVirarEvento(a) ? escolhaNovoAgenda('cliente', { tipo: 'cliente', id: a.id }) : null)
+      : escolhaNovoAgenda('cliente', ev ? { tipo: 'evento', id: ev.id } : null),
+    ev ? el('p', { class: 'hint', text: `Trocando o evento "${ev.titulo}" para agendamento de cliente. Ao salvar, o evento sai da agenda.` }) : null,
     el('div', { class: 'card' },
       campo('ag-cli', 'Cliente', fCli), campo('ag-tel', 'WhatsApp', fTel), campo('ag-serv', 'Serviço', fServ),
       campo('ag-marca', 'Marca ou modelo do carro', fMarca), el('datalist', { id: 'ag-marcas' }, MARCAS.map(m => el('option', { value: m }))),
@@ -5222,11 +5251,13 @@ function renderEvento(idRaw) {
   const novo = !idRaw || idRaw === 'novo';
   const e = novo ? null : eventosAtivos().find(x => x.id === idRaw);
   if (!novo && !e) { toast('Evento não encontrado.', true); return go('#/agenda'); }
-  const fTit = el('input', { id: 'ev-tit', type: 'text', maxlength: '80', autocomplete: 'off', placeholder: 'Ex.: Reforma da loja (fechada)', value: e ? e.titulo : '' });
-  const fDe = el('input', { id: 'ev-de', type: 'date', value: e ? e.de : A.sel });
-  const fAte = el('input', { id: 'ev-ate', type: 'date', value: e ? e.ate : A.sel });
+  if (e) S.converterDe = null;
+  const conv = e ? null : conversaoPara('evento'), ag = conv ? conv.x : null; // agendamento virando evento
+  const fTit = el('input', { id: 'ev-tit', type: 'text', maxlength: '80', autocomplete: 'off', placeholder: 'Ex.: Reforma da loja (fechada)', value: e ? e.titulo : ag ? ag.cliente : '' });
+  const fDe = el('input', { id: 'ev-de', type: 'date', value: e ? e.de : ag ? ag.data : A.sel });
+  const fAte = el('input', { id: 'ev-ate', type: 'date', value: e ? e.ate : ag ? entregaDe(ag) : A.sel });
   const fObs = el('textarea', { id: 'ev-obs', rows: '3', maxlength: '600', placeholder: 'Opcional' });
-  fObs.value = e ? e.obs : '';
+  fObs.value = e ? e.obs : ag ? [ag.servico, ag.obs].filter(Boolean).join(' · ') : '';
   const info = el('p', { class: 'hint' });
   const calc = () => {
     if (fDe.value && (!fAte.value || fAte.value < fDe.value)) fAte.value = fDe.value;
@@ -5240,20 +5271,25 @@ function renderEvento(idRaw) {
     if (!fDe.value || !fAte.value) { toast('Escolha as datas.', true); return; }
     if (Math.round((dataDe(fAte.value) - dataDe(fDe.value)) / 864e5) > 366) { toast('O evento pode ter no máximo um ano.', true); return; }
     const reg = { id: e ? e.id : uid(), titulo, de: fDe.value, ate: fAte.value, obs: fObs.value.trim() };
-    if (commit(() => { DB.eventos = e ? eventosAtivos().map(x => x.id === e.id ? reg : x) : [...eventosAtivos(), reg]; })) {
+    if (commit(() => {
+      DB.eventos = e ? eventosAtivos().map(x => x.id === e.id ? reg : x) : [...eventosAtivos(), reg];
+      if (ag) DB.agenda = agendaAtiva().filter(x => x.id !== ag.id); // o agendamento virou este evento
+    })) {
+      S.converterDe = null;
       const dt = dataDe(reg.de); Object.assign(A, { sel: reg.de, y: dt.getFullYear(), m: dt.getMonth(), modo: 'mes' });
-      toast(e ? 'Evento atualizado.' : 'Evento adicionado.'); go('#/agenda');
+      toast(e ? 'Evento atualizado.' : ag ? 'Agendamento trocado para evento.' : 'Evento adicionado.'); go('#/agenda');
     }
-  } }, e ? 'Salvar alterações' : 'Adicionar evento');
+  } }, e ? 'Salvar alterações' : ag ? 'Salvar como evento' : 'Adicionar evento');
   const excluir = e ? el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
     if (!window.confirm(`Excluir o evento "${e.titulo}"? Ele sai da agenda, mas fica guardado no banco.`)) return;
     if (commit(() => { DB.eventos = eventosAtivos().filter(x => x.id !== e.id); })) { toast('Evento excluído.'); go('#/agenda'); }
   } }, 'Excluir evento') : null;
   const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
-  shell(el('div', { class: 'stack', style: 'max-width:640px' }, backLink('#/agenda', 'Agenda'),
-    el('h1', { text: e ? 'Editar evento' : 'Novo agendamento' }),
-    e ? null : escolhaNovoAgenda('evento'),
-    el('p', { class: 'hint', text: 'Dias que não são de cliente, como reforma ou loja fechada. Aparecem na agenda como feriado.' }),
+  shell(el('div', { class: 'stack', style: 'max-width:640px' }, backLink(ag ? `#/agenda/${esc(ag.id)}/editar` : '#/agenda', ag ? 'Voltar' : 'Agenda'),
+    el('h1', { text: e ? 'Editar evento' : ag ? 'Editar agendamento' : 'Novo agendamento' }),
+    escolhaNovoAgenda('evento', e ? { tipo: 'evento', id: e.id } : ag ? { tipo: 'cliente', id: ag.id } : null),
+    ag ? el('p', { class: 'hint', text: `Trocando o agendamento de ${ag.cliente} para evento. Ao salvar, o agendamento sai da agenda (fica guardado no banco).` }) : null,
+    ag ? null : el('p', { class: 'hint', text: 'Dias que não são de cliente, como reforma ou loja fechada. Aparecem na agenda como feriado.' }),
     el('div', { class: 'card' },
       campo('ev-tit', 'Nome do evento', fTit),
       el('div', { class: 'row' }, campo('ev-de', 'De', fDe), campo('ev-ate', 'Até', fAte)), info,
