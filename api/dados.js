@@ -3,7 +3,7 @@
 //   POST /api/dados  { ops: [...], por: {id, nome} } grava as mudanças, uma por uma, na ordem.
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
-//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | opcionais | chamados
+//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | eventos | opcionais | chamados
 //   Só do Controle: ajustes, senha, opcionais (lista de Ajustes), agenda (o Funcionário só vê a agenda, com valores,
 //   e pode usar 'agenda:entrada', que só marca o agendamento como "em serviço" ao dar entrada no veículo;
 //   quando esse serviço é concluído, o agendamento vira "concluído" aqui mesmo)
@@ -28,7 +28,7 @@ async function carregar(c, eu) {
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
   const desde7 = encodeURIComponent(`"${new Date(Date.now() - 7 * 864e5).toISOString()}"`);
-  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos] = await Promise.all([
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos, eventos] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -47,6 +47,8 @@ async function carregar(c, eu) {
     // Aba Notificações: os avisos dos últimos 7 dias (17/10/2026; antes 30) que eram para esta pessoa (menos os que ela mesma causou,
     // fora o de veículo concluído, que quem concluiu também recebe).
     rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)},tipo.eq.conclusao)&em=gte.${desde7}&order=em.desc&limit=80`),
+    // Eventos da agenda que não são cliente (ex.: reforma da loja), como um feriado. Todos veem; só o Controle muda.
+    restAll(c, 'sd_agenda_eventos?select=id,titulo,de,ate,obs&excluido_em=is.null&order=de,id'),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -115,6 +117,7 @@ async function carregar(c, eu) {
       id: a.id, cliente: a.cliente, tel: a.tel || '', servico: a.servico || '', data: String(a.data).slice(0, 10), marca: a.marca || '',
       prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada), obs: a.obs || '', status: a.status,
     })),
+    eventos: (eventos || []).map(e => ({ id: e.id, titulo: e.titulo, de: String(e.de).slice(0, 10), ate: String(e.ate).slice(0, 10), obs: e.obs || '' })),
   };
 }
 
@@ -127,7 +130,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -435,6 +438,16 @@ async function aplicar(c, op, eu, versoes, depois = []) {
         ...(it.entrada !== undefined ? { valor_entrada: it.entrada == null || it.entrada === '' ? null : num(it.entrada, 'entrada') } : {}),
       });
     }
+    // Evento da agenda (Controle, pedido de 04/11/2026): dias que não são de cliente (ex.: reforma, loja fechada).
+    case 'eventos:salvar': {
+      const titulo = txt(it.titulo, 80); if (!titulo) throw invalido('titulo');
+      const de = String(it.de || ''), ate = String(it.ate || it.de || '');
+      if (!RE_DATA.test(de) || isNaN(Date.parse(de))) throw invalido('de');
+      if (!RE_DATA.test(ate) || isNaN(Date.parse(ate)) || ate < de || Date.parse(ate) - Date.parse(de) > 366 * 864e5) throw invalido('ate');
+      return upsert(c, 'sd_agenda_eventos', { id: id(it.id), titulo, de, ate, obs: txt(it.obs, 600), atualizado_em: agora() });
+    }
+    case 'eventos:remover':
+      return marcar(c, 'sd_agenda_eventos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
     // Entrada do veículo feita a partir do agendamento: qualquer pessoa da equipe pode marcar como concluído.
     case 'agenda:entrada':
       return marcar(c, 'sd_agenda', `id=eq.${q(id(op.id))}&excluido_em=is.null&status=eq.agendado`, { status: 'em_servico', atualizado_em: agora() });

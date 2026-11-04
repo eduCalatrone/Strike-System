@@ -764,6 +764,7 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .rel-aviso { margin: 4px 0 0; font-size: 13px; color: var(--warn); }
 .rel-fat-and { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 .rel-fat-and > div { display: grid; gap: 1px; }
+.rel-fat-and.tres > div:first-child { grid-column: 1 / -1; } /* Aguardando pagamento em cima, inteiro */
 .rel-fat-and b { font: 700 22px/1.1 var(--cond); }
 /* Ajustes (13/10/2026): cabeçalho de seção com quantidade e "+ Novo"; formulários só abrem quando pedidos. */
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; }
@@ -1360,7 +1361,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -1386,6 +1387,7 @@ function diffOps(a, b) {
   lista('itens', a.estoque.itens, b.estoque.itens);
   lista('movimentos', a.estoque.movimentos, b.estoque.movimentos, 'id', () => false);
   lista('agenda', a.agenda || [], b.agenda || []);
+  lista('eventos', a.eventos || [], b.eventos || []);
   lista('opcionais', a.opcionais || [], b.opcionais || []);
   lista('atendimentos', semFotos(a.atendimentos), semFotos(b.atendimentos));
   // Foto de atendimento excluído continua marcada como ativa (o atendimento inteiro fica guardado).
@@ -1455,7 +1457,7 @@ async function commitAgora(fn) {
 function podeRedesenhar() {
   const [r] = parts();
   if (['placa', 'novo', 'ajustes', 'relatorios', 'problema'].includes(r)) return false;
-  if (r === 'agenda' && (parts()[1] === 'novo' || parts()[2] === 'editar')) return false; // formulário de agendamento aberto
+  if (r === 'agenda' && (parts()[1] === 'novo' || parts()[1] === 'evento' || parts()[2] === 'editar')) return false; // formulário de agendamento ou de evento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
   if (r === 'veiculo' && (S.entradaEdit || S.valorAberto || S.pagAberto || S.marcandoEtapas)) return false; // editando estado na entrada, valor, pagamento ou etapas
@@ -1832,6 +1834,9 @@ const textoValor = (valor, entrada) => valor == null ? 'Valor removido'
 const FORMAS_PAG = ['Pix', 'Dinheiro', 'Débito', 'Crédito', 'Transferência', 'Outro'];
 const PAGAMENTO_DESDE = Date.parse('2026-10-19T00:00:00-04:00');
 const pagPendente = at => isCtrl() && at.concluido && !at.pagamento && (at.concluidoEm || 0) >= PAGAMENTO_DESDE;
+// Quando o valor entrou de verdade (faturamento, pedido de 04/11/2026): a data da baixa do pagamento. Concluídos antes da baixa
+// existir (19/10/2026) e sem baixa contam pela conclusão, para os relatórios antigos não mudarem. Sem baixa: ainda não faturou.
+const recebidoEm = at => (at.pagamento ? at.pagamento.em : at.concluido && (at.concluidoEm || 0) < PAGAMENTO_DESDE ? at.concluidoEm : null);
 const dataHoraBR = ts => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts);
 const textoPagamento = (at, p, editado) => `Pagamento confirmado${editado ? ' (editado)' : ''}: ${[p.forma, at.valor != null ? fmtBRL(at.valor) : '', p.obs].filter(Boolean).join(' · ')}`;
 function registrar(at, texto) {
@@ -4472,7 +4477,8 @@ function renderHistory() {
     };
     preencher(list, ...dias.map(d => {
       const total = d.itens.reduce((s, a) => s + (a.valor != null ? Number(a.valor) || 0 : 0), 0);
-      const resumo = [d.itens.length === 1 ? '1 serviço' : `${d.itens.length} serviços`, total ? fmtBRL(total) : ''].filter(Boolean).join(' · ');
+      const pend = d.itens.reduce((s, a) => s + (pagPendente(a) && a.valor != null ? Number(a.valor) || 0 : 0), 0);
+      const resumo = [d.itens.length === 1 ? '1 serviço' : `${d.itens.length} serviços`, total ? fmtBRL(total) : '', pend ? `${fmtBRL(pend)} pendente` : ''].filter(Boolean).join(' · ');
       return el('section', { class: 'hist-dia' },
         el('div', { class: 'hist-dia-head' }, el('h3', { text: d.r }), el('span', { text: resumo })),
         el('ul', { class: 'rows' }, d.itens.map(linha)));
@@ -4965,6 +4971,26 @@ const MARCAS = ['Fiat', 'Volkswagen', 'Chevrolet', 'Ford', 'Toyota', 'Honda', 'H
 const seloMarca = m => { const t = String(m || '').trim(); return t ? (SIGLAS[t.toLowerCase()] || t.toUpperCase().slice(0, 5)) : null; };
 const entregaDe = a => (a.prazo ? somaDias(a.data, a.prazo) : a.data);
 const agendaAtiva = () => DB.agenda || [];
+// Eventos da agenda (pedido de 04/11/2026): dias que não são de cliente (reforma, loja fechada...). Aparecem como feriado.
+// Só o Controle cria, altera e exclui (excluir só marca excluido_em). Tabela sd_agenda_eventos.
+const eventosAtivos = () => (DB && DB.eventos) || [];
+const eventosDoDia = k => eventosAtivos().filter(e => e.de <= k && k <= e.ate);
+// Feriados mais os eventos, por dia, para pintar o calendário.
+function diasMarcados(y) {
+  const f = { ...feriados(y) };
+  for (const e of eventosAtivos()) for (let k = e.de; k <= e.ate; k = somaDias(k, 1)) if (k.startsWith(`${y}-`)) f[k] = f[k] ? `${f[k]} · ${e.titulo}` : e.titulo;
+  return f;
+}
+const periodoEvento = e => (e.de === e.ate ? brData(e.de) : `${brDia(e.de)} a ${brData(e.ate)}`);
+function linhaEvento(e) {
+  const abrir = isCtrl() ? () => go(`#/agenda/evento/${esc(e.id)}`) : null;
+  return el('div', { class: 'ag-appt ag-evento', role: abrir ? 'link' : null, tabindex: abrir ? '0' : null, style: abrir ? 'cursor:pointer' : null, onclick: abrir,
+    onkeydown: abrir ? ev => { if (ev.key === 'Enter') abrir(); } : null },
+    el('span', { class: 'marca' }, icon('calendar')),
+    el('span', { class: 'nome', text: e.titulo }),
+    el('span', { class: 'meta', text: [periodoEvento(e), e.obs].filter(Boolean).join(' · ') }),
+    el('span', { class: 'lado' }, el('span', { class: 'tag tag--danger', text: 'Evento' })));
+}
 const STATUS_AG = { agendado: 'Agendado', em_servico: 'Em serviço', concluido: 'Concluído', cancelado: 'Cancelado' };
 const telWa = t => { const n = String(t || '').replace(/\D/g, ''); return n.length >= 10 ? `https://wa.me/${n.startsWith('55') ? n : '55' + n}` : null; };
 
@@ -5010,7 +5036,7 @@ function renderAgenda() {
       el('button', { type: 'button', 'aria-pressed': String(A.modo === 'ano'), onclick: () => { A.modo = 'ano'; redraw(); } }, 'Ano')));
 
   if (A.modo === 'ano') {
-    const fer = feriados(A.y);
+    const fer = diasMarcados(A.y);
     const minis = MESES.map((nome, m) => {
       const pref = `${A.y}-${pad2(m + 1)}-`;
       const doMes = lista.filter(a => a.data.startsWith(pref) && a.status !== 'cancelado');
@@ -5031,7 +5057,7 @@ function renderAgenda() {
   }
 
   // Mês
-  const fer = feriados(A.y), first = new Date(A.y, A.m, 1).getDay(), total = new Date(A.y, A.m + 1, 0).getDate();
+  const fer = diasMarcados(A.y), first = new Date(A.y, A.m, 1).getDay(), total = new Date(A.y, A.m + 1, 0).getDate();
   const porDia = {}; lista.forEach(a => { (porDia[a.data] = porDia[a.data] || []).push(a); });
   // Entregas de cada dia (sem marca no dia desde 17/10/2026; ficam fora da contagem de entradas).
   const entregasDia = {};
@@ -5054,7 +5080,7 @@ function renderAgenda() {
   const doMes = lista.filter(a => a.data.startsWith(`${A.y}-${pad2(A.m + 1)}-`));
 
   // Dia escolhido
-  const selDt = dataDe(A.sel), selFer = feriados(selDt.getFullYear())[A.sel];
+  const selDt = dataDe(A.sel), selFer = feriados(selDt.getFullYear())[A.sel], evDia = eventosDoDia(A.sel);
   // Cancelados no fim da lista e fora da contagem (a mesma do número no dia).
   const doDia = (porDia[A.sel] || []).slice().sort((a, b) => (a.status === 'cancelado') - (b.status === 'cancelado') || a.cliente.localeCompare(b.cliente));
   const nEntradas = doDia.filter(a => a.status !== 'cancelado').length;
@@ -5065,6 +5091,7 @@ function renderAgenda() {
       el('h2', {}, nomeDia, el('span', { class: 'ag-dia-data', text: ` ${selDt.getDate()} de ${MESES[selDt.getMonth()].toLowerCase()}` })),
       ctrl ? el('a', { class: 'btn btn--sm btn--primary', href: `#/agenda/novo` }, icon('plus'), 'Agendar') : null),
     selFer ? el('span', {}, el('span', { class: 'tag tag--danger', text: selFer })) : null,
+    evDia.length ? el('div', { class: 'ag-sec' }, evDia.map(linhaEvento)) : null,
     // Entradas do dia e, separadas, as entregas (carro que entrou antes e sai neste dia).
     !doDia.length && !entregas.length ? el('p', { class: 'hint', text: 'Nenhum cliente neste dia.' }) : null,
     doDia.length || entregas.length ? el('div', { class: 'ag-sec' },
@@ -5072,7 +5099,8 @@ function renderAgenda() {
       doDia.length ? doDia.map(a => linhaAgendamento(a)) : el('p', { class: 'hint', text: 'Nenhuma entrada neste dia.' })) : null,
     entregas.length ? el('div', { class: 'ag-sec' },
       el('h3', {}, 'Entregas', el('span', { class: 'count', text: String(entregas.length) })),
-      entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null);
+      entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null,
+    ctrl ? el('div', {}, el('a', { class: 'link-btn', href: '#/agenda/evento/novo' }, '+ Evento (loja fechada, reforma...)')) : null);
 
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     topo, nav,
@@ -5082,7 +5110,7 @@ function renderAgenda() {
       el('span', {}, el('b', { style: 'background:#1F9D55' }), 'agendado'),
       el('span', {}, el('b', { style: 'background:var(--ink)' }), 'em serviço'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
-      el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado'),
+      el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado/evento'),
       el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` })),
     dia), { current: 'agenda' });
 }
@@ -5090,6 +5118,7 @@ function renderAgenda() {
 // Agendamento: primeiro a prévia, igual para todos (pedido de 16/10/2026); o Controle tem "Editar"
 // (#/agenda/ID/editar) e cria com "novo". Valor dividido em Entrada e A pagar, com o total embaixo.
 function renderAgendaItem(idRaw) {
+  if (idRaw === 'evento') return renderEvento(parts()[2]);
   const A = estadoAgenda(), ctrl = isCtrl();
   const novo = idRaw === 'novo';
   const a = novo ? null : agendaAtiva().find(x => x.id === idRaw);
@@ -5139,7 +5168,9 @@ function renderAgendaItem(idRaw) {
     const n = Math.max(0, Math.min(90, parseInt(fPrazo.value, 10) || 0));
     if (!fData.value) { entrega.textContent = 'Escolha a data de entrada.'; return; }
     const k = n ? somaDias(fData.value, n) : fData.value;
-    entrega.textContent = n ? `Entrega prevista: ${DIAS_SEMANA[dataDe(k).getDay()].toLowerCase()}, ${brData(k)}` : 'Entrega no mesmo dia.';
+    const ev = eventosDoDia(fData.value)[0] || eventosDoDia(k)[0];
+    entrega.textContent = (n ? `Entrega prevista: ${DIAS_SEMANA[dataDe(k).getDay()].toLowerCase()}, ${brData(k)}` : 'Entrega no mesmo dia.')
+      + (ev ? ` Atenção: ${ev.titulo} (${periodoEvento(ev)}).` : '');
   };
   fData.addEventListener('change', calc); fPrazo.addEventListener('input', calc); calc();
   let status = a ? a.status : 'agendado';
@@ -5180,9 +5211,55 @@ function renderAgendaItem(idRaw) {
   if (!a) fCli.focus();
 }
 
+// Evento da agenda (Controle): título, de, até e observação. #/agenda/evento/novo ou #/agenda/evento/ID.
+function renderEvento(idRaw) {
+  const A = estadoAgenda();
+  if (!isCtrl()) return go('#/agenda');
+  const novo = !idRaw || idRaw === 'novo';
+  const e = novo ? null : eventosAtivos().find(x => x.id === idRaw);
+  if (!novo && !e) { toast('Evento não encontrado.', true); return go('#/agenda'); }
+  const fTit = el('input', { id: 'ev-tit', type: 'text', maxlength: '80', autocomplete: 'off', placeholder: 'Ex.: Reforma da loja (fechada)', value: e ? e.titulo : '' });
+  const fDe = el('input', { id: 'ev-de', type: 'date', value: e ? e.de : A.sel });
+  const fAte = el('input', { id: 'ev-ate', type: 'date', value: e ? e.ate : A.sel });
+  const fObs = el('textarea', { id: 'ev-obs', rows: '3', maxlength: '600', placeholder: 'Opcional' });
+  fObs.value = e ? e.obs : '';
+  const info = el('p', { class: 'hint' });
+  const calc = () => {
+    if (fDe.value && (!fAte.value || fAte.value < fDe.value)) fAte.value = fDe.value;
+    const n = fDe.value && fAte.value ? Math.round((dataDe(fAte.value) - dataDe(fDe.value)) / 864e5) + 1 : 0;
+    info.textContent = !n ? 'Escolha as datas.' : n === 1 ? 'Um dia só.' : `${n} dias, aparecem em vermelho na agenda como feriado.`;
+  };
+  fDe.addEventListener('change', calc); fAte.addEventListener('change', calc); calc();
+  const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button', onclick: () => {
+    const titulo = fTit.value.trim().replace(/\s+/g, ' ');
+    if (!titulo) { toast('Digite o nome do evento.', true); fTit.focus(); return; }
+    if (!fDe.value || !fAte.value) { toast('Escolha as datas.', true); return; }
+    if (Math.round((dataDe(fAte.value) - dataDe(fDe.value)) / 864e5) > 366) { toast('O evento pode ter no máximo um ano.', true); return; }
+    const reg = { id: e ? e.id : uid(), titulo, de: fDe.value, ate: fAte.value, obs: fObs.value.trim() };
+    if (commit(() => { DB.eventos = e ? eventosAtivos().map(x => x.id === e.id ? reg : x) : [...eventosAtivos(), reg]; })) {
+      const dt = dataDe(reg.de); Object.assign(A, { sel: reg.de, y: dt.getFullYear(), m: dt.getMonth(), modo: 'mes' });
+      toast(e ? 'Evento atualizado.' : 'Evento adicionado.'); go('#/agenda');
+    }
+  } }, e ? 'Salvar alterações' : 'Adicionar evento');
+  const excluir = e ? el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
+    if (!window.confirm(`Excluir o evento "${e.titulo}"? Ele sai da agenda, mas fica guardado no banco.`)) return;
+    if (commit(() => { DB.eventos = eventosAtivos().filter(x => x.id !== e.id); })) { toast('Evento excluído.'); go('#/agenda'); }
+  } }, 'Excluir evento') : null;
+  const campo = (id, label, input) => el('div', { class: 'field' }, el('label', { for: id, text: label }), input);
+  shell(el('div', { class: 'stack', style: 'max-width:640px' }, backLink('#/agenda', 'Agenda'),
+    el('h1', { text: e ? 'Editar evento' : 'Novo evento' }),
+    el('p', { class: 'hint', text: 'Dias que não são de cliente, como reforma ou loja fechada. Aparecem na agenda como feriado.' }),
+    el('div', { class: 'card' },
+      campo('ev-tit', 'Nome do evento', fTit),
+      el('div', { class: 'row' }, campo('ev-de', 'De', fDe), campo('ev-ate', 'Até', fAte)), info,
+      campo('ev-obs', 'Observação', fObs)),
+    salvar, excluir ? el('div', {}, excluir) : null), { current: 'agenda' });
+  if (!e) fTit.focus();
+}
+
 /* =====================================================================
    Tela: relatórios (Controle). Faturamento e estoque por período; PDF para baixar.
-   Faturamento = serviços concluídos no período (pela data de conclusão) que têm valor.
+   Faturamento = serviços com baixa do pagamento no período (pela data da baixa; ver recebidoEm).
    ===================================================================== */
 function periodoRel() {
   if (!S.rel) S.rel = { preset: 'mes' };
@@ -5209,16 +5286,26 @@ function calcularRelatorio(de, ate) {
   const dentro = ms => ms != null && ms >= ini && ms < fim;
   const concluidos = DB.atendimentos.filter(a => a.concluido && dentro(a.concluidoEm)).sort((a, b) => a.concluidoEm - b.concluidoEm);
   const comValor = concluidos.filter(a => a.valor != null);
-  const faturamento = round2(comValor.reduce((s, a) => s + a.valor, 0));
+  // Faturado = pagamento com baixa no período (não mais a conclusão). Concluído sem baixa fica em "Aguardando pagamento".
+  const pagos = DB.atendimentos.filter(a => a.valor != null && dentro(recebidoEm(a))).sort((a, b) => recebidoEm(a) - recebidoEm(b));
+  const faturamento = round2(pagos.reduce((s, a) => s + a.valor, 0));
+  const aguardando = DB.atendimentos.filter(a => a.concluido && a.valor != null && recebidoEm(a) == null);
+  const aguardandoValor = round2(aguardando.reduce((s, a) => s + aReceberDe(a), 0));
   const porTipo = new Map();
-  for (const a of comValor) { const t = porTipo.get(a.tipoNome || 'Sem tipo') || { qtd: 0, total: 0 }; t.qtd++; t.total = round2(t.total + a.valor); porTipo.set(a.tipoNome || 'Sem tipo', t); }
+  for (const a of pagos) { const t = porTipo.get(a.tipoNome || 'Sem tipo') || { qtd: 0, total: 0 }; t.qtd++; t.total = round2(t.total + a.valor); porTipo.set(a.tipoNome || 'Sem tipo', t); }
   const andamento = DB.atendimentos.filter(a => !a.concluido);
   const previsto = round2(andamento.reduce((s, a) => s + (a.valor || 0), 0));
   const movs = DB.estoque.movimentos.filter(m => dentro(m.em));
+  // Uso da Cabine Blindada (pedido de 04/11/2026): janela de pelo menos 30 dias terminando no fim do período (ou hoje), para
+  // a média não zerar na virada do mês. Período maior (ano, escolhido) usa o período inteiro.
+  const usoAte = ate < hojeISO() ? ate : hojeISO(), usoDe = somaDias(usoAte, -29) < de ? somaDias(usoAte, -29) : de;
+  const uIni = dataDe(usoDe).getTime(), uFim = dataDe(somaDias(usoAte, 1)).getTime();
+  const dentroUso = ms => ms != null && ms >= uIni && ms < uFim;
+  const saiuUso = itId => -round2(DB.estoque.movimentos.filter(m => m.itemId === itId && m.tipo === 'saida' && dentroUso(m.em)).reduce((s, m) => s + m.delta, 0));
   const itens = DB.estoque.itens.map(it => {
     const ms = movs.filter(m => m.itemId === it.id);
     const soma = tipo => round2(ms.filter(m => m.tipo === tipo).reduce((s, m) => s + m.delta, 0));
-    return { nome: it.nome, unidade: it.unidade, entrou: soma('entrada'), saiu: -soma('saida'), ajuste: soma('ajuste'), saldo: saldo(it.id) };
+    return { id: it.id, nome: it.nome, unidade: it.unidade, entrou: soma('entrada'), saiu: -soma('saida'), ajuste: soma('ajuste'), saldo: saldo(it.id) };
   });
   const porPessoa = new Map();
   for (const m of movs.filter(m => m.tipo === 'saida')) {
@@ -5231,18 +5318,19 @@ function calcularRelatorio(de, ate) {
   // expansiva divididas pelos Cabine Blindada que usaram o material no período (a retirada não fica ligada a um veículo).
   // O veículo conta no dia em que as etapas de vedação (isolamento interno e externo) ficaram feitas, mesmo ainda em
   // serviço; sem essas etapas (ou sem data), conta pela conclusão. Assim cada veículo entra uma vez só.
-  const cabine = DB.atendimentos.filter(a => /cabine\s*blindada/i.test(a.tipoNome || '') && dentro(diaDoUso(a)));
+  const cabine = DB.atendimentos.filter(a => /cabine\s*blindada/i.test(a.tipoNome || '') && dentroUso(diaDoUso(a)));
   // Manta asfáltica (pedido de 23/10/2026): a conta é invertida, veículos por rolo (veículos ÷ rolos retirados) em vez de rolo por veículo.
   // Sem retirada no período não há média (null). A espuma continua em retirada por veículo.
-  const usoCabine = { veiculos: cabine.length, emServico: cabine.filter(a => !a.concluido).length, linhas: itens.filter(i => /manta|espuma/i.test(i.nome))
+  const usoCabine = { de: usoDe, ate: usoAte, dias: Math.round((uFim - uIni) / 864e5), veiculos: cabine.length, emServico: cabine.filter(a => !a.concluido).length, linhas: itens.filter(i => /manta|espuma/i.test(i.nome))
     .map(i => {
-      const inverso = /manta/i.test(i.nome);
-      const media = inverso ? (cabine.length && i.saiu > 0 ? round2(cabine.length / i.saiu) : null) : (cabine.length ? round2(i.saiu / cabine.length) : null);
-      return { nome: i.nome, unidade: i.unidade, saiu: i.saiu, media, inverso };
+      const inverso = /manta/i.test(i.nome), saiu = saiuUso(i.id);
+      const media = inverso ? (cabine.length && saiu > 0 ? round2(cabine.length / saiu) : null) : (cabine.length ? round2(saiu / cabine.length) : null);
+      return { nome: i.nome, unidade: i.unidade, saiu, media, inverso };
     }) };
   return {
-    de, ate, concluidos, comValor, faturamento, semValor: concluidos.length - comValor.length, usoCabine,
-    ticket: comValor.length ? round2(faturamento / comValor.length) : 0,
+    de, ate, concluidos, comValor, pagos, faturamento, semValor: concluidos.length - comValor.length, usoCabine,
+    aguardando: aguardando.length, aguardandoValor,
+    ticket: pagos.length ? round2(faturamento / pagos.length) : 0,
     porTipo: [...porTipo].map(([tipo, t]) => ({ tipo, ...t })).sort((a, b) => b.total - a.total),
     andamento: andamento.length, previsto, itens,
     retiradas: [...porPessoa.values()].sort((a, b) => a.pessoa.localeCompare(b.pessoa) || a.material.localeCompare(b.material)),
@@ -5268,11 +5356,12 @@ function renderRelatorios() {
     finally { pdfBtn.disabled = false; preencher(pdfBtn, icon('file'), 'PDF'); }
   });
   // A receber dos serviços em andamento (valor menos a entrada paga).
-  const emServ = DB.atendimentos.filter(a => !a.concluido && a.valor != null);
+  const emServ = DB.atendimentos.filter(a => !a.concluido && a.valor != null && !a.pagamento); // com baixa já foi recebido
   const aReceber = round2(emServ.reduce((t, a) => t + aReceberDe(a), 0));
   const nConc = DB.atendimentos.filter(a => a.concluido).length, nCham = chamadosAbertos().length;
   const verTodos = S.rel.todos;
-  const linhasServ = r.concluidos.map(a => [fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']);
+  const situacaoPag = a => (a.valor == null ? 'Sem valor' : recebidoEm(a) != null ? 'Pago' : 'Pendente');
+  const linhasServ = r.concluidos.map(a => [brDia(isoDe(new Date(a.concluidoEm))), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor', situacaoPag(a)]);
 
   shell(el('div', { class: 'stack-lg', style: 'max-width:720px' },
     // Atalhos no topo: Histórico, Equipe (ao vivo) e Chamados, lado a lado.
@@ -5299,15 +5388,16 @@ function renderRelatorios() {
       el('div', { class: 'card rel-fat' },
         el('span', { class: 'label', text: 'Faturado no período' }),
         el('b', { class: 'rel-fat-num', text: fmtBRL(r.faturamento) }),
-        el('span', { class: 'hint', text: `${r.concluidos.length} ${r.concluidos.length === 1 ? 'serviço concluído' : 'serviços concluídos'} · ticket médio ${fmtBRL(r.ticket)}` }),
+        el('span', { class: 'hint', text: `${r.pagos.length} ${r.pagos.length === 1 ? 'pago' : 'pagos'} (pela baixa do pagamento) · ${r.concluidos.length} ${r.concluidos.length === 1 ? 'concluído' : 'concluídos'} · ticket médio ${fmtBRL(r.ticket)}` }),
         r.semValor ? el('p', { class: 'rel-aviso', text: `${r.semValor} ${r.semValor === 1 ? 'concluído sem valor lançado (fica fora do faturado)' : 'concluídos sem valor lançado (ficam fora do faturado)'}` }) : null,
-        el('div', { class: 'rel-fat-and' },
+        el('div', { class: 'rel-fat-and' + (r.aguardando ? ' tres' : '') },
+          r.aguardando ? el('div', {}, el('span', { class: 'label', text: `Aguardando pagamento (${r.aguardando})` }), el('b', { text: fmtBRL(r.aguardandoValor) }), el('span', { class: 'hint', text: 'concluídos sem baixa' })) : null,
           el('div', {}, el('span', { class: 'label', text: `Em serviço (${r.andamento})` }), el('b', { text: fmtBRL(r.previsto) }), el('span', { class: 'hint', text: 'valor previsto' })),
           el('div', {}, el('span', { class: 'label', text: 'A receber' }), el('b', { text: fmtBRL(aReceber) }), el('span', { class: 'hint', text: 'dos em serviço' })))),
       r.porTipo.length ? el('div', { class: 'card' }, el('h3', { text: 'Por tipo de serviço' }),
         tabela(['Tipo', 'Qtd.', 'Total'], r.porTipo.map(t => [t.tipo, String(t.qtd), fmtBRL(t.total)]), [1, 2])) : null,
       el('div', { class: 'card' }, el('h3', { text: 'Concluídos no período' }),
-        linhasServ.length ? tabela(['Conclusão', 'Placa', 'Cliente', 'Valor'], verTodos ? linhasServ : linhasServ.slice(0, 10), [3]) : el('p', { class: 'hint', text: 'Nenhum serviço concluído no período.' }),
+        linhasServ.length ? tabela(['Data', 'Placa', 'Cliente', 'Valor', 'Pgto.'], verTodos ? linhasServ : linhasServ.slice(0, 10), [3]) : el('p', { class: 'hint', text: 'Nenhum serviço concluído no período.' }),
         linhasServ.length > 10 ? el('div', {}, el('button', { class: 'link-btn', type: 'button', onclick: () => { S.rel.todos = !verTodos; redraw(); } },
           verTodos ? 'Mostrar menos' : `Mostrar todos (${linhasServ.length})`)) : null)),
     el('section', { class: 'stack' },
@@ -5317,9 +5407,9 @@ function renderRelatorios() {
           el('span', { class: 'label', text: l.nome }),
           el('b', { text: l.media == null ? '-' : l.inverso ? `${fmtQ(l.media)} ${l.media === 1 ? 'veículo' : 'veículos'}` : `${fmtQ(l.media)} ${l.unidade}` }),
           el('span', { class: 'hint', text: `${l.inverso ? `por ${l.unidade}` : 'por veículo'} · saiu ${fmtQ(l.saiu)} ${l.unidade}` })))),
-        el('p', { class: 'hint', text: r.usoCabine.veiculos
-          ? `Média de ${r.usoCabine.veiculos} Cabine Blindada com a vedação feita no período${r.usoCabine.emServico ? ` (${r.usoCabine.emServico} ainda em serviço)` : ''}. Manta: veículos por rolo retirado. Espuma: retirada por veículo.`
-          : 'Nenhum Cabine Blindada com a vedação feita no período.' })) : null,
+        el('p', { class: 'hint', text: `${r.usoCabine.dias} dias, de ${brData(r.usoCabine.de)} a ${brData(r.usoCabine.ate)} (não zera na virada do mês). ` + (r.usoCabine.veiculos
+          ? `Média de ${r.usoCabine.veiculos} Cabine Blindada com a vedação feita${r.usoCabine.emServico ? ` (${r.usoCabine.emServico} ainda em serviço)` : ''}. Manta: veículos por rolo retirado. Espuma: retirada por veículo.`
+          : 'Nenhum Cabine Blindada com a vedação feita nesses dias.') })) : null,
       el('div', { class: 'card' }, el('h3', { text: 'Materiais no período' }),
         r.itens.length ? tabela(['Material', 'Entrou', 'Saiu', 'Saldo hoje'], r.itens.map(i => [i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), [1, 2, 3])
           : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
@@ -5392,18 +5482,21 @@ async function baixarRelatorioPDF(r) {
   };
   const dir = n => Object.fromEntries(n.map(i => [i, { halign: 'right' }]));
   tab('Faturamento', ['Indicador', 'Valor'], [
-    ['Faturado no período (serviços concluídos com valor)', fmtBRL(r.faturamento)],
+    ['Faturado no período (pagamentos com baixa no período)', fmtBRL(r.faturamento)],
+    ['Pagamentos recebidos', String(r.pagos.length)],
     ['Serviços concluídos', String(r.concluidos.length)],
+    [`Aguardando pagamento hoje (${r.aguardando} concluídos sem baixa)`, fmtBRL(r.aguardandoValor)],
     ['Ticket médio', fmtBRL(r.ticket)],
     ['Concluídos sem valor lançado', String(r.semValor)],
     [`Em andamento hoje (${r.andamento}), valor previsto`, fmtBRL(r.previsto)],
   ], dir([1]));
   tab('Por tipo de serviço', ['Tipo', 'Qtd.', 'Total'], r.porTipo.map(t => [t.tipo, String(t.qtd), fmtBRL(t.total)]), dir([1, 2]));
-  tab('Serviços concluídos', ['Conclusão', 'Placa', 'Cliente', 'Veículo', 'Tipo', 'Valor'], r.concluidos.map(a => [
-    fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', (DB.veiculos[a.placa] || {}).descricao || '', a.tipoNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor']), dir([5]));
+  tab('Serviços concluídos', ['Conclusão', 'Placa', 'Cliente', 'Veículo', 'Tipo', 'Valor', 'Pagamento'], r.concluidos.map(a => [
+    fmtDia(a.concluidoEm), fmtPlaca(a.placa), a.clienteNome || '', (DB.veiculos[a.placa] || {}).descricao || '', a.tipoNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor',
+    a.valor == null ? '-' : recebidoEm(a) != null ? 'Pago' : 'Pendente']), dir([5]));
   tab('Estoque no período', ['Material', 'Entrou', 'Saiu', 'Contagem (ajuste)', 'Saldo hoje'], r.itens.map(i => [
     i.nome, `${fmtQ(i.entrou)} ${i.unidade}`, `${fmtQ(i.saiu)} ${i.unidade}`, `${i.ajuste > 0 ? '+' : ''}${fmtQ(i.ajuste)} ${i.unidade}`, `${fmtQ(i.saldo)} ${i.unidade}`]), dir([1, 2, 3, 4]));
-  if (r.usoCabine.linhas.length && r.usoCabine.veiculos) tab(`Uso por veículo: Cabine Blindada (${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'veículo' : 'veículos'})`, ['Material', 'Saiu no período', 'Média'],
+  if (r.usoCabine.linhas.length && r.usoCabine.veiculos) tab(`Uso por veículo: Cabine Blindada (${r.usoCabine.veiculos} ${r.usoCabine.veiculos === 1 ? 'veículo' : 'veículos'}, ${brData(r.usoCabine.de)} a ${brData(r.usoCabine.ate)})`, ['Material', 'Saiu nesses dias', 'Média'],
     r.usoCabine.linhas.map(l => [l.nome, `${fmtQ(l.saiu)} ${l.unidade}`, l.media == null ? '-' : l.inverso ? `${fmtQ(l.media)} ${l.media === 1 ? 'veículo' : 'veículos'} por ${l.unidade}` : `${fmtQ(l.media)} ${l.unidade} por veículo`]), dir([1, 2]));
   tab('Retiradas por pessoa', ['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), dir([2]));
   const n = doc.getNumberOfPages();
