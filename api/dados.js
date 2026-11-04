@@ -3,7 +3,7 @@
 //   POST /api/dados  { ops: [...], por: {id, nome} } grava as mudanças, uma por uma, na ordem.
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
-//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | eventos | opcionais | chamados
+//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | eventos | opcionais | chamados | convites
 //   Só do Controle: ajustes, senha, opcionais (lista de Ajustes), agenda (o Funcionário só vê a agenda, com valores,
 //   e pode usar 'agenda:entrada', que só marca o agendamento como "em serviço" ao dar entrada no veículo;
 //   quando esse serviço é concluído, o agendamento vira "concluído" aqui mesmo)
@@ -28,7 +28,7 @@ async function carregar(c, eu) {
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
   const desde7 = encodeURIComponent(`"${new Date(Date.now() - 7 * 864e5).toISOString()}"`);
-  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos, eventos] = await Promise.all([
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos, eventos, convites] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -49,6 +49,8 @@ async function carregar(c, eu) {
     rest(c, `sd_push_envios?select=id,tipo,titulo,texto,url,por_nome,em&tipo=neq.teste&para=cs.${encodeURIComponent(JSON.stringify([eu.id]))}&or=(por_id.is.null,por_id.neq.${encodeURIComponent(eu.id)},tipo.eq.conclusao)&em=gte.${desde7}&order=em.desc&limit=80`),
     // Eventos da agenda que não são cliente (ex.: reforma da loja), como um feriado. Todos veem; só o Controle muda.
     restAll(c, 'sd_agenda_eventos?select=id,titulo,de,ate,obs&excluido_em=is.null&order=de,id'),
+    // Convites do casamento de Petherson e Anna (tabela cv_convites, site petherson-e-anna.vercel.app). Só o Controle.
+    ctrl ? restAll(c, 'cv_convites?select=slug,convidados,papel,resposta,pessoas,respondido_em,aberto_em,aberturas,criado_em&excluido_em=is.null&order=criado_em.desc,slug') : Promise.resolve(null),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -118,6 +120,10 @@ async function carregar(c, eu) {
       prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada), obs: a.obs || '', status: a.status,
     })),
     eventos: (eventos || []).map(e => ({ id: e.id, titulo: e.titulo, de: String(e.de).slice(0, 10), ate: String(e.ate).slice(0, 10), obs: e.obs || '' })),
+    ...(convites ? { convites: convites.map(v => ({
+      slug: v.slug, convidados: v.convidados, papel: v.papel, resposta: v.resposta || null, pessoas: Array.isArray(v.pessoas) ? v.pessoas : [],
+      respondidoEm: ms(v.respondido_em), abertoEm: ms(v.aberto_em), aberturas: v.aberturas || 0, criadoEm: ms(v.criado_em),
+    })) } : {}),
   };
 }
 
@@ -130,10 +136,14 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir', 'convites:salvar', 'convites:excluir']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
+const RE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+// Endereço do convite a partir dos nomes: "João & Maria" vira "joao-e-maria".
+const slugDe = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' e ')
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
 function id(v, campo = 'id') { const s = String(v == null ? '' : v); if (!RE_ID.test(s)) throw invalido(campo); return s; }
 function idOuNulo(v, campo) { return v == null || v === '' ? null : id(v, campo); }
 function num(v, campo) { const n = Number(v); if (v === null || v === '' || !Number.isFinite(n) || Math.abs(n) > 1e9) throw invalido(campo); return Math.round(n * 100) / 100; }
@@ -446,6 +456,24 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (!RE_DATA.test(ate) || isNaN(Date.parse(ate)) || ate < de || Date.parse(ate) - Date.parse(de) > 366 * 864e5) throw invalido('ate');
       return upsert(c, 'sd_agenda_eventos', { id: id(it.id), titulo, de, ate, obs: txt(it.obs, 600), atualizado_em: agora() });
     }
+    // Convites do casamento (Controle): criar (o endereço sai dos nomes; repetido ganha -2, -3...), editar nomes e papel, excluir (só marca).
+    case 'convites:salvar': {
+      const convidados = txt(it.convidados, 80); if (!convidados) throw invalido('convidados');
+      const papel = it.papel === 'Convidados' ? 'Convidados' : 'Padrinhos';
+      if (it.slug) {
+        if (!RE_SLUG.test(String(it.slug))) throw invalido('slug');
+        return marcar(c, 'cv_convites', `slug=eq.${q(it.slug)}&excluido_em=is.null`, { convidados, papel });
+      }
+      const base = slugDe(convidados); if (!base) throw invalido('convidados');
+      const usados = new Set((await rest(c, `cv_convites?select=slug&slug=like.${q(base)}*`) || []).map(x => x.slug));
+      let slug = base;
+      for (let n = 2; usados.has(slug); n++) slug = `${base}-${n}`;
+      await rest(c, 'cv_convites', { method: 'POST', body: { slug, convidados, papel, criado_por: quem }, prefer: 'return=minimal' });
+      return;
+    }
+    case 'convites:excluir':
+      if (!RE_SLUG.test(String(op.slug || ''))) throw invalido('slug');
+      return marcar(c, 'cv_convites', `slug=eq.${q(op.slug)}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem });
     case 'eventos:remover':
       return marcar(c, 'sd_agenda_eventos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
     // Entrada do veículo feita a partir do agendamento: qualquer pessoa da equipe pode marcar como concluído.

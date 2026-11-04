@@ -757,6 +757,34 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .rt-vivo { width: 7px; height: 7px; border-radius: 50%; background: #2FBF6B; animation: pulso-verde 1.6s ease-out infinite; }
 .rt-badge { position: absolute; top: 10px; right: 10px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #E5484D; color: #fff; font: 700 11px/20px var(--body); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .rt-vivo { animation: none; } }
+/* Convites do casamento (Relatórios > Convites, só Controle; pedido de 04/11/2026) */
+.rel-convite { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; text-decoration: none; color: #fff;
+  background: linear-gradient(120deg, #1d1a16 0%, #2b241b 55%, #3a2f20 100%); box-shadow: 0 8px 20px rgba(0, 0, 0, .14); border: 1px solid rgba(214, 178, 110, .28); }
+.rel-convite .rt-ico { margin: 0; flex: none; color: #E2C487; background: rgba(214, 178, 110, .12); border-color: rgba(214, 178, 110, .3); }
+.rel-convite .rc-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rel-convite .rc-sub { font-size: 12px; color: rgba(255, 255, 255, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rel-convite .rc-num { flex: none; text-align: right; display: grid; gap: 1px; }
+.rel-convite .rc-num b { font: 700 20px/1 var(--cond); color: #E2C487; }
+.rel-convite .rc-num span { font-size: 11px; color: rgba(255, 255, 255, .6); }
+.rel-convite .rc-chev { flex: none; opacity: .6; display: grid; }
+.rel-convite .rc-chev svg { width: 18px; height: 18px; }
+.cv-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cv-resumo > div { display: grid; gap: 2px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.cv-resumo b { font: 700 24px/1 var(--cond); }
+.cv-resumo span { font-size: 12px; color: var(--muted); }
+.cv-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cv-item { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.cv-item.ok { border-color: rgba(31, 122, 66, .35); }
+.cv-topo { display: flex; align-items: flex-start; gap: 10px; }
+.cv-nome { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cv-nome b { font-size: 16px; font-weight: 600; }
+.cv-nome span { font-size: 13px; color: var(--muted); }
+.cv-sit { flex: none; font: 700 12px/1 var(--body); padding: 5px 9px; border-radius: 999px; background: #EDEDEB; color: var(--ink-2); }
+.cv-item.ok .cv-sit { background: rgba(31, 122, 66, .12); color: var(--ok); }
+.cv-pessoas { display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-link { font-size: 12px; color: var(--muted); word-break: break-all; }
+.cv-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cv-acoes .link-btn { margin-left: auto; }
 .seg.seg-linha { display: flex; width: 100%; flex-wrap: nowrap; }
 .seg.seg-linha button { flex: 1; padding: 10px 4px; white-space: nowrap; }
 .rel-fat { gap: 4px; }
@@ -1361,7 +1389,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -2167,6 +2195,132 @@ function renderChamados() {
     el('h1', { text: 'Chamados' }),
     secaoChamados(redraw)), { current: 'relatorios' });
 }
+/* ---------- Convites do casamento de Petherson e Anna (pedido de 04/11/2026) ----------
+   Site do convite: petherson-e-anna.vercel.app/<nome-do-casal> (projeto Vercel convite-petherson-anna, pasta
+   convite-casamento/ do repositório Strike-Details). Tabela cv_convites: o convidado confirma no site (até 4 nomes);
+   aqui o Controle vê as respostas, cria convites, copia o link e exclui (só marca). Fica em Relatórios, só para o Controle. */
+const SITE_CONVITE = 'https://petherson-e-anna.vercel.app';
+const ICONE_ALIANCAS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="14" r="5.5"/><circle cx="15" cy="14" r="5.5"/><path d="M9.5 5.5 12 3l2.5 2.5"/></svg>';
+const linkConvite = v => `${SITE_CONVITE}/${v.slug}`;
+function resumoConvites() {
+  const todos = DB.convites || [], conf = todos.filter(v => v.resposta === 'sim');
+  return { todos, conf, agu: todos.filter(v => v.resposta !== 'sim'), pessoas: conf.reduce((t, v) => t + v.pessoas.length, 0) };
+}
+function botaoConvites() {
+  const r = resumoConvites();
+  return el('a', { class: 'rel-convite', href: '#/convites', 'aria-label': `Convites do casamento, ${r.conf.length} de ${r.todos.length} confirmados, ${r.pessoas} pessoas` },
+    el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICONE_ALIANCAS }),
+    el('span', { class: 'rc-txt' }, el('span', { class: 'rt-tit', text: 'Convites do casamento' }),
+      el('span', { class: 'rc-sub', text: r.todos.length ? `Petherson & Anna · ${r.conf.length} de ${r.todos.length} confirmados` : 'Petherson & Anna · nenhum convite criado' })),
+    el('span', { class: 'rc-num' }, el('b', { text: String(r.pessoas) }), el('span', { text: r.pessoas === 1 ? 'pessoa' : 'pessoas' })),
+    el('span', { class: 'rc-chev', 'aria-hidden': 'true', html: ICON.chev }));
+}
+async function copiarTexto(texto, ok) {
+  try { await navigator.clipboard.writeText(texto); toast(ok); }
+  catch { window.prompt('Copie:', texto); }
+}
+function renderConvites() {
+  const redraw = () => { const y = window.scrollY; renderConvites(); window.scrollTo(0, y); };
+  const { todos, conf, agu, pessoas } = resumoConvites();
+  const aba = ['confirmados', 'aguardando'].includes(S.convAba) ? S.convAba : 'todos';
+  const lista = aba === 'confirmados' ? conf : aba === 'aguardando' ? agu : todos;
+  const enviar = async (op, msg) => {
+    try { await apiJson('/api/dados', { method: 'POST', body: { ops: [op] } }); if (msg) toast(msg); }
+    catch { toast('Não deu para salvar agora.', true); return false; }
+    await buscarDados({ forcar: true }).catch(() => {});
+    return true;
+  };
+
+  // Novo convite: nomes do casal e se são padrinhos ou convidados. O endereço sai dos nomes.
+  const novo = S.convNovo = S.convNovo || { aberto: false, papel: 'Padrinhos' };
+  const papelSeg = (obj, onpick) => el('div', { class: 'seg', role: 'group', 'aria-label': 'Papel' },
+    ['Padrinhos', 'Convidados'].map(p => el('button', { type: 'button', 'aria-pressed': String(obj.papel === p), onclick: () => { obj.papel = p; onpick(); } }, p)));
+  let formNovo = null;
+  if (novo.aberto) {
+    const fNomes = el('input', { type: 'text', maxlength: '80', placeholder: 'Ex.: João & Maria', value: novo.nomes || '', 'aria-label': 'Nomes do casal', oninput: e => { novo.nomes = e.target.value; } });
+    const criar = el('button', { class: 'btn btn--primary', type: 'button', onclick: async () => {
+      const nomes = fNomes.value.trim(); if (!nomes) { toast('Escreva os nomes.', true); fNomes.focus(); return; }
+      criar.disabled = true;
+      if (await enviar({ col: 'convites', acao: 'salvar', item: { convidados: nomes, papel: novo.papel } }, 'Convite criado.')) { S.convNovo = { aberto: false, papel: novo.papel }; S.convAba = 'todos'; }
+      redraw();
+    } }, icon('check'), 'Criar convite');
+    formNovo = el('div', { class: 'card stack' },
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nomes do casal (como aparece no convite)' }), fNomes),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Papel' }), papelSeg(novo, redraw)),
+      el('div', { class: 'row', style: 'gap:8px;justify-content:flex-end' }, el('button', { class: 'btn', type: 'button', onclick: () => { novo.aberto = false; redraw(); } }, 'Cancelar'), criar));
+    setTimeout(() => { if (fNomes.isConnected && !fNomes.value) fNomes.focus(); }, 50);
+  }
+
+  const cartao = v => {
+    const ok = v.resposta === 'sim';
+    const link = linkConvite(v);
+    const edit = S.convEdit && S.convEdit.slug === v.slug ? S.convEdit : null;
+    const excluir = el('button', { class: 'link-btn', type: 'button', onclick: async () => {
+      if (!excluir.dataset.conf) { excluir.dataset.conf = '1'; excluir.textContent = 'Tocar de novo para excluir'; setTimeout(() => { if (excluir.isConnected) { delete excluir.dataset.conf; excluir.textContent = 'Excluir'; } }, 4000); return; }
+      excluir.disabled = true;
+      await enviar({ col: 'convites', acao: 'excluir', slug: v.slug }, 'Convite excluído.'); redraw();
+    } }, 'Excluir');
+    const msgWa = `${v.convidados}, Petherson & Anna têm um convite especial para vocês. Toque para abrir: ${link}`;
+    let corpo;
+    if (edit) {
+      const fN = el('input', { type: 'text', maxlength: '80', value: edit.convidados, 'aria-label': 'Nomes do casal', oninput: e => { edit.convidados = e.target.value; } });
+      const salvar = el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async () => {
+        if (!edit.convidados.trim()) { toast('Escreva os nomes.', true); return; }
+        salvar.disabled = true;
+        if (await enviar({ col: 'convites', acao: 'salvar', item: { slug: v.slug, convidados: edit.convidados.trim(), papel: edit.papel } }, 'Convite salvo.')) S.convEdit = null;
+        redraw();
+      } }, 'Salvar');
+      corpo = [el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nomes do casal' }), fN),
+        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Papel' }), papelSeg(edit, redraw)),
+        el('p', { class: 'hint', text: 'O link continua o mesmo.' }),
+        el('div', { class: 'cv-acoes' }, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = null; redraw(); } }, 'Cancelar'), salvar)];
+    } else {
+      corpo = [
+        ok ? el('div', { class: 'cv-pessoas' }, v.pessoas.map(n => el('span', { class: 'tag', text: n }))) : null,
+        el('span', { class: 'cv-link', text: link.replace(/^https:\/\//, '') }),
+        el('div', { class: 'cv-acoes' },
+          el('button', { class: 'btn btn--sm', type: 'button', onclick: () => copiarTexto(link, 'Link copiado. É só colar no WhatsApp.') }, 'Copiar link'),
+          el('a', { class: 'btn btn--sm', href: `https://wa.me/?text=${encodeURIComponent(msgWa)}`, target: '_blank', rel: 'noopener' }, icon('wa'), 'WhatsApp'),
+          el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = { slug: v.slug, convidados: v.convidados, papel: v.papel }; redraw(); } }, 'Editar'),
+          excluir)];
+    }
+    const situacao = ok ? `Confirmado ${quandoCurto(v.respondidoEm)} · ${v.pessoas.length} ${v.pessoas.length === 1 ? 'pessoa' : 'pessoas'}`
+      : v.aberturas ? `Abriu o link ${v.aberturas} ${v.aberturas === 1 ? 'vez' : 'vezes'} (a primeira ${quandoCurto(v.abertoEm)})` : 'Ainda não abriu o link';
+    return el('li', { class: 'cv-item' + (ok ? ' ok' : '') },
+      el('div', { class: 'cv-topo' },
+        el('div', { class: 'cv-nome' }, el('b', { text: v.convidados }), el('span', { text: `${v.papel} · ${situacao}` })),
+        el('span', { class: 'cv-sit', text: ok ? 'Confirmado' : 'Aguardando' })),
+      corpo);
+  };
+
+  // Lista de presença (para buffet, cerimonial): todos os nomes confirmados, separados por padrinhos e convidados.
+  const copiarPresenca = () => {
+    const bloco = papel => { const vs = conf.filter(v => v.papel === papel); if (!vs.length) return '';
+      return `${papel} (${vs.reduce((t, v) => t + v.pessoas.length, 0)})\n` + vs.map(v => v.pessoas.map(n => `- ${n}`).join('\n')).join('\n'); };
+    const txt = [bloco('Padrinhos'), bloco('Convidados')].filter(Boolean).join('\n\n');
+    copiarTexto(`Lista de presença · Petherson & Anna\n${pessoas} ${pessoas === 1 ? 'pessoa confirmada' : 'pessoas confirmadas'}\n\n${txt}`, 'Lista de presença copiada.');
+  };
+
+  shell(el('div', { class: 'stack', style: 'max-width:720px' },
+    backLink('#/relatorios', 'Relatórios'),
+    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Convites' }),
+      novo.aberto ? null : el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => { novo.aberto = true; novo.nomes = ''; redraw(); } }, icon('plus'), 'Convite')),
+    el('p', { class: 'hint', text: 'Casamento de Petherson & Anna · cada casal tem um link próprio para confirmar a presença.' }),
+    formNovo,
+    el('div', { class: 'cv-resumo' },
+      el('div', {}, el('b', { text: `${conf.length}/${todos.length}` }), el('span', { text: 'convites confirmados' })),
+      el('div', {}, el('b', { text: String(pessoas) }), el('span', { text: pessoas === 1 ? 'pessoa confirmada' : 'pessoas confirmadas' })),
+      el('div', {}, el('b', { text: String(agu.length) }), el('span', { text: 'aguardando' }))),
+    conf.length ? el('button', { class: 'btn btn--block', type: 'button', onclick: copiarPresenca }, 'Copiar lista de presença') : null,
+    todos.length ? el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Filtro', style: 'display:flex;width:100%' },
+      [['todos', 'Todos', todos.length], ['confirmados', 'Confirmados', conf.length], ['aguardando', 'Aguardando', agu.length]].map(([k, t, n]) =>
+        el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 8px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k),
+          onclick: () => { S.convAba = k; redraw(); } }, t, el('span', { class: 'seg-n', text: String(n) })))) : null,
+    lista.length ? el('ul', { class: 'cv-lista' }, lista.map(cartao))
+      : el('p', { class: 'empty', text: todos.length ? 'Nenhum convite aqui.' : 'Nenhum convite ainda. Toque em "+ Convite" para criar o primeiro.' })),
+  { current: 'relatorios' });
+}
+
 // #/problema (Funcionário; o Controle também abre pelo endereço)
 function renderProblema() {
   const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
@@ -2528,7 +2682,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -2809,6 +2963,7 @@ function route(opts) {
     case 'ajustes': return isCtrl() ? renderSettings() : go('#/inicio');
     case 'problema': return renderProblema();
     case 'chamados': return isCtrl() ? renderChamados() : go('#/notificacoes'); // aviso de chamado no celular do Funcionário
+    case 'convites': return isCtrl() ? renderConvites() : go('#/inicio');
     case 'notificacoes': return renderAvisos();
     default: return renderHome();
   }
@@ -5418,6 +5573,7 @@ function renderRelatorios() {
           nCham ? el('span', { class: 'rt-badge', 'aria-hidden': 'true', text: String(nCham) }) : null,
           el('span', { class: 'rt-tit', text: 'Chamados' }),
           el('span', { class: 'rt-sub', text: nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto' }))),
+    botaoConvites(),
     // Título (com o PDF) logo acima do período
     el('div', { class: 'rel-topo' },
       el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Relatórios' }), pdfBtn),
