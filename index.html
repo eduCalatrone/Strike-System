@@ -784,7 +784,13 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .cv-pessoas { display: flex; flex-wrap: wrap; gap: 6px; }
 .cv-link { font-size: 12px; color: var(--muted); word-break: break-all; }
 .cv-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.cv-acoes .link-btn { margin-left: auto; }
+.cv-acoes .link-btn:last-child { margin-left: auto; }
+.cv-form { display: grid; gap: 8px; }
+.cv-det { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.cv-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+.cv-dl dt { color: var(--muted); }
+.cv-dl dd { margin: 0; word-break: break-word; }
+.cv-grupo { margin: 4px 0 0; font-size: 15px; }
 .seg.seg-linha { display: flex; width: 100%; flex-wrap: nowrap; }
 .seg.seg-linha button { flex: 1; padding: 10px 4px; white-space: nowrap; }
 .rel-fat { gap: 4px; }
@@ -1389,7 +1395,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -2195,23 +2201,27 @@ function renderChamados() {
     el('h1', { text: 'Chamados' }),
     secaoChamados(redraw)), { current: 'relatorios' });
 }
-/* ---------- Convites do casamento de Petherson e Anna (pedido de 04/11/2026) ----------
-   Site do convite: petherson-e-anna.vercel.app/<nome-do-casal> (projeto Vercel convite-petherson-anna, pasta
-   convite-casamento/ do repositório Strike-Details). Tabela cv_convites: o convidado confirma no site (até 4 nomes);
-   aqui o Controle vê as respostas, cria convites, copia o link e exclui (só marca). Fica em Relatórios, só para o Controle. */
+/* ---------- Convites do casamento de Petherson e Anna (pedido de 04/11/2026; simplificado no mesmo dia) ----------
+   Site: petherson-e-anna.vercel.app (projeto Vercel convite-petherson-anna, pasta convite-casamento/ do repositório Strike-Details).
+   Padrinhos: um link por casal (/<slug>). Convidados: um link só (o endereço principal); escrevem os nomes e escolhem os padrinhos
+   que convidaram. Cada confirmação guarda hora, aparelho e cidade aproximada (meta). O perfil de teste (/teste) nunca grava. */
 const SITE_CONVITE = 'https://petherson-e-anna.vercel.app';
 const ICONE_ALIANCAS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="14" r="5.5"/><circle cx="15" cy="14" r="5.5"/><path d="M9.5 5.5 12 3l2.5 2.5"/></svg>';
 const linkConvite = v => `${SITE_CONVITE}/${v.slug}`;
 function resumoConvites() {
-  const todos = DB.convites || [], conf = todos.filter(v => v.resposta === 'sim');
-  return { todos, conf, agu: todos.filter(v => v.resposta !== 'sim'), pessoas: conf.reduce((t, v) => t + v.pessoas.length, 0) };
+  const padrinhos = (DB.convites || []).filter(v => v.papel === 'Padrinhos' && !v.teste);
+  const teste = (DB.convites || []).filter(v => v.teste);
+  const padConf = padrinhos.filter(v => v.resposta === 'sim');
+  const convidados = DB.confirmacoes || [];
+  const nPad = padConf.reduce((t, v) => t + v.pessoas.length, 0), nConv = convidados.reduce((t, x) => t + x.pessoas.length, 0);
+  return { padrinhos, teste, padConf, convidados, nPad, nConv, pessoas: nPad + nConv };
 }
 function botaoConvites() {
   const r = resumoConvites();
-  return el('a', { class: 'rel-convite', href: '#/convites', 'aria-label': `Convites do casamento, ${r.conf.length} de ${r.todos.length} confirmados, ${r.pessoas} pessoas` },
+  return el('a', { class: 'rel-convite', href: '#/convites', 'aria-label': `Convites do casamento, ${r.pessoas} pessoas confirmadas` },
     el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICONE_ALIANCAS }),
     el('span', { class: 'rc-txt' }, el('span', { class: 'rt-tit', text: 'Convites do casamento' }),
-      el('span', { class: 'rc-sub', text: r.todos.length ? `Petherson & Anna · ${r.conf.length} de ${r.todos.length} confirmados` : 'Petherson & Anna · nenhum convite criado' })),
+      el('span', { class: 'rc-sub', text: `Padrinhos ${r.padConf.length}/${r.padrinhos.length} · Convidados ${r.convidados.length}` })),
     el('span', { class: 'rc-num' }, el('b', { text: String(r.pessoas) }), el('span', { text: r.pessoas === 1 ? 'pessoa' : 'pessoas' })),
     el('span', { class: 'rc-chev', 'aria-hidden': 'true', html: ICON.chev }));
 }
@@ -2219,105 +2229,150 @@ async function copiarTexto(texto, ok) {
   try { await navigator.clipboard.writeText(texto); toast(ok); }
   catch { window.prompt('Copie:', texto); }
 }
+// Aparelho e cidade de quem confirmou, curtos para a lista; o completo fica em "Detalhes".
+function aparelhoDe(m, srv) {
+  m = m || {}; const ua = m.user_agent || (srv && srv.user_agent) || '';
+  let ap = m.modelo || (/iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (((ua.match(/Android [\d.]+; ([^;)]+)/) || [])[1]) || 'Android') : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'Mac' : '');
+  if (ap === 'K') ap = 'Android';
+  return [ap, m.navegador].filter(Boolean).join(' · ');
+}
+const cidadeDe = m => { const l = m && m.local; return l ? [l.cidade, l.estado].filter(Boolean).join('/') : ''; };
+function detalhesConfirmacao(m, srv, quando, extra = []) {
+  m = m || {}; srv = srv || {}; const l = m.local || {};
+  const linhas = [
+    ['Confirmado em', quando ? new Date(quando).toLocaleString('pt-BR') : ''],
+    ['Cidade (aprox.)', [l.cidade, l.estado, l.pais].filter(Boolean).join(', ')],
+    ['Provedor', l.provedor], ['IP', l.ip || srv.ip],
+    ['Aparelho', aparelhoDe(m, srv)], ['Sistema', m.sistema || m.plataforma], ['Tela', m.tela],
+    ['Idioma e fuso', [m.idioma, m.fuso].filter(Boolean).join(' · ')], ['Hora do aparelho', m.hora_aparelho],
+    ['Abriu o convite', m.aberto_em ? new Date(m.aberto_em).toLocaleString('pt-BR') : ''],
+    ...extra,
+  ].filter(([, v]) => v != null && v !== '');
+  return el('dl', { class: 'cv-dl' }, linhas.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: String(v) })]));
+}
 function renderConvites() {
   const redraw = () => { const y = window.scrollY; renderConvites(); window.scrollTo(0, y); };
-  const { todos, conf, agu, pessoas } = resumoConvites();
-  const aba = ['confirmados', 'aguardando'].includes(S.convAba) ? S.convAba : 'todos';
-  const lista = aba === 'confirmados' ? conf : aba === 'aguardando' ? agu : todos;
+  const r = resumoConvites();
+  const aba = S.convAba === 'convidados' ? 'convidados' : 'padrinhos';
   const enviar = async (op, msg) => {
     try { await apiJson('/api/dados', { method: 'POST', body: { ops: [op] } }); if (msg) toast(msg); }
     catch { toast('Não deu para salvar agora.', true); return false; }
     await buscarDados({ forcar: true }).catch(() => {});
     return true;
   };
+  const botaoExcluir = (op, msg) => {
+    const b = el('button', { class: 'link-btn', type: 'button', onclick: async () => {
+      if (!b.dataset.conf) { b.dataset.conf = '1'; b.textContent = 'Tocar de novo para excluir'; setTimeout(() => { if (b.isConnected) { delete b.dataset.conf; b.textContent = 'Excluir'; } }, 4000); return; }
+      b.disabled = true; await enviar(op, msg); redraw();
+    } }, 'Excluir');
+    return b;
+  };
+  const acoesLink = (link, msg) => [
+    el('button', { class: 'btn btn--sm', type: 'button', onclick: () => copiarTexto(link, 'Link copiado.') }, 'Copiar link'),
+    el('a', { class: 'btn btn--sm', href: `https://wa.me/?text=${encodeURIComponent(msg)}`, target: '_blank', rel: 'noopener' }, icon('wa'), 'WhatsApp')];
+  const nomePad = slug => { const v = (DB.convites || []).find(x => x.slug === slug); return v ? v.convidados : 'Padrinhos'; };
 
-  // Novo convite: nomes do casal e se são padrinhos ou convidados. O endereço sai dos nomes.
-  const novo = S.convNovo = S.convNovo || { aberto: false, papel: 'Padrinhos' };
-  const papelSeg = (obj, onpick) => el('div', { class: 'seg', role: 'group', 'aria-label': 'Papel' },
-    ['Padrinhos', 'Convidados'].map(p => el('button', { type: 'button', 'aria-pressed': String(obj.papel === p), onclick: () => { obj.papel = p; onpick(); } }, p)));
-  let formNovo = null;
-  if (novo.aberto) {
-    const fNomes = el('input', { type: 'text', maxlength: '80', placeholder: 'Ex.: João & Maria', value: novo.nomes || '', 'aria-label': 'Nomes do casal', oninput: e => { novo.nomes = e.target.value; } });
-    const criar = el('button', { class: 'btn btn--primary', type: 'button', onclick: async () => {
-      const nomes = fNomes.value.trim(); if (!nomes) { toast('Escreva os nomes.', true); fNomes.focus(); return; }
-      criar.disabled = true;
-      if (await enviar({ col: 'convites', acao: 'salvar', item: { convidados: nomes, papel: novo.papel } }, 'Convite criado.')) { S.convNovo = { aberto: false, papel: novo.papel }; S.convAba = 'todos'; }
-      redraw();
-    } }, icon('check'), 'Criar convite');
-    formNovo = el('div', { class: 'card stack' },
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nomes do casal (como aparece no convite)' }), fNomes),
-      el('div', { class: 'field' }, el('span', { class: 'label', text: 'Papel' }), papelSeg(novo, redraw)),
-      el('div', { class: 'row', style: 'gap:8px;justify-content:flex-end' }, el('button', { class: 'btn', type: 'button', onclick: () => { novo.aberto = false; redraw(); } }, 'Cancelar'), criar));
-    setTimeout(() => { if (fNomes.isConnected && !fNomes.value) fNomes.focus(); }, 50);
+  // Lista de presença: padrinhos e convidados (por quem convidou).
+  const copiarPresenca = () => {
+    const linhas = [`Lista de presença · Petherson & Anna (${r.pessoas})`, '', `Padrinhos (${r.nPad})`];
+    r.padConf.forEach(v => v.pessoas.forEach(n => linhas.push(`- ${n}`)));
+    const grupos = new Map();
+    r.convidados.forEach(x => { const k = x.padrinhos || ''; grupos.set(k, [...(grupos.get(k) || []), ...x.pessoas]); });
+    linhas.push('', `Convidados (${r.nConv})`);
+    for (const [k, ns] of grupos) { linhas.push(`${k ? nomePad(k) : 'Noivos'}:`); ns.forEach(n => linhas.push(`- ${n}`)); }
+    copiarTexto(linhas.join('\n'), 'Lista de presença copiada.');
+  };
+
+  let conteudo;
+  if (aba === 'padrinhos') {
+    const novo = S.convNovo = S.convNovo || { aberto: false };
+    let form = null;
+    if (novo.aberto) {
+      const f = el('input', { type: 'text', maxlength: '80', placeholder: 'Ex.: João & Maria', 'aria-label': 'Nomes dos padrinhos' });
+      const criar = el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async () => {
+        const nomes = f.value.trim(); if (!nomes) { f.focus(); return; }
+        criar.disabled = true;
+        if (await enviar({ col: 'convites', acao: 'salvar', item: { convidados: nomes, papel: 'Padrinhos' } }, 'Padrinhos adicionados.')) S.convNovo = { aberto: false };
+        redraw();
+      } }, 'Adicionar');
+      form = el('div', { class: 'card cv-form' }, f, el('div', { class: 'cv-acoes' }, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { novo.aberto = false; redraw(); } }, 'Cancelar'), criar));
+      setTimeout(() => f.isConnected && f.focus(), 50);
+    }
+    const cartao = v => {
+      const ok = v.resposta === 'sim', link = linkConvite(v);
+      const edit = S.convEdit === v.slug;
+      const sub = v.teste ? 'Perfil de teste · nunca fica confirmado'
+        : ok ? [quandoCurto(v.respondidoEm), cidadeDe(v.meta), aparelhoDe(v.meta, v.metaServidor)].filter(Boolean).join(' · ')
+        : v.aberturas ? `Abriu ${v.aberturas}x · ainda não confirmou` : 'Ainda não abriu';
+      let det = null;
+      if (S.convDet === v.slug) {
+        const fN = el('input', { type: 'text', maxlength: '80', value: v.convidados, 'aria-label': 'Nomes dos padrinhos' });
+        det = el('div', { class: 'cv-det' },
+          ok ? detalhesConfirmacao(v.meta, v.metaServidor, v.respondidoEm, [['Vezes que abriu o link', v.aberturas]]) : null,
+          el('span', { class: 'cv-link', text: link.replace('https://', '') }),
+          edit ? el('div', { class: 'cv-form' }, fN, el('div', { class: 'cv-acoes' },
+            el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = null; redraw(); } }, 'Cancelar'),
+            el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async e => {
+              if (!fN.value.trim()) return; e.currentTarget.disabled = true;
+              if (await enviar({ col: 'convites', acao: 'salvar', item: { slug: v.slug, convidados: fN.value.trim(), papel: 'Padrinhos' } }, 'Salvo.')) S.convEdit = null;
+              redraw();
+            } }, 'Salvar')))
+          : el('div', { class: 'cv-acoes' }, el('button', { class: 'link-btn', type: 'button', onclick: () => { S.convEdit = v.slug; redraw(); } }, 'Editar nomes'),
+              v.teste ? null : botaoExcluir({ col: 'convites', acao: 'excluir', slug: v.slug }, 'Excluído.')));
+      }
+      return el('li', { class: 'cv-item' + (ok ? ' ok' : '') },
+        el('div', { class: 'cv-topo' },
+          el('div', { class: 'cv-nome' }, el('b', { text: v.convidados }), el('span', { text: sub })),
+          el('span', { class: 'cv-sit', text: v.teste ? 'Teste' : ok ? 'Confirmado' : 'Aguardando' })),
+        ok ? el('div', { class: 'cv-pessoas' }, v.pessoas.map(n => el('span', { class: 'tag', text: n }))) : null,
+        el('div', { class: 'cv-acoes' }, acoesLink(link, `${v.convidados}, Petherson & Anna têm um convite especial para vocês: ${link}`),
+          el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(S.convDet === v.slug), onclick: () => { S.convDet = S.convDet === v.slug ? null : v.slug; S.convEdit = null; redraw(); } }, S.convDet === v.slug ? 'Fechar' : 'Detalhes')),
+        det);
+    };
+    conteudo = [
+      form,
+      r.padrinhos.length + r.teste.length ? el('ul', { class: 'cv-lista' }, [...r.padrinhos, ...r.teste].map(cartao)) : el('p', { class: 'empty', text: 'Nenhum casal de padrinhos.' }),
+      novo.aberto ? null : el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: () => { novo.aberto = true; redraw(); } }, '+ Adicionar padrinhos')];
+  } else {
+    // Convidados: o link único em cima e as confirmações separadas pelos padrinhos que convidaram.
+    const grupos = new Map();
+    r.convidados.forEach(x => { const k = x.padrinhos || ''; grupos.set(k, [...(grupos.get(k) || []), x]); });
+    const ordem = [...r.padrinhos.map(v => v.slug).filter(k => grupos.has(k)), ...[...grupos.keys()].filter(k => !r.padrinhos.some(v => v.slug === k))];
+    const item = x => {
+      const aberto = S.convDet === x.id;
+      return el('li', { class: 'cv-item' },
+        el('div', { class: 'cv-topo' },
+          el('div', { class: 'cv-nome' }, el('b', { text: x.pessoas.join(', ') }),
+            el('span', { text: [quandoCurto(x.atualizadoEm || x.criadoEm), cidadeDe(x.meta), aparelhoDe(x.meta, x.metaServidor)].filter(Boolean).join(' · ') })),
+          el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(aberto), onclick: () => { S.convDet = aberto ? null : x.id; redraw(); } }, aberto ? 'Fechar' : 'Detalhes')),
+        aberto ? el('div', { class: 'cv-det' }, detalhesConfirmacao(x.meta, x.metaServidor, x.criadoEm, x.edicoes ? [['Alterada', `${x.edicoes}x (última ${quandoCurto(x.atualizadoEm)})`]] : []),
+          el('div', { class: 'cv-acoes' }, botaoExcluir({ col: 'confirmacoes', acao: 'excluir', id: x.id }, 'Confirmação excluída.'))) : null);
+    };
+    conteudo = [
+      el('div', { class: 'card cv-form' },
+        el('b', { text: 'Link dos convidados' }),
+        el('span', { class: 'cv-link', text: SITE_CONVITE.replace('https://', '') }),
+        el('div', { class: 'cv-acoes' }, acoesLink(SITE_CONVITE, `Petherson & Anna convidam você para o casamento. Confirme sua presença: ${SITE_CONVITE}`))),
+      r.convidados.length ? ordem.map(k => el('section', { class: 'stack', style: 'gap:8px' },
+        el('h3', { class: 'cv-grupo', text: `${k ? nomePad(k) : 'Noivos'} · ${grupos.get(k).reduce((t, x) => t + x.pessoas.length, 0)}` }),
+        el('ul', { class: 'cv-lista' }, grupos.get(k).map(item))))
+        : el('p', { class: 'empty', text: 'Nenhum convidado confirmou ainda.' })];
   }
 
-  const cartao = v => {
-    const ok = v.resposta === 'sim';
-    const link = linkConvite(v);
-    const edit = S.convEdit && S.convEdit.slug === v.slug ? S.convEdit : null;
-    const excluir = el('button', { class: 'link-btn', type: 'button', onclick: async () => {
-      if (!excluir.dataset.conf) { excluir.dataset.conf = '1'; excluir.textContent = 'Tocar de novo para excluir'; setTimeout(() => { if (excluir.isConnected) { delete excluir.dataset.conf; excluir.textContent = 'Excluir'; } }, 4000); return; }
-      excluir.disabled = true;
-      await enviar({ col: 'convites', acao: 'excluir', slug: v.slug }, 'Convite excluído.'); redraw();
-    } }, 'Excluir');
-    const msgWa = `${v.convidados}, Petherson & Anna têm um convite especial para vocês. Toque para abrir: ${link}`;
-    let corpo;
-    if (edit) {
-      const fN = el('input', { type: 'text', maxlength: '80', value: edit.convidados, 'aria-label': 'Nomes do casal', oninput: e => { edit.convidados = e.target.value; } });
-      const salvar = el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async () => {
-        if (!edit.convidados.trim()) { toast('Escreva os nomes.', true); return; }
-        salvar.disabled = true;
-        if (await enviar({ col: 'convites', acao: 'salvar', item: { slug: v.slug, convidados: edit.convidados.trim(), papel: edit.papel } }, 'Convite salvo.')) S.convEdit = null;
-        redraw();
-      } }, 'Salvar');
-      corpo = [el('div', { class: 'field' }, el('span', { class: 'label', text: 'Nomes do casal' }), fN),
-        el('div', { class: 'field' }, el('span', { class: 'label', text: 'Papel' }), papelSeg(edit, redraw)),
-        el('p', { class: 'hint', text: 'O link continua o mesmo.' }),
-        el('div', { class: 'cv-acoes' }, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = null; redraw(); } }, 'Cancelar'), salvar)];
-    } else {
-      corpo = [
-        ok ? el('div', { class: 'cv-pessoas' }, v.pessoas.map(n => el('span', { class: 'tag', text: n }))) : null,
-        el('span', { class: 'cv-link', text: link.replace(/^https:\/\//, '') }),
-        el('div', { class: 'cv-acoes' },
-          el('button', { class: 'btn btn--sm', type: 'button', onclick: () => copiarTexto(link, 'Link copiado. É só colar no WhatsApp.') }, 'Copiar link'),
-          el('a', { class: 'btn btn--sm', href: `https://wa.me/?text=${encodeURIComponent(msgWa)}`, target: '_blank', rel: 'noopener' }, icon('wa'), 'WhatsApp'),
-          el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = { slug: v.slug, convidados: v.convidados, papel: v.papel }; redraw(); } }, 'Editar'),
-          excluir)];
-    }
-    const situacao = ok ? `Confirmado ${quandoCurto(v.respondidoEm)} · ${v.pessoas.length} ${v.pessoas.length === 1 ? 'pessoa' : 'pessoas'}`
-      : v.aberturas ? `Abriu o link ${v.aberturas} ${v.aberturas === 1 ? 'vez' : 'vezes'} (a primeira ${quandoCurto(v.abertoEm)})` : 'Ainda não abriu o link';
-    return el('li', { class: 'cv-item' + (ok ? ' ok' : '') },
-      el('div', { class: 'cv-topo' },
-        el('div', { class: 'cv-nome' }, el('b', { text: v.convidados }), el('span', { text: `${v.papel} · ${situacao}` })),
-        el('span', { class: 'cv-sit', text: ok ? 'Confirmado' : 'Aguardando' })),
-      corpo);
-  };
-
-  // Lista de presença (para buffet, cerimonial): todos os nomes confirmados, separados por padrinhos e convidados.
-  const copiarPresenca = () => {
-    const bloco = papel => { const vs = conf.filter(v => v.papel === papel); if (!vs.length) return '';
-      return `${papel} (${vs.reduce((t, v) => t + v.pessoas.length, 0)})\n` + vs.map(v => v.pessoas.map(n => `- ${n}`).join('\n')).join('\n'); };
-    const txt = [bloco('Padrinhos'), bloco('Convidados')].filter(Boolean).join('\n\n');
-    copiarTexto(`Lista de presença · Petherson & Anna\n${pessoas} ${pessoas === 1 ? 'pessoa confirmada' : 'pessoas confirmadas'}\n\n${txt}`, 'Lista de presença copiada.');
-  };
-
+  conteudo = conteudo.flat(2);
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     backLink('#/relatorios', 'Relatórios'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Convites' }),
-      novo.aberto ? null : el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => { novo.aberto = true; novo.nomes = ''; redraw(); } }, icon('plus'), 'Convite')),
-    el('p', { class: 'hint', text: 'Casamento de Petherson & Anna · cada casal tem um link próprio para confirmar a presença.' }),
-    formNovo,
+      r.pessoas ? el('button', { class: 'btn btn--sm', type: 'button', onclick: copiarPresenca }, 'Copiar lista') : null),
     el('div', { class: 'cv-resumo' },
-      el('div', {}, el('b', { text: `${conf.length}/${todos.length}` }), el('span', { text: 'convites confirmados' })),
-      el('div', {}, el('b', { text: String(pessoas) }), el('span', { text: pessoas === 1 ? 'pessoa confirmada' : 'pessoas confirmadas' })),
-      el('div', {}, el('b', { text: String(agu.length) }), el('span', { text: 'aguardando' }))),
-    conf.length ? el('button', { class: 'btn btn--block', type: 'button', onclick: copiarPresenca }, 'Copiar lista de presença') : null,
-    todos.length ? el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Filtro', style: 'display:flex;width:100%' },
-      [['todos', 'Todos', todos.length], ['confirmados', 'Confirmados', conf.length], ['aguardando', 'Aguardando', agu.length]].map(([k, t, n]) =>
+      el('div', {}, el('b', { text: String(r.pessoas) }), el('span', { text: 'confirmados' })),
+      el('div', {}, el('b', { text: `${r.padConf.length}/${r.padrinhos.length}` }), el('span', { text: 'padrinhos' })),
+      el('div', {}, el('b', { text: String(r.nConv) }), el('span', { text: 'convidados' }))),
+    el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Convites', style: 'display:flex;width:100%' },
+      [['padrinhos', 'Padrinhos', r.padrinhos.length], ['convidados', 'Convidados', r.convidados.length]].map(([k, t, n]) =>
         el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 8px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k),
-          onclick: () => { S.convAba = k; redraw(); } }, t, el('span', { class: 'seg-n', text: String(n) })))) : null,
-    lista.length ? el('ul', { class: 'cv-lista' }, lista.map(cartao))
-      : el('p', { class: 'empty', text: todos.length ? 'Nenhum convite aqui.' : 'Nenhum convite ainda. Toque em "+ Convite" para criar o primeiro.' })),
+          onclick: () => { S.convAba = k; S.convDet = null; redraw(); } }, t, el('span', { class: 'seg-n', text: String(n) })))),
+    conteudo),
   { current: 'relatorios' });
 }
 
