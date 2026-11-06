@@ -805,6 +805,11 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .cv-link-conv .cv-nome span { word-break: break-all; }
 .seg.seg-linha { display: flex; width: 100%; flex-wrap: nowrap; }
 .seg.seg-linha button { flex: 1; padding: 10px 4px; white-space: nowrap; }
+.mes-entrada button { display: grid; gap: 1px; line-height: 1.2; padding: 8px 4px; }
+.mes-entrada button b { font-weight: 700; }
+.mes-entrada button small { font-size: 11px; font-weight: 500; opacity: .75; }
+.valor-mes { font-size: 12px; color: var(--muted); }
+.valor-mes.is-sem { color: var(--warn); font-weight: 600; }
 .rel-fat { gap: 4px; }
 .rel-fat-num { font: 700 38px/1.05 var(--cond); letter-spacing: .01em; }
 .rel-aviso { margin: 4px 0 0; font-size: 13px; color: var(--warn); }
@@ -1009,6 +1014,153 @@ main { padding-bottom: calc(var(--nav-h) + 44px + env(safe-area-inset-bottom, 0p
 main.no-nav { padding-bottom: 48px; }
 .toast { bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom, 0px)); }
 
+/* ---------- Computador (pedido de 06/11/2026): barra lateral, resumo e quadro ----------
+   De 1024 px para cima a barra do topo e o menu de baixo dão lugar à barra lateral. O celular não muda. */
+:root { --lat-w: 252px; }
+.lateral { display: none; }
+@media (max-width: 1023px) { .so-pc { display: none !important; } }
+@media (min-width: 1024px) {
+  body.com-lateral .topbar, body.com-lateral .nav { display: none; }
+  body.com-lateral .lateral { display: flex; }
+  body.com-lateral main { margin-left: var(--lat-w); max-width: none; padding: 30px clamp(24px, 3vw, 44px) 56px; }
+  body.com-lateral .toast { bottom: 24px; left: calc(50% + var(--lat-w) / 2); }
+  body.com-lateral h1 { font-size: 34px; }
+}
+.lateral {
+  position: fixed; z-index: 30; top: 0; bottom: 0; left: 0; width: var(--lat-w); flex-direction: column; gap: 4px;
+  padding: 22px 14px 14px; overflow-y: auto; overscroll-behavior: contain;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(246, 246, 244, .7));
+  border-right: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+.lat-marca { display: grid; gap: 6px; padding: 2px 10px 18px; color: inherit; text-decoration: none; }
+.lat-marca img { height: 15px; width: auto; max-width: 100%; object-fit: contain; object-position: left; }
+.lat-marca span { font-size: 12px; color: var(--muted); }
+.lat-novo { margin: 0 4px 14px; min-height: 44px; border-radius: 12px; }
+.lat-sec { padding: 14px 12px 6px; font: 700 10.5px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: #8E8E8B; }
+.lat-item { display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 10px 0 8px; border-radius: 12px; border: 0; background: none;
+  color: var(--ink-2); font: 500 14px/1.2 var(--body); text-decoration: none; text-align: left; width: 100%; transition: background-color .15s; }
+.lat-item:hover { background: rgba(18, 18, 18, .05); }
+.lat-ico { flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: rgba(18, 18, 18, .05); color: var(--ink-2); }
+.lat-ico svg { width: 17px; height: 17px; }
+.lat-txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lat-n { flex: none; min-width: 22px; height: 20px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; background: rgba(18, 18, 18, .07); color: var(--ink-2); font: 700 11px/1 var(--body); }
+.lat-n.is-alerta { background: #B4231B; color: #fff; }
+.lat-n.is-aviso { background: #D97706; color: #fff; }
+.lat-item[aria-current="page"] { background: var(--primary-grad); color: #fff; font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .14); }
+.lat-item[aria-current="page"] .lat-ico { background: rgba(255, 255, 255, .14); color: #fff; }
+.lat-item[aria-current="page"] .lat-n:not(.is-alerta):not(.is-aviso) { background: rgba(255, 255, 255, .18); color: #fff; }
+.lat-item.is-problema, .lat-item.is-problema .lat-ico { color: #B4231B; }
+.lat-espaco { flex: 1; min-height: 16px; }
+.lat-pe { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+.lat-eu { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; border: 0; background: none; width: 100%; text-align: left; color: var(--ink); }
+.lat-eu:hover { background: rgba(18, 18, 18, .05); }
+.lat-av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--primary-grad); color: #fff; font: 700 14px/1 var(--cond); letter-spacing: .04em; }
+.lat-eu-txt { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.2; }
+.lat-eu-txt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lat-eu-txt span { font-size: 12px; color: var(--muted); }
+.lat-eu-txt span.is-modo { justify-self: start; padding: 1px 7px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 600; }
+/* Cabeçalho das telas no computador */
+.pc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.pc-eyebrow { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.pc-head-dir { display: flex; align-items: center; gap: 16px; }
+.pc-data { font-size: 13px; color: var(--muted); }
+.pc-head .btn { min-height: 44px; border-radius: 999px; padding: 0 20px; }
+/* Resumo: quatro cartões */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.kpi { position: relative; display: grid; align-content: start; gap: 4px; min-height: 148px; padding: 18px; border-radius: 20px; background: rgba(255, 255, 255, .86);
+  border: 1px solid rgba(18, 18, 18, .06); box-shadow: 0 1px 2px rgba(18, 18, 18, .04); color: var(--ink); text-decoration: none; transition: transform .15s var(--suave), box-shadow .15s; }
+a.kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(18, 18, 18, .08); }
+.kpi-topo { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.kpi-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #EDEDEA; color: var(--ink-2); font: 700 12px/1 var(--body); }
+.kpi-ico svg { width: 17px; height: 17px; }
+.kpi-ir { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); color: var(--ink); }
+.kpi-ir svg { width: 15px; height: 15px; }
+.kpi-rot { font-size: 13px; color: var(--muted); font-weight: 500; }
+.kpi-num { font: 700 30px/1.05 var(--cond); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 12.5px; color: var(--muted); }
+.kpi.is-escuro { background: linear-gradient(150deg, #2a2a2c 0%, #121213 55%, #050505 100%); color: #fff; border-color: transparent; box-shadow: 0 12px 28px rgba(0, 0, 0, .22); }
+.kpi.is-escuro .kpi-ico { background: rgba(255, 255, 255, .12); color: #fff; }
+.kpi.is-escuro .kpi-ir { background: #fff; border-color: #fff; }
+.kpi.is-escuro .kpi-rot, .kpi.is-escuro .kpi-sub { color: rgba(255, 255, 255, .68); }
+/* O que pede atenção */
+.atencao { border-radius: 22px; overflow: hidden; background: linear-gradient(150deg, #2a2a2c 0%, #121213 60%, #050505 100%); box-shadow: 0 12px 30px rgba(0, 0, 0, .16); }
+.atencao-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 20px 22px 18px; color: #fff; }
+.atencao-topo small { display: block; margin-bottom: 4px; font: 700 10.5px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .6); }
+.atencao-topo h2 { font-size: 26px; }
+.atencao-pill { flex: none; padding: 7px 14px; border-radius: 999px; background: #fff; color: var(--ink); font: 600 12.5px/1 var(--body); }
+.atencao-pill.is-ok { background: rgba(255, 255, 255, .14); color: #fff; }
+.atencao-lista { list-style: none; margin: 0; padding: 6px 12px; display: grid; background: #F7F7F5; border-radius: 20px 20px 0 0; }
+.atencao-lista li + li { border-top: 1px solid var(--line); }
+.atencao-item { display: flex; align-items: center; gap: 14px; padding: 12px 8px; border-radius: 12px; color: var(--ink); text-decoration: none; }
+a.atencao-item:hover { background: rgba(18, 18, 18, .04); }
+.atencao-ico { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #EDEDEA; color: var(--ink-2); font: 700 11px/1 var(--body); }
+.atencao-ico svg { width: 16px; height: 16px; }
+.atencao-item.is-warn .atencao-ico { background: var(--warn-bg); color: var(--warn); }
+.atencao-item.is-danger .atencao-ico { background: var(--danger-bg); color: var(--danger); }
+.atencao-item.is-ok .atencao-ico { background: #E8F3EC; color: var(--ok); }
+.atencao-txt { flex: 1; min-width: 0; display: grid; gap: 2px; line-height: 1.3; }
+.atencao-txt b { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.atencao-txt span { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.atencao-ir { flex: none; color: #A3A3A0; }
+.atencao-ir svg { width: 18px; height: 18px; }
+.atencao-mais { padding: 10px 8px 12px; font-size: 13px; color: var(--muted); }
+/* Barra da lista de veículos: título, busca e Galeria/Quadro */
+.pc-painel { display: grid; gap: 18px; padding: 18px; border-radius: 22px; background: rgba(255, 255, 255, .62); border: 1px solid rgba(18, 18, 18, .06); }
+.pc-barra { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pc-barra h2 { display: flex; align-items: center; gap: 8px; font-size: 24px; }
+.pc-qtd { display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 8px; border-radius: 999px; background: #E6E6E3; font: 700 12px/1 var(--body); }
+.pc-barra .search { flex: 1; min-width: 260px; max-width: 520px; margin-left: auto; }
+.pc-barra .search input { border-radius: 999px; background: #F1F1EF; border-color: transparent; }
+.pc-barra .search input:focus { background: #fff; }
+.vista { display: inline-flex; padding: 3px; border-radius: 999px; background: #ECECE9; }
+.vista button { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font: 600 13px/1 var(--body); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.vista button svg { width: 15px; height: 15px; }
+.vista button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.pc-abas { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: #ECECE9; justify-self: start; }
+.pc-abas button { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font: 600 13px/1 var(--body); color: var(--muted); }
+.pc-abas button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.pc-abas .seg-n { margin-left: 4px; }
+@media (min-width: 1024px) { body.com-lateral .gallery { grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 18px; } }
+/* Quadro: colunas pela fase do serviço */
+.quadro { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.q-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; border-radius: 18px; background: #EFEFEC; min-height: 120px; }
+.q-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px; }
+.q-tit { font: 600 13px/1.2 var(--body); }
+.q-col.is-final .q-tit { color: #9A5B00; }
+.q-col.is-feito .q-tit { color: var(--ok); }
+.q-n { min-width: 22px; height: 20px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; background: rgba(18, 18, 18, .08); font: 700 11px/1 var(--body); }
+.q-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.q-card { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: #fff; border: 1px solid rgba(18, 18, 18, .06); color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(18, 18, 18, .04); transition: transform .12s var(--suave), box-shadow .15s; }
+.q-card:hover { box-shadow: 0 8px 18px rgba(18, 18, 18, .08); transform: translateY(-1px); }
+.q-topo { display: flex; gap: 10px; min-width: 0; }
+.q-foto { flex: none; width: 64px; height: 48px; border-radius: 9px; overflow: hidden; background: var(--soft); position: relative; }
+.q-foto img { width: 100%; height: 100%; object-fit: cover; }
+.q-foto .ph { position: absolute; inset: 0; display: grid; place-items: center; color: #B5B5B2; }
+.q-foto .ph svg { width: 22px; height: 22px; }
+.q-info { min-width: 0; display: grid; gap: 4px; align-content: start; }
+.q-modelo { font: 700 15px/1.1 var(--cond); letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-info .car-meta { flex-wrap: nowrap; min-width: 0; }
+.q-info .car-cliente { min-width: 0; }
+.q-card { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.q-info { flex: 1; }
+.q-pe > * { min-width: 0; }
+.q-tipo { font-size: 12px; margin-top: -4px; }
+.q-card > .car-cliente { font-size: 13px; }
+.q-info .car-placa-num { font-size: 12px; padding: 2px 5px; }
+.q-info .car-cliente { font-size: 12px; }
+.q-pe { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; }
+.q-etapa { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-tipo { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-vazio { margin: 0; padding: 18px 8px; text-align: center; font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line-2); border-radius: 12px; }
+/* Duas colunas (veículo, relatórios) */
+.pc-colunas { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.pc-colunas > * { min-width: 0; }
+.ag-pc { grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr); }
+.ag-pc > .card { position: sticky; top: 24px; }
+@media (min-width: 1024px) and (max-width: 1180px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .quadro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .kpi, .q-card, .lat-item { transition: none; } a.kpi:hover, .q-card:hover { transform: none; } }
+
 /* ---------- Fluidez: animações leves (só transform e opacity, que o celular desenha sem esforço) ---------- */
 :root { --suave: cubic-bezier(.2, .8, .2, 1); }
 /* Tela de carregamento: logo, barrinha correndo e o texto. Aparece com um pequeno atraso,
@@ -1108,6 +1260,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const esc = s => encodeURIComponent(s);
 
 const ICON = {
+  seta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>',
+  quadro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>',
   scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>',
@@ -1852,6 +2006,35 @@ function capaDe(at) {
 // Atendimento antigo, sem entrada: tudo a receber.
 const entradaDe = at => at.entrada == null ? 0 : at.entrada;
 const aReceberDe = at => at.valor == null ? null : round2(at.valor - entradaDe(at));
+/* Mês da entrada (pedido de 06/11/2026): a entrada costuma ser paga no agendamento, às vezes no mês anterior ao serviço.
+   at.entradaMes = 'AAAA-MM' (sd_atendimentos.entrada_mes). Nos relatórios a entrada conta nesse mês e o restante na baixa.
+   Sem mês (registros antigos): o valor inteiro conta na baixa, como antes. */
+const mesDe = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const mesAntes = (mes, n) => { const [y, m] = mes.split('-').map(Number); return mesDe(new Date(y, m - 1 - n, 1).getTime()); };
+const nomeMes = (mes, curto = false) => { const [y, m] = mes.split('-').map(Number); const n = MESES[m - 1]; return curto ? `${n.slice(0, 3).toLowerCase()}/${y}` : `${n}/${y}`; };
+// Botões do mês da entrada: este mês e os dois anteriores (e o já escolhido, se for mais antigo).
+function campoMesEntrada(inicial, onChange) {
+  const hoje = mesDe(Date.now());
+  let mes = inicial && inicial <= hoje ? inicial : hoje;
+  const opcoes = [hoje, mesAntes(hoje, 1), mesAntes(hoje, 2)];
+  if (!opcoes.includes(mes)) opcoes.push(mes);
+  const box = el('div', { class: 'seg seg-linha mes-entrada', role: 'group', 'aria-label': 'Mês em que a entrada foi recebida' });
+  const desenhar = () => preencher(box, ...opcoes.map((m, i) => el('button', { type: 'button', 'aria-pressed': String(m === mes),
+    onclick: () => { mes = m; desenhar(); if (onChange) onChange(m); } },
+    el('b', { text: MESES[Number(m.slice(5)) - 1] }), el('small', { text: i === 0 ? 'este mês' : i === 1 ? 'mês passado' : m.slice(0, 4) }))));
+  desenhar();
+  return { el: el('div', { class: 'field' }, el('span', { class: 'label', text: 'Entrada recebida em' }), box), valor: () => mes };
+}
+// Valores recebidos de um atendimento, cada um com a data em que conta: entrada (no mês dela) e restante (na baixa).
+function recebimentosDe(at) {
+  if (at.valor == null) return [];
+  const ent = entradaDe(at), rEm = recebidoEm(at), out = [];
+  if (at.entradaMes && ent > 0) {
+    out.push({ at, parte: 'entrada', valor: ent, em: dataDe(`${at.entradaMes}-01`).getTime() });
+    if (rEm != null && round2(at.valor - ent) > 0) out.push({ at, parte: 'restante', valor: round2(at.valor - ent), em: rEm });
+  } else if (rEm != null) out.push({ at, parte: 'tudo', valor: at.valor, em: rEm });
+  return out;
+}
 // Lê os dois campos. Devolve { valor, entrada } ou null se algum estiver inválido (já avisa).
 function lerValorPartes(fEntrada, fReceber, nomeR = 'Valor a receber') {
   const rawE = fEntrada.value.trim(), rawR = fReceber.value.trim();
@@ -1872,8 +2055,8 @@ function previaTotal(fEntrada, fResto, rotulo = 'Total do serviço') {
   fEntrada.addEventListener('input', somar); fResto.addEventListener('input', somar); somar();
   return p;
 }
-const textoValor = (valor, entrada) => valor == null ? 'Valor removido'
-  : `Valor definido: ${fmtBRL(valor)} (entrada paga ${fmtBRL(entrada || 0)}, a receber ${fmtBRL(round2(valor - (entrada || 0)))})`;
+const textoValor = (valor, entrada, mes) => valor == null ? 'Valor removido'
+  : `Valor definido: ${fmtBRL(valor)} (entrada paga ${fmtBRL(entrada || 0)}${mes && entrada ? ` em ${nomeMes(mes, true)}` : ''}, a receber ${fmtBRL(round2(valor - (entrada || 0)))})`;
 /* Baixa do pagamento (pedido de 19/10/2026; só Controle): forma e observação de como foi pago. Para o Controle, o
    veículo concluído fica no Início até a baixa (para o Funcionário continua saindo depois de 24 h). Só vale para
    os concluídos desde 19/10/2026, para os antigos não encherem o Início. Dados em sd_atendimentos.pago_* (at.pagamento). */
@@ -1884,7 +2067,9 @@ const pagPendente = at => isCtrl() && at.concluido && !at.pagamento && (at.concl
 // existir (19/10/2026) e sem baixa contam pela conclusão, para os relatórios antigos não mudarem. Sem baixa: ainda não faturou.
 const recebidoEm = at => (at.pagamento ? at.pagamento.em : at.concluido && (at.concluidoEm || 0) < PAGAMENTO_DESDE ? at.concluidoEm : null);
 const dataHoraBR = ts => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts);
-const textoPagamento = (at, p, editado) => `Pagamento confirmado${editado ? ' (editado)' : ''}: ${[p.forma, at.valor != null ? fmtBRL(at.valor) : '', p.obs].filter(Boolean).join(' · ')}`;
+// Baixa com o dia escolhido fica ao meio-dia em ponto (sem a hora de verdade): mostra só a data.
+const quandoPago = ts => (ts % 60e3 === 0 && new Date(ts).getHours() === 12 && new Date(ts).getMinutes() === 0 ? fmtData(ts) : dataHoraBR(ts));
+const textoPagamento = (at, p, editado) => `Pagamento confirmado${editado ? ' (editado)' : ''}: ${[p.forma, at.valor != null ? fmtBRL(at.valor) : '', p.dia ? `pago em ${brData(p.dia)}` : '', p.obs].filter(Boolean).join(' · ')}`;
 function registrar(at, texto) {
   const u = me();
   at.historico.push({ texto, em: Date.now(), porId: u ? u.id : null, porNome: u ? u.nome : '' });
@@ -2044,8 +2229,9 @@ function menuModo(btn) {
   const opc = (k, t) => el('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(u.tipo === k),
     onclick: () => { fecharMenuModo(); if (u.tipo !== k) trocarModo(k === 'funcionario'); } },
     el('span', { class: 'mm-check', 'aria-hidden': 'true', html: u.tipo === k ? ICON.check : '' }), t);
+  const emBaixo = r.bottom > innerHeight - 140; // botão no pé da barra lateral (computador): o menu abre para cima
   const menu = el('div', { class: 'menu-modo', role: 'menu', 'aria-label': 'Modo',
-    style: `top:${Math.round(r.bottom + 8)}px;left:${Math.round(Math.max(8, Math.min(r.left - 8, innerWidth - 196)))}px` },
+    style: `${emBaixo ? `bottom:${Math.round(innerHeight - r.top + 8)}px;transform-origin:bottom left` : `top:${Math.round(r.bottom + 8)}px`};left:${Math.round(Math.max(8, Math.min(r.left - 8, innerWidth - 196)))}px` },
     opc('controle', 'Controle'), opc('funcionario', 'Funcionário'));
   const fundo = el('div', { class: 'menu-modo-fundo', onclick: fecharMenuModo });
   document.body.append(fundo, menu);
@@ -2874,7 +3060,7 @@ function tipoAcao(t) {
   if (t === 'Serviço concluído') return 'concluido';
   if (/ concluída$|^Opcional concluído/.test(t)) return 'etapa';
   if (/^Foto/.test(t)) return 'foto';
-  if (/^Valor|^Pagamento confirmado|^Baixa do pagamento/.test(t)) return 'valor';
+  if (/^Valor|^Entrada paga|^Pagamento confirmado|^Baixa do pagamento/.test(t)) return 'valor';
   return 'outro';
 }
 function atividadesDe(fid) {
@@ -3160,9 +3346,59 @@ function shell(body, { nav = true, current = '' } = {}) {
   const main = el('main', { class: [nav ? '' : 'no-nav', trocou ? 'entra' : ''].filter(Boolean).join(' ') }, body);
   const kids = [top, main];
   if (nav && u) kids.push(navBar(current));
+  if (nav && u) kids.unshift(barraLateral()); // computador: barra lateral no lugar do topo e do menu de baixo (CSS)
   document.body.classList.toggle('no-nav', !(nav && u));
+  document.body.classList.toggle('com-lateral', !!(nav && u));
   preencher($('app'), ...kids);
 }
+/* Computador (pedido de 06/11/2026): de 1024 px para cima a barra do topo e o menu de baixo dão lugar a uma barra
+   lateral com as mesmas telas e ferramentas; o Início ganha resumo, "O que pede atenção" e a vista em Quadro.
+   No celular nada muda. Ao passar de um tamanho para o outro (janela redimensionada), a tela é redesenhada. */
+const MQ_PC = matchMedia('(min-width: 1024px)');
+const ePC = () => MQ_PC.matches;
+try { MQ_PC.addEventListener('change', () => { if (!MODO_CLIENTE && DB && me() && podeRedesenhar()) redesenhar(); }); } catch {}
+function barraLateral() {
+  const u = me(), ctrl = u.tipo === 'controle', [r] = parts();
+  const ativo = { veiculo: 'inicio', novo: 'placa', convites: 'relatorios' }[r] || r || 'inicio';
+  const item = (href, key, label, ico, { n = 0, tom = '', cls = '', aria = null } = {}) => el('a', {
+    class: 'lat-item' + (cls ? ` ${cls}` : ''), href, 'aria-current': ativo === key ? 'page' : null, 'aria-label': aria },
+    el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON[ico] }), el('span', { class: 'lat-txt', text: label }),
+    n ? el('span', { class: 'lat-n' + (tom ? ` is-${tom}` : ''), 'aria-hidden': 'true', text: n > 99 ? '99+' : String(n) }) : null);
+  const emServico = ativos().length;
+  const hoje = hojeISO(), entradasHoje = agendaAtiva().filter(a => a.data === hoje && a.status === 'agendado').length;
+  const alertaEst = ctrl ? itensEmAlerta().length : 0, nCham = ctrl ? chamadosAbertos().length : 0, nAvisos = avisosNovos().length;
+  const modo = u.real === 'controle' && u.tipo !== 'controle';
+  return el('aside', { class: 'lateral', 'aria-label': 'Menu' },
+    el('a', { class: 'lat-marca', href: '#/inicio' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details' }), el('span', { text: 'Controle de veículos' })),
+    el('a', { class: 'btn btn--primary btn--block lat-novo', href: '#/placa', 'aria-current': ativo === 'placa' ? 'page' : null }, icon('plus'), 'Adicionar veículo'),
+    el('div', { class: 'lat-sec', text: 'Painel' }),
+    item('#/inicio', 'inicio', 'Em serviço', 'home', { n: emServico }),
+    item('#/agenda', 'agenda', 'Agenda', 'calendar', { n: entradasHoje, aria: entradasHoje ? `Agenda, ${entradasHoje} ${entradasHoje === 1 ? 'entrada' : 'entradas'} hoje` : null }),
+    item('#/estoque', 'estoque', 'Estoque', 'box', { n: alertaEst, tom: 'aviso', aria: alertaEst ? `Estoque, ${alertaEst} ${alertaEst === 1 ? 'aviso' : 'avisos'}` : null }),
+    ctrl ? item('#/relatorios', 'relatorios', 'Relatórios', 'chart') : null,
+    ctrl ? item('#/historico', 'historico', 'Histórico de serviços', 'clock') : null,
+    el('div', { class: 'lat-sec', text: 'Ferramentas' }),
+    item('#/notificacoes', 'notificacoes', 'Notificações', 'bell', { n: nAvisos, tom: 'alerta', aria: nAvisos ? `Notificações, ${nAvisos} ${nAvisos === 1 ? 'nova' : 'novas'}` : null }),
+    ctrl ? item('#/equipe', 'equipe', 'Status da equipe', 'users') : null,
+    ctrl ? item('#/chamados', 'chamados', 'Chamados', 'warn', { n: nCham, tom: 'alerta', aria: nCham ? `Chamados, ${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : null }) : null,
+    ctrl ? null : item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }),
+    ctrl ? item('#/ajustes', 'ajustes', 'Ajustes', 'gear') : null,
+    appInstalado() ? el('button', { class: 'lat-item', type: 'button', onclick: recarregar }, el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON.reload }), el('span', { class: 'lat-txt', text: 'Recarregar' })) : null,
+    el('div', { class: 'lat-espaco' }),
+    el('div', { class: 'lat-pe' },
+      el('button', { class: 'lat-eu', type: 'button', title: u.real === 'controle' ? 'Trocar modo' : 'Notificações deste aparelho',
+        'aria-label': `${u.nome}: ${u.real === 'controle' ? 'trocar modo' : 'notificações'}`, 'aria-haspopup': u.real === 'controle' ? 'menu' : null,
+        onclick: e => u.real === 'controle' ? menuModo(e.currentTarget) : janelaNotificacoes() },
+        el('span', { class: 'lat-av', 'aria-hidden': 'true', text: iniciais(u.nome) }),
+        el('span', { class: 'lat-eu-txt' }, el('b', { text: u.nome }),
+          el('span', { class: modo ? 'is-modo' : null, text: u.real === 'controle' ? (modo ? 'Modo funcionário' : 'Controle') : 'Funcionário' }))),
+      el('button', { class: 'lat-item', type: 'button', onclick: sair }, el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON.logout }), el('span', { class: 'lat-txt', text: 'Sair' }))));
+}
+// Cabeçalho das telas no computador: linha pequena em cima, título e, à direita, a data de hoje e um botão.
+const hojeExtenso = () => { const t = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()); return t[0].toUpperCase() + t.slice(1); };
+const cabecalhoPC = (sobre, titulo, botao) => el('div', { class: 'pc-head' },
+  el('div', {}, el('span', { class: 'pc-eyebrow', text: sobre }), el('h1', { text: titulo })),
+  el('div', { class: 'pc-head-dir' }, el('span', { class: 'pc-data', text: hojeExtenso() }), botao || null));
 function navBar(current) {
   const item = (href, key, label, ico, cls = '') => el('a', { href, class: cls, 'aria-current': current === key ? 'page' : null },
     el('span', { class: cls === 'nav-scan' ? 'pill' : 'ico' }, icon(ico)),
@@ -3204,7 +3440,7 @@ function tipoHist(t) {
   if (/^Etapas? ajustadas?|marcada como concluída/.test(t)) return 'controle';
   if (/ concluída( \(sem foto\))?$/.test(t)) return 'etapa';
   if (/^Foto|^Tipo da foto/.test(t)) return 'foto';
-  if (/^Valor|^Pagamento confirmado|^Baixa do pagamento/.test(t)) return 'valor';
+  if (/^Valor|^Entrada paga|^Pagamento confirmado|^Baixa do pagamento/.test(t)) return 'valor';
   if (/^Etapas atualizadas|^Etapa renomeada|^Tipo de serviço/.test(t)) return 'tipo';
   if (/^Placa corrigida|^Cliente:|editados$|^Descrição/.test(t)) return 'edicao';
   if (/^Opciona/.test(t)) return 'opcional';
@@ -3329,9 +3565,11 @@ function renderHome() {
   const all = ativos();
   // Concluídos nas últimas 24 h (pedido de 16/10/2026): ficam embaixo dos em serviço antes de irem só para o Histórico.
   const feitos = concluidosRecentes();
+  const pc = ePC(), vista = pc ? vistaInicio() : 'galeria';
   const grid = el('ul', { class: 'gallery' }), gridFeitos = el('ul', { class: 'gallery' });
   const secFeitos = el('section', { class: 'stack', hidden: true });
   const empty = el('p', { class: 'empty' });
+  const quadro = vista === 'quadro' ? el('div', { class: 'quadro' }) : null;
   const draw = () => {
     const q = S.homeQuery.trim().toLowerCase(), q2 = norm(q);
     const bate = a => {
@@ -3339,6 +3577,7 @@ function renderHome() {
       return (q2 && a.placa.includes(q2)) || [a.clienteNome || NOME_PENDENTE, v.descricao, a.tipoNome, etapaAtual(a), ...opcionaisDe(a)].join(' ').toLowerCase().includes(q);
     };
     const items = !q ? all : all.filter(bate), itemsFeitos = !q ? feitos : feitos.filter(bate);
+    if (quadro) { desenharQuadro(quadro, items, itemsFeitos); return; }
     preencher(grid, ...items.map(carCard));
     preencher(gridFeitos, ...itemsFeitos.map(carCard));
     const semBaixa = itemsFeitos.filter(pagPendente).length;
@@ -3348,6 +3587,29 @@ function renderHome() {
     empty.hidden = items.length > 0;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum veículo em serviço. Toque em Adicionar para registrar a entrada de um veículo.';
   };
+  if (pc) {
+    // Computador: cabeçalho, resumo em quatro cartões, "O que pede atenção" e a lista em Galeria ou Quadro.
+    const busca = el('div', { class: 'search' }, icon('search'),
+      el('input', { type: 'search', placeholder: 'Buscar placa, cliente, veículo ou opcional', value: S.homeQuery, 'aria-label': 'Buscar veículos', oninput: e => { S.homeQuery = e.target.value; draw(); } }));
+    const body = el('div', { class: 'stack-lg', style: 'max-width:1320px' },
+      cabecalhoPC('Veículos na loja agora', 'Em serviço'), // "Adicionar veículo" fica no topo da barra lateral
+      cartaoRascunho(),
+      cartaoInstalar({ fechavel: true }),
+      resumoPC(all, feitos),
+      atencaoPC(),
+      el('section', { class: 'pc-painel' },
+        el('div', { class: 'pc-barra' },
+          el('h2', {}, 'Veículos', el('span', { class: 'pc-qtd', text: String(all.length) })),
+          busca,
+          el('div', { class: 'vista', role: 'group', 'aria-label': 'Ver como' },
+            [['galeria', 'Galeria', 'home'], ['quadro', 'Quadro', 'quadro']].map(([k, t, ic]) => el('button', { type: 'button', 'aria-pressed': String(vista === k),
+              onclick: () => { if (vista === k) return; try { localStorage.setItem('sd:inicio:vista', k); } catch {} S.vistaInicio = k; redesenhar(); } }, icon(ic), t)))),
+        quadro || grid, quadro ? null : empty, quadro ? null : secFeitos));
+    shell(body, { current: 'inicio' });
+    draw();
+    setTimeout(popupConcluidos, 900);
+    return;
+  }
   const alertas = isCtrl() ? itensEmAlerta() : [];
   const body = el('div', { class: 'stack' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Em serviço' }), el('span', { class: 'count', text: all.length ? `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}` : '' })),
@@ -3365,6 +3627,106 @@ function renderHome() {
   setTimeout(popupConcluidos, 900);
 }
 const CONC_MS = 24 * 3600e3;
+// Galeria ou Quadro no Início do computador (fica neste aparelho).
+const vistaInicio = () => { if (S.vistaInicio) return S.vistaInicio; try { return localStorage.getItem('sd:inicio:vista') === 'quadro' ? 'quadro' : 'galeria'; } catch { return 'galeria'; } };
+// Etapas e opcionais concluídos hoje (por toda a equipe).
+function etapasHoje() {
+  const ini = new Date(); ini.setHours(0, 0, 0, 0);
+  let n = 0;
+  for (const a of DB.atendimentos) {
+    for (const t of Object.values(a.feitas || {})) if (t >= ini.getTime()) n++;
+    for (const t of Object.values(a.opcionaisFeitos || {})) if (t >= ini.getTime()) n++;
+  }
+  return n;
+}
+// Resumo no topo do Início (computador). Controle: dinheiro e agenda; Funcionário: sem valores.
+function resumoPC(all, feitos) {
+  const card = ({ href, ico, txt, rot, num, sub, escuro }) => el(href ? 'a' : 'div', { class: 'kpi' + (escuro ? ' is-escuro' : ''), href: href || null },
+    el('div', { class: 'kpi-topo' },
+      el('span', { class: 'kpi-ico', 'aria-hidden': 'true', html: ico ? ICON[ico] : null, text: ico ? null : txt }),
+      href ? el('span', { class: 'kpi-ir', 'aria-hidden': 'true', html: ICON.seta }) : null),
+    el('span', { class: 'kpi-rot', text: rot }), el('b', { class: 'kpi-num', text: num }), sub ? el('span', { class: 'kpi-sub', text: sub }) : null);
+  const hoje = hojeISO(), ag7 = agendaAtiva().filter(a => a.status === 'agendado' && a.data >= hoje && a.data <= somaDias(hoje, 6));
+  const nHoje = ag7.filter(a => a.data === hoje).length, nAmanha = ag7.filter(a => a.data === somaDias(hoje, 1)).length;
+  const cardAgenda = card({ href: '#/agenda', ico: 'calendar', rot: 'Agenda: próximos 7 dias', num: `${ag7.length} ${ag7.length === 1 ? 'entrada' : 'entradas'}`, sub: `${nHoje} hoje · ${nAmanha} amanhã` });
+  const nEtapas = etapasHoje();
+  if (!isCtrl()) return el('div', { class: 'kpis' },
+    card({ escuro: true, ico: 'car', rot: 'Em serviço', num: `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}`, sub: `${all.filter(a => progresso(a) === 0).length} aguardando a primeira etapa` }),
+    card({ ico: 'check', rot: 'Etapas concluídas hoje', num: String(nEtapas), sub: 'por toda a equipe' }),
+    card({ ico: 'clock', rot: 'Concluídos nas últimas 24 h', num: String(feitos.length), sub: feitos.length ? `último ${ago(feitos[0].concluidoEm)}` : 'nenhum ainda' }),
+    cardAgenda);
+  const t = new Date(), r = calcularRelatorio(isoDia(t.getFullYear(), t.getMonth(), 1), isoDe(new Date(t.getFullYear(), t.getMonth() + 1, 0)));
+  const emServ = DB.atendimentos.filter(a => !a.concluido && a.valor != null && !a.pagamento);
+  const aReceber = round2(emServ.reduce((s, a) => s + aReceberDe(a), 0) + r.aguardandoValor);
+  return el('div', { class: 'kpis' },
+    card({ escuro: true, href: '#/relatorios', txt: 'R$', rot: `Recebido em ${MESES[t.getMonth()].toLowerCase()}`, num: fmtBRL(r.faturamento),
+      sub: [`${r.pagos.length} ${r.pagos.length === 1 ? 'pago' : 'pagos'}`, r.entradas ? `${fmtBRL(r.entradas)} de entradas` : ''].filter(Boolean).join(' · ') }),
+    card({ href: '#/relatorios', ico: 'file', rot: 'A receber', num: fmtBRL(aReceber), sub: `${emServ.length} em serviço · ${r.aguardando} ${r.aguardando === 1 ? 'aguardando' : 'aguardando'} pagamento` }),
+    card({ ico: 'car', rot: 'Em serviço', num: `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}`, sub: `${nEtapas} ${nEtapas === 1 ? 'etapa concluída' : 'etapas concluídas'} hoje` }),
+    cardAgenda);
+}
+// "O que pede atenção" (computador): pagamentos pendentes, estoque, chamados, entradas de hoje e serviços sem valor.
+function atencaoPC() {
+  const ctrl = isCtrl(), itens = [];
+  const add = (tom, ico, tit, sub, href) => itens.push({ tom, ico, tit, sub, href });
+  const nomeAt = a => { const v = DB.veiculos[a.placa] || {}; return `${v.descricao ? `${modeloCurto(v.descricao)} · ` : ''}${fmtPlaca(a.placa)}`; };
+  if (ctrl) {
+    for (const a of concluidosRecentes().filter(pagPendente))
+      add('warn', 'clock', `Pagamento pendente: ${nomeAt(a)}`, `${a.clienteNome || `(${NOME_PENDENTE})`} · concluído ${ago(a.concluidoEm)}${a.valor != null ? ` · falta receber ${fmtBRL(aReceberDe(a))}` : ''}`, `#/veiculo/${esc(a.id)}`);
+    for (const it of itensEmAlerta()) { const sit = situacao(it);
+      add(sit.k === 'low' ? 'warn' : 'danger', 'box', `${it.nome}: ${sit.txt.toLowerCase()}`, `Saldo ${fmtQ(saldo(it.id))} ${it.unidade}${it.minimo ? ` · mínimo ${fmtQ(it.minimo)}` : ''}`, '#/estoque'); }
+    const cham = chamadosAbertos();
+    if (cham.length) add('danger', 'warn', `${cham.length} ${cham.length === 1 ? 'chamado aberto' : 'chamados abertos'}`, `${cham[0].porNome}: ${cham[0].texto}`, '#/chamados');
+  }
+  const hoje = hojeISO();
+  for (const ag of agendaAtiva().filter(a => a.data === hoje && a.status === 'agendado'))
+    add('', 'calendar', `Entrada hoje: ${ag.cliente}`, [ag.servico, ag.marca].filter(Boolean).join(' · ') || 'Agendamento', `#/agenda/${esc(ag.id)}`);
+  if (ctrl) for (const a of ativos().filter(x => x.valor == null))
+    add('', 'file', `Sem valor lançado: ${nomeAt(a)}`, [a.clienteNome || `(${NOME_PENDENTE})`, a.tipoNome].filter(Boolean).join(' · '), `#/veiculo/${esc(a.id)}`);
+  const MAX = 6, n = itens.length;
+  return el('section', { class: 'atencao', 'aria-label': 'O que pede atenção' },
+    el('div', { class: 'atencao-topo' },
+      el('div', {}, el('small', { text: 'Hoje' }), el('h2', { text: n ? 'O que pede atenção' : 'Tudo em dia' })),
+      el('span', { class: 'atencao-pill' + (n ? '' : ' is-ok'), text: n ? `${n} ${n === 1 ? 'ponto de atenção' : 'pontos de atenção'}` : 'Nada pendente' })),
+    n ? el('ul', { class: 'atencao-lista' },
+      itens.slice(0, MAX).map(x => el('li', {}, el('a', { class: 'atencao-item' + (x.tom ? ` is-${x.tom}` : ''), href: x.href },
+        el('span', { class: 'atencao-ico', 'aria-hidden': 'true', html: ICON[x.ico] }),
+        el('span', { class: 'atencao-txt' }, el('b', { text: x.tit }), el('span', { text: x.sub })),
+        el('span', { class: 'atencao-ir', 'aria-hidden': 'true', html: ICON.chev })))),
+      n > MAX ? el('li', { class: 'atencao-mais', text: `E mais ${n - MAX}.` }) : null) : null);
+}
+// Quadro (computador): os veículos em colunas pela fase do serviço.
+function faseDe(at) {
+  if (at.concluido) return 'feito';
+  const total = at.etapas.length + opcionaisDe(at).length;
+  const feitas = at.etapas.filter((_, i) => etapaFeita(at, i)).length + opcionaisDe(at).length - opcPendentes(at).length;
+  return feitas === 0 ? 'entrada' : total - feitas <= 1 ? 'final' : 'andamento';
+}
+function desenharQuadro(box, items, feitos) {
+  const cols = [['entrada', 'Aguardando início'], ['andamento', 'Em andamento'], ['final', 'Última etapa'], ['feito', isCtrl() ? 'Concluídos' : 'Concluídos (24 h)']];
+  preencher(box, ...cols.map(([k, tit]) => {
+    const lista = k === 'feito' ? feitos : items.filter(a => faseDe(a) === k);
+    return el('section', { class: `q-col is-${k}`, 'aria-label': tit },
+      el('div', { class: 'q-head' }, el('span', { class: 'q-tit', text: tit }), el('span', { class: 'q-n', text: String(lista.length) })),
+      lista.length ? el('ul', { class: 'q-lista' }, lista.map(cartaoQuadro)) : el('p', { class: 'q-vazio', text: 'Nenhum veículo aqui' }));
+  }));
+}
+function cartaoQuadro(at) {
+  const capa = capaDe(at), v = DB.veiculos[at.placa] || {}, pct = Math.round(progresso(at) * 100);
+  const pag = at.concluido && isCtrl() && (at.pagamento || pagPendente(at));
+  return el('li', {}, el('a', { class: 'q-card', href: `#/veiculo/${esc(at.id)}` },
+    el('div', { class: 'q-topo' },
+      el('div', { class: 'q-foto' }, capa ? photoImg(capa, `Foto do veículo ${at.placa}`) : el('span', { class: 'ph' }, icon('car'))),
+      el('div', { class: 'q-info' },
+        el('span', { class: 'q-modelo', title: v.descricao || '', text: v.descricao ? modeloCurto(v.descricao) : fmtPlaca(at.placa) }),
+        v.descricao ? el('span', { class: 'car-meta' }, miniPlaca(at.placa)) : null)),
+    el('span', { class: 'car-cliente' + (at.clienteNome ? '' : ' is-pendente'), text: at.clienteNome || `(${NOME_PENDENTE})` }),
+    el('div', { class: 'q-pe' },
+      el('span', { class: 'q-etapa', text: at.concluido ? `Concluído ${ago(at.concluidoEm)}` : textoEtapa(at) }),
+      pag ? el('span', { class: 'tag ' + (at.pagamento ? 'tag--ok' : 'tag--warn'), text: at.pagamento ? 'Pago' : 'Pendente' }) : null),
+    el('span', { class: 'q-tipo', text: [at.tipoNome, ...opcionaisDe(at).map(n => `+ ${n}`)].filter(Boolean).join(' ') }),
+    el('div', { class: 'bar' + (at.concluido ? ' is-ok' : '') }, el('i', { style: `width:${pct}%` }))));
+}
 // Controle: o concluído sem baixa do pagamento continua aqui depois das 24 h (pagPendente).
 const concluidosRecentes = () => DB.atendimentos.filter(a => a.concluido && a.concluidoEm && (Date.now() - a.concluidoEm < CONC_MS || pagPendente(a))).sort((a, b) => b.concluidoEm - a.concluidoEm);
 /* Veículo concluído (pedido de 16/10/2026): no Início, janela no meio da tela com foto, modelo, placa, dono e quem
@@ -3823,6 +4185,10 @@ function renderNew(placaRaw) {
   const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null && entradaDe(ag0) ? fmtQ(entradaDe(ag0)) : '' });
   const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(aReceberDe(ag0)) : '' });
   const opcSel = rasc ? (rasc.opcionais || []).filter(n => (DB.opcionais || []).some(o => o.nome === n)) : []; // opcionais marcados na entrada
+  // Mês da entrada (06/11/2026): do agendamento vem o mês em que ele foi feito (a entrada é paga no agendamento).
+  const campoMes = campoMesEntrada(rasc && rasc.entradaMes ? rasc.entradaMes : ag0 && entradaDe(ag0) > 0 && ag0.criadoEm ? mesDe(ag0.criadoEm) : mesDe(Date.now()), () => guardar());
+  const mostrarMes = () => { campoMes.el.hidden = !(parseNum(fEntrada.value.trim() || '0') > 0); };
+  fEntrada.addEventListener('input', mostrarMes);
   // Rascunho: volta com o que já tinha sido preenchido.
   if (rasc) {
     fCliente.value = rasc.cliente || ''; fDesc.value = rasc.desc || '';
@@ -3830,6 +4196,7 @@ function renderNew(placaRaw) {
     fEntrada.value = rasc.entrada || ''; fReceber.value = rasc.receber || '';
     if (rasc.tipoId && tiposOk.some(t => t.id === rasc.tipoId)) fTipo.value = rasc.tipoId;
   }
+  mostrarMes();
 
   // Guarda o rascunho neste aparelho a cada mudança (só depois de a pessoa mexer em algo).
   let mexeu = !!rasc, encerrado = false, tRasc = 0;
@@ -3843,7 +4210,7 @@ function renderNew(placaRaw) {
     salvarRascunho({
       placa, porId: u.id, em: Date.now(), agendaId: ag ? ag.id : null,
       cliente: fCliente.value, desc: fDesc.value, tipoId: fTipo.value, danos: fDanos.value, objetos: fObj.value,
-      entrada: fEntrada.value, receber: fReceber.value, opcionais: [...opcSel],
+      entrada: fEntrada.value, receber: fReceber.value, entradaMes: campoMes.valor(), opcionais: [...opcSel],
       fotos: fotos.map(f => ({ id: f.id, rotulo: f.rotulo, meta: f.meta || null })),
     });
   };
@@ -3925,7 +4292,7 @@ function renderNew(placaRaw) {
     const at = {
       id: uid(), placa, tipoId: tipo.id, tipoNome: tipo.nome, etapas: [...tipo.etapas], etapaIndex: 0, feitas: {}, livres: livresDe(tipo), // etapas livres vêm do tipo (Ajustes)
       concluido: false, concluidoEm: null, criadoEm: Date.now(), criadoPorNome: u.nome, clienteNome, agendaId: ag ? ag.id : null,
-      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, ...(isCtrl() ? { entrada } : {}), fotos: fotosMeta, historico: [], opcionais: [...opcSel], opcionaisFeitos: {},
+      danos: fDanos.value.trim(), objetos: fObj.value.trim(), valor, ...(isCtrl() ? { entrada, ...(entrada > 0 ? { entradaMes: campoMes.valor() } : {}) } : {}), fotos: fotosMeta, historico: [], opcionais: [...opcSel], opcionaisFeitos: {},
     };
     registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
     if (opcSel.length) registrar(at, `Opcionais na entrada: ${opcSel.join(', ')}`);
@@ -3971,7 +4338,8 @@ function renderNew(placaRaw) {
       isCtrl() ? el('div', { class: 'valor-campos' },
         el('div', { class: 'field' }, el('label', { for: 'f-entrada', text: 'Entrada paga (R$)' }), fEntrada),
         el('div', { class: 'field' }, el('label', { for: 'f-receber', text: 'A receber (R$)' }), fReceber)) : null,
-      isCtrl() ? previaTotal(fEntrada, fReceber) : null),
+      isCtrl() ? previaTotal(fEntrada, fReceber) : null,
+      isCtrl() ? campoMes.el : null),
     el('div', { class: 'card' },
       el('h2', { text: 'Fotos de entrada' }),
       fotosBox),
@@ -4108,7 +4476,7 @@ function blocoPagamento(at, redraw) {
     if (p) return el('div', { class: 'pag-box is-pago' },
       el('div', { class: 'pag-txt' },
         el('b', { text: 'Pago' }),
-        el('span', { text: [p.forma, p.em ? dataHoraBR(p.em) : '', p.porNome].filter(Boolean).join(' · ') }),
+        el('span', { text: [p.forma, p.em ? quandoPago(p.em) : '', p.porNome].filter(Boolean).join(' · ') }),
         p.obs ? el('span', { class: 'pag-obs', text: p.obs }) : null),
       el('button', { class: 'link-btn', type: 'button', style: 'flex:none', onclick: () => abrir(true) }, 'Editar'));
     const pend = pagPendente(at);
@@ -4121,15 +4489,22 @@ function blocoPagamento(at, redraw) {
   const desenharFormas = () => preencher(formas, ...FORMAS_PAG.map(f => el('button', { type: 'button', 'aria-pressed': String(forma === f), onclick: () => { forma = f; desenharFormas(); } }, f)));
   desenharFormas();
   const fObs = el('textarea', { id: 'p-obs', rows: '2', maxlength: '300', placeholder: 'Ex.: crédito em 3x', text: p ? p.obs : '' });
+  // Dia do pagamento (06/11/2026): hoje por padrão; outro dia quando a baixa é lançada depois de o dinheiro entrar.
+  const diaInicial = p ? isoDe(new Date(p.em)) : hojeISO();
+  const fDia = el('input', { id: 'p-dia', type: 'date', value: diaInicial, max: hojeISO() });
   const confirmar = () => {
     if (!forma) { toast('Escolha a forma de pagamento.', true); return; }
     const obs = fObs.value.trim();
     if (forma === 'Outro' && !obs) { toast('Descreva na observação.', true); fObs.focus(); return; }
-    if (p && p.forma === forma && (p.obs || '') === obs) { abrir(false); return; }
+    const dia = fDia.value || diaInicial;
+    if (dia > hojeISO()) { toast('A data do pagamento não pode ser no futuro.', true); fDia.focus(); return; }
+    const mudouDia = dia !== diaInicial;
+    if (p && p.forma === forma && (p.obs || '') === obs && !mudouDia) { abrir(false); return; }
     const u = me();
     S.pagAberto = null;
     if (commit(() => {
-      at.pagamento = { em: p ? p.em : Date.now(), porNome: p ? p.porNome : (u ? u.nome : ''), forma, obs };
+      const em = !mudouDia ? (p ? p.em : Date.now()) : dia === hojeISO() ? Date.now() : dataDe(dia).getTime() + 12 * 3600e3;
+      at.pagamento = { em, porNome: p ? p.porNome : (u ? u.nome : ''), forma, obs, ...(mudouDia ? { dia } : {}) };
       registrar(at, textoPagamento(at, at.pagamento, !!p));
     })) { toast(p ? 'Pagamento atualizado.' : 'Pagamento confirmado.'); redraw(); }
   };
@@ -4141,6 +4516,7 @@ function blocoPagamento(at, redraw) {
   return el('div', { class: 'pag-form' },
     el('h3', { text: p ? 'Editar pagamento' : 'Dar baixa' }),
     formas,
+    el('div', { class: 'field' }, el('label', { for: 'p-dia', text: 'Data do pagamento' }), fDia),
     el('div', { class: 'field' }, el('label', { for: 'p-obs', text: 'Observação' }), fObs),
     el('div', { class: 'actions' },
       el('button', { class: 'btn btn--primary grow', type: 'button', onclick: confirmar }, p ? 'Salvar' : 'Confirmar'),
@@ -4443,12 +4819,24 @@ function renderVehicle(id) {
         preencher(total, 'Total do serviço: ', el('b', { text: isNaN(e) || isNaN(r) ? '...' : fmtBRL(round2(e + r)) }));
       };
       fEntrada.addEventListener('input', somar); fReceber.addEventListener('input', somar); somar();
+      // Mês da entrada: o já salvo ou, em registro antigo, o mês em que o veículo entrou.
+      const campoMes = campoMesEntrada(at.entradaMes || mesDe(at.criadoEm || Date.now()));
+      const linhaMes = campoMes.el;
+      const mostrarMes = () => { const e = parseNum(fEntrada.value.trim() || '0'); linhaMes.hidden = !(e > 0); };
+      fEntrada.addEventListener('input', mostrarMes); mostrarMes();
       const salvar = () => {
         const v = lerValorPartes(fEntrada, fReceber); if (!v) return;
         S.valorAberto = null;
+        const mes = v.entrada > 0 ? campoMes.valor() : null;
         const antes = at.valor == null ? null : at.valor, antesE = at.valor == null ? null : entradaDe(at);
-        if (v.valor === antes && v.entrada === antesE) { redraw(); return; }
-        if (commit(() => { at.valor = v.valor; at.entrada = v.entrada; registrar(at, textoValor(v.valor, v.entrada)); })) { toast('Valor salvo.'); redraw(); }
+        const mudouMes = (at.entradaMes || null) !== mes;
+        if (v.valor === antes && v.entrada === antesE && !mudouMes) { redraw(); return; }
+        if (commit(() => {
+          at.valor = v.valor; at.entrada = v.entrada;
+          if (mes) at.entradaMes = mes; else if (at.entradaMes) at.entradaMes = null;
+          if (v.valor !== antes || v.entrada !== antesE) registrar(at, textoValor(v.valor, v.entrada, mes));
+          else registrar(at, `Entrada paga: recebida em ${nomeMes(mes || mesDe(Date.now())).toLowerCase()}`);
+        })) { toast('Valor salvo.'); redraw(); }
       };
       for (const f of [fEntrada, fReceber]) f.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvar(); } });
       valorCard = el('div', { class: 'card' },
@@ -4456,7 +4844,7 @@ function renderVehicle(id) {
         el('div', { class: 'valor-campos' },
           el('div', { class: 'field' }, el('label', { for: 'v-entrada', text: 'Entrada paga (R$)' }), fEntrada),
           el('div', { class: 'field' }, el('label', { for: 'v-receber', text: 'A receber (R$)' }), fReceber)),
-        total,
+        total, linhaMes,
         el('div', { class: 'actions' },
           el('button', { class: 'btn btn--primary grow', type: 'button', onclick: salvar }, 'Salvar valor'),
           el('button', { class: 'btn', type: 'button', onclick: () => abrir(false) }, 'Cancelar')));
@@ -4470,7 +4858,8 @@ function renderVehicle(id) {
             el('span', { class: 'valor-num' + (at.valor == null ? ' vazio' : ''), text: at.valor == null ? 'Ainda sem valor' : fmtBRL(at.valor) })),
           el('button', { class: 'btn' + (at.valor == null ? ' btn--primary' : ''), type: 'button', style: 'flex:none', onclick: () => abrir(true) }, at.valor == null ? 'Lançar valor' : 'Alterar')),
         at.valor == null ? null : el('div', { class: 'valor-partes' },
-          el('div', { class: 'valor-parte' + (ent ? '' : ' zerado') }, el('span', { class: 'label', text: 'Entrada paga' }), el('b', { text: fmtBRL(ent) })),
+          el('div', { class: 'valor-parte' + (ent ? '' : ' zerado') }, el('span', { class: 'label', text: 'Entrada paga' }), el('b', { text: fmtBRL(ent) }),
+            ent ? el('span', { class: 'valor-mes' + (at.entradaMes ? '' : ' is-sem'), text: at.entradaMes ? `recebida em ${nomeMes(at.entradaMes, true)}` : 'mês não informado' }) : null),
           el('div', { class: 'valor-parte receber' + (rec ? '' : ' zerado') }, el('span', { class: 'label', text: at.pagamento ? 'Recebido' : 'A receber' }), el('b', { text: rec ? fmtBRL(rec) : 'Quitado' }))),
         blocoPagamento(at, redraw));
     }
@@ -4478,23 +4867,23 @@ function renderVehicle(id) {
 
   const pct = Math.round(progresso(at) * 100);
   const recente = at.concluido && (Date.now() - (at.concluidoEm || 0) < CONC_MS || pagPendente(at));
-  const body = el('div', { class: 'stack', style: 'max-width:720px' },
-    // Concluído nas últimas 24 h (ou Funcionário): volta para o Início, onde ele ainda aparece.
-    at.concluido && ctrl && !recente ? backLink('#/historico', 'Histórico') : backLink('#/inicio', at.concluido ? 'Início' : 'Em serviço'),
-    topoVeiculo(at, v),
-    el('div', { class: 'card' },
-      el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
-        el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),
-      el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
-      steps, concluirBtn, botaoAddOpcional(at, redraw)),
-    valorCard,
-    el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeServico(f)).length}` })),
-      at.fotosApagadas ? el('p', { class: 'hint', text: `${at.fotosApagadas} ${at.fotosApagadas === 1 ? 'foto foi apagada' : 'fotos foram apagadas'} pela limpeza automática (serviço concluído há mais de ${DB.ajustes.limpezaDias} dias).` }) : null,
-      fotosBox),
-    entrada,
-    ctrlCard,
-    // Histórico só para o Controle (tem os valores lançados).
-    isCtrl() ? historicoVeiculo(at) : null);
+  // Concluído nas últimas 24 h (ou Funcionário): volta para o Início, onde ele ainda aparece.
+  const voltar = at.concluido && ctrl && !recente ? backLink('#/historico', 'Histórico') : backLink('#/inicio', at.concluido ? 'Início' : 'Em serviço');
+  const cardEtapas = el('div', { class: 'card' },
+    el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
+      el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),
+    el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
+    steps, concluirBtn, botaoAddOpcional(at, redraw));
+  const cardFotos = el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeServico(f)).length}` })),
+    at.fotosApagadas ? el('p', { class: 'hint', text: `${at.fotosApagadas} ${at.fotosApagadas === 1 ? 'foto foi apagada' : 'fotos foram apagadas'} pela limpeza automática (serviço concluído há mais de ${DB.ajustes.limpezaDias} dias).` }) : null,
+    fotosBox);
+  // Histórico só para o Controle (tem os valores lançados).
+  const hist = isCtrl() ? historicoVeiculo(at) : null;
+  // Computador: duas colunas (etapas, valor e opções à esquerda; fotos, estado e histórico à direita).
+  const body = ePC()
+    ? el('div', { class: 'stack', style: 'max-width:1180px' }, voltar, topoVeiculo(at, v),
+      el('div', { class: 'pc-colunas' }, el('div', { class: 'stack' }, cardEtapas, valorCard, ctrlCard), el('div', { class: 'stack' }, cardFotos, entrada, hist)))
+    : el('div', { class: 'stack', style: 'max-width:720px' }, voltar, topoVeiculo(at, v), cardEtapas, valorCard, cardFotos, entrada, ctrlCard, hist);
   shell(body, { current: at.concluido && ctrl && !recente ? 'relatorios' : 'inicio' });
 }
 
@@ -5353,8 +5742,7 @@ function renderAgenda() {
       el('h3', {}, 'Entregas', el('span', { class: 'count', text: String(entregas.length) })),
       entregas.map(a => linhaAgendamento(a, { entrega: true }))) : null);
 
-  shell(el('div', { class: 'stack', style: 'max-width:720px' },
-    topo, nav,
+  const calendario = [
     el('div', { class: 'ag-dow', 'aria-hidden': 'true' }, ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map(t => el('span', { text: t }))),
     el('div', { class: 'ag-grid' }, cells),
     el('div', { class: 'ag-legenda' },
@@ -5362,8 +5750,12 @@ function renderAgenda() {
       el('span', {}, el('b', { style: 'background:var(--ink)' }), 'em serviço'),
       el('span', {}, el('b', { style: 'background:#9A9A98' }), 'concluído'),
       el('span', {}, el('b', { style: 'background:var(--danger)' }), 'feriado/evento'),
-      el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` })),
-    dia), { current: 'agenda' });
+      el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` }))];
+  // Computador: calendário à esquerda e o dia escolhido à direita.
+  shell(ePC()
+    ? el('div', { class: 'stack', style: 'max-width:1180px' }, topo,
+      el('div', { class: 'pc-colunas ag-pc' }, el('div', { class: 'stack' }, nav, ...calendario), dia))
+    : el('div', { class: 'stack', style: 'max-width:720px' }, topo, nav, ...calendario, dia), { current: 'agenda' });
 }
 
 // Agendamento: primeiro a prévia, igual para todos (pedido de 16/10/2026); o Controle tem "Editar"
@@ -5555,13 +5947,20 @@ function calcularRelatorio(de, ate) {
   const dentro = ms => ms != null && ms >= ini && ms < fim;
   const concluidos = DB.atendimentos.filter(a => a.concluido && dentro(a.concluidoEm)).sort((a, b) => a.concluidoEm - b.concluidoEm);
   const comValor = concluidos.filter(a => a.valor != null);
-  // Faturado = pagamento com baixa no período (não mais a conclusão). Concluído sem baixa fica em "Aguardando pagamento".
+  // Faturado = o que entrou no período (pedido de 06/11/2026): a entrada no mês em que foi recebida (entradaMes) e o restante
+  // na baixa do pagamento (recebimentosDe). Sem mês da entrada (registro antigo): o valor inteiro na baixa, como antes.
+  // Concluído sem baixa fica em "Aguardando pagamento".
+  const receb = DB.atendimentos.flatMap(recebimentosDe).filter(x => dentro(x.em));
+  const faturamento = round2(receb.reduce((s, x) => s + x.valor, 0));
+  const entradas = round2(receb.filter(x => x.parte === 'entrada').reduce((s, x) => s + x.valor, 0));
   const pagos = DB.atendimentos.filter(a => a.valor != null && dentro(recebidoEm(a))).sort((a, b) => recebidoEm(a) - recebidoEm(b));
-  const faturamento = round2(pagos.reduce((s, a) => s + a.valor, 0));
   const aguardando = DB.atendimentos.filter(a => a.concluido && a.valor != null && recebidoEm(a) == null);
   const aguardandoValor = round2(aguardando.reduce((s, a) => s + aReceberDe(a), 0));
   const porTipo = new Map();
-  for (const a of pagos) { const t = porTipo.get(a.tipoNome || 'Sem tipo') || { qtd: 0, total: 0 }; t.qtd++; t.total = round2(t.total + a.valor); porTipo.set(a.tipoNome || 'Sem tipo', t); }
+  for (const x of receb) {
+    const k = x.at.tipoNome || 'Sem tipo', t = porTipo.get(k) || { ids: new Set(), total: 0 };
+    t.ids.add(x.at.id); t.total = round2(t.total + x.valor); porTipo.set(k, t);
+  }
   const andamento = DB.atendimentos.filter(a => !a.concluido);
   const previsto = round2(andamento.reduce((s, a) => s + (a.valor || 0), 0));
   const movs = DB.estoque.movimentos.filter(m => dentro(m.em));
@@ -5597,10 +5996,11 @@ function calcularRelatorio(de, ate) {
       return { nome: i.nome, unidade: i.unidade, saiu, media, inverso };
     }) };
   return {
-    de, ate, concluidos, comValor, pagos, faturamento, semValor: concluidos.length - comValor.length, usoCabine,
+    de, ate, concluidos, comValor, pagos, faturamento, entradas, semValor: concluidos.length - comValor.length, usoCabine,
     aguardando: aguardando.length, aguardandoValor,
-    ticket: pagos.length ? round2(faturamento / pagos.length) : 0,
-    porTipo: [...porTipo].map(([tipo, t]) => ({ tipo, ...t })).sort((a, b) => b.total - a.total),
+    // Ticket médio: valor médio dos serviços pagos (baixa) no período.
+    ticket: pagos.length ? round2(pagos.reduce((s, a) => s + a.valor, 0) / pagos.length) : 0,
+    porTipo: [...porTipo].map(([tipo, t]) => ({ tipo, qtd: t.ids.size, total: t.total })).sort((a, b) => b.total - a.total),
     andamento: andamento.length, previsto, itens,
     retiradas: [...porPessoa.values()].sort((a, b) => a.pessoa.localeCompare(b.pessoa) || a.material.localeCompare(b.material)),
   };
@@ -5632,7 +6032,7 @@ function renderRelatorios() {
   const situacaoPag = a => (a.valor == null ? 'Sem valor' : recebidoEm(a) != null ? 'Pago' : 'Pendente');
   const linhasServ = r.concluidos.map(a => [brDia(isoDe(new Date(a.concluidoEm))), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor', situacaoPag(a)]);
 
-  shell(el('div', { class: 'stack-lg', style: 'max-width:720px' },
+  const body = el('div', { class: 'stack-lg', style: 'max-width:720px' },
     // Atalhos no topo: Histórico, Equipe (ao vivo) e Chamados, lado a lado.
     el('div', { class: 'rel-atalhos' },
         el('a', { class: 'rel-tile claro', href: '#/historico', 'aria-label': `Histórico de serviços, ${nConc} concluídos` },
@@ -5658,7 +6058,9 @@ function renderRelatorios() {
       el('div', { class: 'card rel-fat' },
         el('span', { class: 'label', text: 'Faturado no período' }),
         el('b', { class: 'rel-fat-num', text: fmtBRL(r.faturamento) }),
-        el('span', { class: 'hint', text: `${r.pagos.length} ${r.pagos.length === 1 ? 'pago' : 'pagos'} (pela baixa do pagamento) · ${r.concluidos.length} ${r.concluidos.length === 1 ? 'concluído' : 'concluídos'} · ticket médio ${fmtBRL(r.ticket)}` }),
+        el('span', { class: 'hint', text: [`${r.pagos.length} ${r.pagos.length === 1 ? 'pago' : 'pagos'}`, r.entradas ? `${fmtBRL(r.entradas)} de entradas` : '',
+          `${r.concluidos.length} ${r.concluidos.length === 1 ? 'concluído' : 'concluídos'}`, `ticket médio ${fmtBRL(r.ticket)}`].filter(Boolean).join(' · ') }),
+        el('span', { class: 'hint', style: 'font-size:12px', text: 'Entrada conta no mês em que foi recebida; o restante, no dia do pagamento (baixa).' }),
         r.semValor ? el('p', { class: 'rel-aviso', text: `${r.semValor} ${r.semValor === 1 ? 'concluído sem valor lançado (fica fora do faturado)' : 'concluídos sem valor lançado (ficam fora do faturado)'}` }) : null,
         el('div', { class: 'rel-fat-and' + (r.aguardando ? ' tres' : '') },
           r.aguardando ? el('div', {}, el('span', { class: 'label', text: `Aguardando pagamento (${r.aguardando})` }), el('b', { text: fmtBRL(r.aguardandoValor) }), el('span', { class: 'hint', text: 'concluídos sem baixa' })) : null,
@@ -5685,7 +6087,14 @@ function renderRelatorios() {
           : el('p', { class: 'hint', text: 'Nenhum material cadastrado.' })),
       el('div', { class: 'card' }, el('h3', { text: 'Retiradas por pessoa' }),
         r.retiradas.length ? tabela(['Pessoa', 'Material', 'Qtd.'], r.retiradas.map(x => [x.pessoa, x.material, `${fmtQ(x.qtd)} ${x.unidade}`]), [2])
-          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' })))), { current: 'relatorios' });
+          : el('p', { class: 'hint', text: 'Nenhuma retirada no período.' }))));
+  // Computador: Serviços e Estoque lado a lado.
+  if (ePC()) {
+    body.style.maxWidth = '1180px';
+    const secs = [...body.children].filter(n => n.tagName === 'SECTION');
+    if (secs.length === 2) { const col = el('div', { class: 'pc-colunas' }); secs[0].before(col); col.append(...secs); }
+  }
+  shell(body, { current: 'relatorios' });
 }
 
 // Zerar o estoque (Controle): descarta todos os movimentos (entradas, retiradas e contagens), sem apagar do banco.
@@ -5752,8 +6161,9 @@ async function baixarRelatorioPDF(r) {
   };
   const dir = n => Object.fromEntries(n.map(i => [i, { halign: 'right' }]));
   tab('Faturamento', ['Indicador', 'Valor'], [
-    ['Faturado no período (pagamentos com baixa no período)', fmtBRL(r.faturamento)],
-    ['Pagamentos recebidos', String(r.pagos.length)],
+    ['Faturado no período (entradas pelo mês recebido + restante pela baixa)', fmtBRL(r.faturamento)],
+    ['Entradas recebidas no período', fmtBRL(r.entradas)],
+    ['Pagamentos recebidos (baixas)', String(r.pagos.length)],
     ['Serviços concluídos', String(r.concluidos.length)],
     [`Aguardando pagamento hoje (${r.aguardando} concluídos sem baixa)`, fmtBRL(r.aguardandoValor)],
     ['Ticket médio', fmtBRL(r.ticket)],

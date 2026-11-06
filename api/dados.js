@@ -37,7 +37,7 @@ async function carregar(c, eu) {
     restAll(c, 'sd_estoque_itens?select=id,nome,unidade,minimo&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_estoque_movimentos?select=*&descartado_em=is.null&order=em,id'),
     restAll(c, 'sd_ajustes?select=chave,valor'),
-    restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,valor_entrada,obs,status&excluido_em=is.null&order=data,id'),
+    restAll(c, 'sd_agenda?select=id,cliente,tel,servico,data,marca,prazo,valor,valor_entrada,obs,status,criado_em&excluido_em=is.null&order=data,id'),
     restAll(c, 'sd_opcionais?select=id,nome&ativo=eq.true&order=nome,id'),
     // Chamados (problemas relatados): o Controle recebe os abertos e os resolvidos dos últimos 60 dias;
     // o Funcionário, dos últimos 30 dias, os dele e os mandados para toda a equipe (sem o contexto do aparelho).
@@ -102,6 +102,7 @@ async function carregar(c, eu) {
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
       opcionais: listaOpcionais(a.opcionais), opcionaisFeitos: opcFeitos(a.opcionais_feitos, a.opcionais),
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada),
+        ...(a.entrada_mes ? { entradaMes: a.entrada_mes } : {}),
         pagamento: a.pago_em ? { em: ms(a.pago_em), porNome: a.pago_por || '', forma: a.pago_forma || '', obs: a.pago_obs || '' } : null } : {}),
       fotos: fotosPorAt.get(a.id) || [], fotosApagadas: apagadasPorAt.get(a.id) || 0, historico: ctrl ? a.historico || [] : semValores(a.historico), versao: a.versao,
     })),
@@ -119,7 +120,7 @@ async function carregar(c, eu) {
     avisos: (avisos || []).map(x => ({ id: x.id, tipo: x.tipo, titulo: x.titulo, texto: x.texto || '', url: x.url || '', porNome: x.por_nome || '', em: ms(x.em) })),
     agenda: agenda.map(a => ({
       id: a.id, cliente: a.cliente, tel: a.tel || '', servico: a.servico || '', data: String(a.data).slice(0, 10), marca: a.marca || '',
-      prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada), obs: a.obs || '', status: a.status,
+      prazo: a.prazo || 0, valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada), obs: a.obs || '', status: a.status, criadoEm: ms(a.criado_em),
     })),
     eventos: (eventos || []).map(e => ({ id: e.id, titulo: e.titulo, de: String(e.de).slice(0, 10), ate: String(e.ate).slice(0, 10), obs: e.obs || '' })),
     ...(convites ? { convites: convites.map(v => ({
@@ -195,6 +196,15 @@ function feitas(v) {
 
 /* ---------- Gravação ---------- */
 const agora = () => new Date().toISOString();
+// Dia e mês no horário da loja (Jaru/RO, UTC-4, sem horário de verão).
+const diaLoja = (t = Date.now()) => new Date(new Date(t).getTime() - 4 * 3600e3).toISOString().slice(0, 10);
+const RE_MES = /^\d{4}-(0[1-9]|1[0-2])$/;
+// Mês em que a entrada foi recebida ('AAAA-MM'): não aceita mês futuro.
+function mesEntrada(v) {
+  if (v == null || v === '') return null;
+  const s = String(v); if (!RE_MES.test(s) || s > diaLoja().slice(0, 7) || s < '2025-01') throw invalido('entradaMes');
+  return s;
+}
 const q = encodeURIComponent;
 
 async function upsert(c, tabela, linha, conflito = 'id') {
@@ -321,13 +331,21 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (ctrl) linha.valor = it.valor == null || it.valor === '' ? null : num(it.valor, 'valor');
       // Entrada paga: só quando veio (site antigo não manda e não apaga). A receber = valor - entrada.
       if (ctrl && it.entrada !== undefined) linha.valor_entrada = it.entrada == null || it.entrada === '' ? null : num(it.entrada, 'entrada');
+      // Mês em que a entrada foi recebida (06/11/2026): os relatórios contam a entrada nesse mês e o restante na baixa.
+      if (ctrl && it.entradaMes !== undefined) linha.entrada_mes = mesEntrada(it.entradaMes);
       // Baixa do pagamento (19/10/2026): só o Controle, só quando veio (site antigo não manda e não apaga).
-      // Hora e nome de quem deu baixa são os do servidor; se já tinha baixa, mantém (só forma e observação mudam).
+      // Nome de quem deu baixa é o do servidor. A data é a de agora, salvo quando o Controle escolhe outro dia
+      // (pag.dia, 06/11/2026: baixa lançada depois do dia em que o dinheiro entrou); esse dia fica ao meio-dia da loja.
       const pag = ctrl && it.pagamento !== undefined ? (it.pagamento && typeof it.pagamento === 'object' ? it.pagamento : null) : undefined;
+      const diaPag = pag && pag.dia != null ? String(pag.dia) : null;
+      if (diaPag && (!RE_DATA.test(diaPag) || isNaN(Date.parse(diaPag)) || diaPag > diaLoja() || diaPag < '2025-01-01')) throw invalido('dia');
+      const pagoNoDia = dia => (dia === diaLoja() ? agora() : `${dia}T12:00:00-04:00`);
       if (pag === null) Object.assign(linha, { pago_em: null, pago_por: null, pago_forma: null, pago_obs: null });
-      else if (pag) Object.assign(linha, { pago_em: agora(), pago_por: eu.nome, pago_forma: txt(pag.forma, 40), pago_obs: txt(pag.obs, 300) });
+      else if (pag) Object.assign(linha, { pago_em: diaPag ? pagoNoDia(diaPag) : agora(), pago_por: eu.nome, pago_forma: txt(pag.forma, 40), pago_obs: txt(pag.obs, 300) });
       const atId = id(it.id);
       if (op.versao == null) {
+        // Site antigo (sem o campo do mês): entrada lançada agora conta no mês de agora.
+        if (ctrl && linha.entrada_mes === undefined && Number(linha.valor_entrada) > 0) linha.entrada_mes = diaLoja().slice(0, 7);
         await rest(c, 'sd_atendimentos', {
           method: 'POST', prefer: 'return=minimal',
           body: { id: atId, placa, criado_em: quando(it.criadoEm, 'criadoEm') || agora(), criado_por_nome: txt(it.criadoPorNome, 80), versao: 1,
@@ -339,7 +357,7 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const v = Number(op.versao); if (!Number.isInteger(v)) throw invalido('versao');
       const [atual] = await rest(c, `sd_atendimentos?select=historico,concluido,concluido_em,cliente_nome,danos,objetos,tipo_id,tipo_nome,etapas,opcionais,opcionais_feitos,feitas,pago_em,pago_por&id=eq.${q(atId)}&versao=eq.${v}`) || [];
       if (!atual) throw erro(409, 'conflito', atId);
-      if (pag && atual.pago_em) Object.assign(linha, { pago_em: atual.pago_em, pago_por: atual.pago_por });
+      if (pag && atual.pago_em) Object.assign(linha, { pago_em: diaPag && diaPag !== diaLoja(atual.pago_em) ? pagoNoDia(diaPag) : atual.pago_em, pago_por: atual.pago_por });
       // Data de conclusão pelo relógio do servidor (celular com data errada não adianta a limpeza das fotos
       // nem muda o mês do faturamento): a de agora quando conclui; a já gravada quando continua concluído.
       if (linha.concluido) linha.concluido_em = atual.concluido && atual.concluido_em ? atual.concluido_em : agora();
