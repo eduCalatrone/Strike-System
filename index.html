@@ -2018,10 +2018,11 @@ function campoMesEntrada(inicial, onChange) {
   let mes = inicial && inicial <= hoje ? inicial : hoje;
   const opcoes = [hoje, mesAntes(hoje, 1), mesAntes(hoje, 2)];
   if (!opcoes.includes(mes)) opcoes.push(mes);
+  opcoes.reverse(); // mais antigo à esquerda, este mês à direita (pedido de 06/11/2026)
   const box = el('div', { class: 'seg seg-linha mes-entrada', role: 'group', 'aria-label': 'Mês em que a entrada foi recebida' });
   const desenhar = () => preencher(box, ...opcoes.map((m, i) => el('button', { type: 'button', 'aria-pressed': String(m === mes),
     onclick: () => { mes = m; desenhar(); if (onChange) onChange(m); } },
-    el('b', { text: MESES[Number(m.slice(5)) - 1] }), el('small', { text: i === 0 ? 'este mês' : i === 1 ? 'mês passado' : m.slice(0, 4) }))));
+    el('b', { text: MESES[Number(m.slice(5)) - 1] }), el('small', { text: m === hoje ? 'este mês' : m === mesAntes(hoje, 1) ? 'mês passado' : m.slice(0, 4) }))));
   desenhar();
   return { el: el('div', { class: 'field' }, el('span', { class: 'label', text: 'Entrada recebida em' }), box), valor: () => mes };
 }
