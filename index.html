@@ -1168,7 +1168,10 @@ a.atencao-item:hover { background: rgba(18, 18, 18, .04); }
   .ag-it.em_servico { border-left-color: var(--ink); }
   .ag-it.concluido { border-left-color: #9A9A98; color: var(--muted); }
   .ag-it.evento, .ag-it.feriado { border-left-color: var(--danger); color: var(--danger); background: rgba(255, 255, 255, .7); }
-  .ag-it.mais { border-left: 0; background: none; color: var(--muted); padding-left: 2px; }
+  .ag-itens.d2 { gap: 2px; }
+  .ag-itens.d2 .ag-it { font-size: 10px; line-height: 1.25; padding: 1px 5px; }
+  .ag-itens.d3 { gap: 1px; }
+  .ag-itens.d3 .ag-it { font-size: 9px; line-height: 1.2; padding: 0 4px; border-left-width: 2px; border-radius: 4px; }
   .ag-cell.sel .ag-it { background: rgba(255, 255, 255, .14); color: #fff; }
   body.com-lateral .ag-pc .ag-grid { gap: 6px; }
 }
@@ -5747,11 +5750,11 @@ function renderAgenda() {
     }, el('span', { class: 'n', text: String(d) }),
       el('span', { class: 'ag-marcas', 'aria-hidden': 'true' }, n ? el('span', { class: 'ag-num ' + cor, text: String(n) }) : null),
       // Computador (pedido de 06/11/2026: "muito espaço, pouco conteúdo"): nomes dos clientes e eventos dentro do dia.
-      pc ? el('span', { class: 'ag-itens', 'aria-hidden': 'true' },
+      // Todos os nomes aparecem (pedido de 06/11/2026): quanto mais itens, menores ficam (d2, d3).
+      pc ? el('span', { class: 'ag-itens' + (n + eventosDoDia(k).length >= 6 ? ' d3' : n + eventosDoDia(k).length >= 4 ? ' d2' : ''), 'aria-hidden': 'true' },
         eventosDoDia(k).map(e => el('span', { class: 'ag-it evento', text: e.titulo })),
         !eventosDoDia(k).length && fer[k] ? el('span', { class: 'ag-it feriado', text: fer[k] }) : null,
-        ativos.slice(0, 3).map(a => el('span', { class: `ag-it ${a.status}`, text: a.cliente.split(/\s+/)[0], title: a.cliente })),
-        n > 3 ? el('span', { class: 'ag-it mais', text: `+${n - 3}` }) : null) : null));
+        ativos.map(a => el('span', { class: `ag-it ${a.status}`, text: a.cliente.split(/\s+/)[0], title: a.cliente }))) : null));
   }
   const doMes = lista.filter(a => a.data.startsWith(`${A.y}-${pad2(A.m + 1)}-`));
 
