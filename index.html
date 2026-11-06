@@ -1156,8 +1156,24 @@ a.atencao-item:hover { background: rgba(18, 18, 18, .04); }
 /* Duas colunas (veículo, relatórios) */
 .pc-colunas { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .pc-colunas > * { min-width: 0; }
-.ag-pc { grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr); }
-.ag-pc > .card { position: sticky; top: 24px; }
+.ag-pc { grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
+.ag-pc > .ag-lado { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.ag-itens { display: none; }
+@media (min-width: 1024px) {
+  body.com-lateral .ag-pc .ag-cell { height: auto; aspect-ratio: auto; min-height: max(92px, calc((100vh - 290px) / 6)); place-items: stretch; align-content: start; justify-items: start; gap: 4px; padding: 7px 8px 8px; text-align: left; }
+  body.com-lateral .ag-pc .ag-cell .n { font-size: 13px; }
+  body.com-lateral .ag-pc .ag-marcas { position: absolute; top: 6px; right: 7px; }
+  body.com-lateral .ag-pc .ag-itens { display: grid; gap: 3px; width: 100%; min-width: 0; }
+  .ag-it { display: block; min-width: 0; padding: 2px 6px; border-radius: 6px; font: 600 11px/1.35 var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; color: var(--ink-2); border-left: 3px solid #1F9D55; }
+  .ag-it.em_servico { border-left-color: var(--ink); }
+  .ag-it.concluido { border-left-color: #9A9A98; color: var(--muted); }
+  .ag-it.evento, .ag-it.feriado { border-left-color: var(--danger); color: var(--danger); background: rgba(255, 255, 255, .7); }
+  .ag-it.mais { border-left: 0; background: none; color: var(--muted); padding-left: 2px; }
+  .ag-cell.sel .ag-it { background: rgba(255, 255, 255, .14); color: #fff; }
+  body.com-lateral .ag-pc .ag-grid { gap: 6px; }
+}
+.ag-prox-dia { display: grid; gap: 6px; }
+.ag-prox-dia h3 { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 @media (min-width: 1024px) and (max-width: 1180px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .quadro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .kpi, .q-card, .lat-item { transition: none; } a.kpi:hover, .q-card:hover { transform: none; } }
 
@@ -5639,6 +5655,18 @@ function estadoAgenda() {
   if (!S.ag) { const t = new Date(); S.ag = { y: t.getFullYear(), m: t.getMonth(), sel: hojeISO(), modo: 'mes' }; }
   return S.ag;
 }
+// Computador: próximas entradas (14 dias) embaixo do dia escolhido, para a coluna da direita não ficar vazia.
+function proximasEntradas(lista, hoje) {
+  const ate = somaDias(hoje, 14);
+  const prox = lista.filter(a => a.status === 'agendado' && a.data >= hoje && a.data <= ate).sort((a, b) => a.data.localeCompare(b.data) || a.cliente.localeCompare(b.cliente));
+  const grupos = [];
+  for (const a of prox) { if (!grupos.length || grupos[grupos.length - 1].k !== a.data) grupos.push({ k: a.data, itens: [] }); grupos[grupos.length - 1].itens.push(a); }
+  const rot = k => k === hoje ? 'Hoje' : k === somaDias(hoje, 1) ? 'Amanhã' : `${DIAS_SEMANA[dataDe(k).getDay()].replace('-feira', '')}, ${brDia(k)}`;
+  return el('div', { class: 'card ag-prox' },
+    el('div', { class: 'card-head' }, el('h2', { text: 'Próximas entradas' }), el('span', { class: 'count', text: `${prox.length} em 14 dias` })),
+    prox.length ? grupos.map(g => el('div', { class: 'ag-prox-dia' }, el('h3', { text: rot(g.k) }), g.itens.map(a => linhaAgendamento(a))))
+      : el('p', { class: 'hint', text: 'Nenhum agendamento nos próximos 14 dias.' }));
+}
 function linhaAgendamento(a, { entrega = false } = {}) {
   const selo = seloMarca(a.marca);
   const meta = entrega
@@ -5704,7 +5732,7 @@ function renderAgenda() {
   // Entregas de cada dia (sem marca no dia desde 17/10/2026; ficam fora da contagem de entradas).
   const entregasDia = {};
   lista.filter(a => a.prazo && a.status !== 'cancelado').forEach(a => { const k = entregaDe(a); entregasDia[k] = (entregasDia[k] || 0) + 1; });
-  const cells = [];
+  const cells = [], pc = ePC();
   for (let i = 0; i < first; i++) cells.push(el('span', { class: 'ag-cell out', 'aria-hidden': 'true' }));
   for (let d = 1; d <= total; d++) {
     const k = isoDia(A.y, A.m, d), its = porDia[k] || [], dow = new Date(A.y, A.m, d).getDay();
@@ -5717,7 +5745,13 @@ function renderAgenda() {
       class: ['ag-cell', n ? 'tem' : '', k === hoje ? 'today' : '', k === A.sel ? 'sel' : '', fer[k] ? 'feriado' : '', dow === 0 || dow === 6 ? 'fim' : ''].filter(Boolean).join(' '),
       onclick: () => { A.sel = k; redraw(); },
     }, el('span', { class: 'n', text: String(d) }),
-      el('span', { class: 'ag-marcas', 'aria-hidden': 'true' }, n ? el('span', { class: 'ag-num ' + cor, text: String(n) }) : null)));
+      el('span', { class: 'ag-marcas', 'aria-hidden': 'true' }, n ? el('span', { class: 'ag-num ' + cor, text: String(n) }) : null),
+      // Computador (pedido de 06/11/2026: "muito espaço, pouco conteúdo"): nomes dos clientes e eventos dentro do dia.
+      pc ? el('span', { class: 'ag-itens', 'aria-hidden': 'true' },
+        eventosDoDia(k).map(e => el('span', { class: 'ag-it evento', text: e.titulo })),
+        !eventosDoDia(k).length && fer[k] ? el('span', { class: 'ag-it feriado', text: fer[k] }) : null,
+        ativos.slice(0, 3).map(a => el('span', { class: `ag-it ${a.status}`, text: a.cliente.split(/\s+/)[0], title: a.cliente })),
+        n > 3 ? el('span', { class: 'ag-it mais', text: `+${n - 3}` }) : null) : null));
   }
   const doMes = lista.filter(a => a.data.startsWith(`${A.y}-${pad2(A.m + 1)}-`));
 
@@ -5754,8 +5788,8 @@ function renderAgenda() {
       el('span', { class: 'ag-total', text: `${doMes.filter(a => a.status !== 'cancelado').length} no mês` }))];
   // Computador: calendário à esquerda e o dia escolhido à direita.
   shell(ePC()
-    ? el('div', { class: 'stack', style: 'max-width:1180px' }, topo,
-      el('div', { class: 'pc-colunas ag-pc' }, el('div', { class: 'stack' }, nav, ...calendario), dia))
+    ? el('div', { class: 'stack', style: 'max-width:1560px' }, topo,
+      el('div', { class: 'pc-colunas ag-pc' }, el('div', { class: 'stack' }, nav, ...calendario), el('div', { class: 'stack ag-lado' }, dia, proximasEntradas(lista, hoje))))
     : el('div', { class: 'stack', style: 'max-width:720px' }, topo, nav, ...calendario, dia), { current: 'agenda' });
 }
 
