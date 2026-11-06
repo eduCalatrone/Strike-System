@@ -791,6 +791,18 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .cv-dl dt { color: var(--muted); }
 .cv-dl dd { margin: 0; word-break: break-word; }
 .cv-grupo { margin: 4px 0 0; font-size: 15px; }
+/* Tela única (06/11/2026): convidados dentro do cartão dos padrinhos que chamaram. */
+.cv-item.teste { border-style: dashed; }
+.cv-convs { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.cv-convs-tit { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.cv-lista-conv { list-style: none; margin: 0; padding: 0; display: grid; }
+.cv-conv { display: grid; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); }
+.cv-conv:first-child { border-top: 0; padding-top: 2px; }
+.cv-conv .cv-nome b { font-size: 15px; }
+.cv-conv .cv-nome span { font-size: 12px; }
+.cv-link-conv { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.cv-link-conv .cv-nome { flex: 1 1 160px; }
+.cv-link-conv .cv-nome span { word-break: break-all; }
 .seg.seg-linha { display: flex; width: 100%; flex-wrap: nowrap; }
 .seg.seg-linha button { flex: 1; padding: 10px 4px; white-space: nowrap; }
 .rel-fat { gap: 4px; }
@@ -2250,7 +2262,6 @@ function detalhesConfirmacao(m, srv, quando, extra = []) {
 function renderConvites() {
   const redraw = () => { const y = window.scrollY; renderConvites(); window.scrollTo(0, y); };
   const r = resumoConvites();
-  const aba = S.convAba === 'convidados' ? 'convidados' : 'padrinhos';
   const enviar = async (op, msg) => {
     try { await apiJson('/api/dados', { method: 'POST', body: { ops: [op] } }); if (msg) toast(msg); }
     catch { toast('Não deu para salvar agora.', true); return false; }
@@ -2277,87 +2288,92 @@ function renderConvites() {
     const grupos = new Map();
     r.convidados.forEach(x => { const k = x.padrinhos || ''; grupos.set(k, [...(grupos.get(k) || []), ...x.pessoas]); });
     linhas.push('', `Convidados (${r.nConv})`);
-    for (const [k, ns] of grupos) { linhas.push(`${k ? nomePad(k) : 'Noivos'}:`); ns.forEach(n => linhas.push(`- ${n}`)); }
+    for (const [k, ns] of grupos) { linhas.push(`${k && k !== 'noivos' ? nomePad(k) : 'Noivos'}:`); ns.forEach(n => linhas.push(`- ${n}`)); }
     copiarTexto(linhas.join('\n'), 'Lista de presença copiada.');
   };
 
-  let conteudo;
-  if (aba === 'padrinhos') {
-    const novo = S.convNovo = S.convNovo || { aberto: false };
-    let form = null;
-    if (novo.aberto) {
-      const f = el('input', { type: 'text', maxlength: '80', placeholder: 'Ex.: João & Maria', 'aria-label': 'Nomes dos padrinhos' });
-      const criar = el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async () => {
-        const nomes = f.value.trim(); if (!nomes) { f.focus(); return; }
-        criar.disabled = true;
-        if (await enviar({ col: 'convites', acao: 'salvar', item: { convidados: nomes, papel: 'Padrinhos' } }, 'Padrinhos adicionados.')) S.convNovo = { aberto: false };
-        redraw();
-      } }, 'Adicionar');
-      form = el('div', { class: 'card cv-form' }, f, el('div', { class: 'cv-acoes' }, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { novo.aberto = false; redraw(); } }, 'Cancelar'), criar));
-      setTimeout(() => f.isConnected && f.focus(), 50);
+  // Tela única (pedido de 06/11/2026): cada casal de padrinhos num cartão, com os convidados que eles chamaram logo embaixo;
+  // depois os convidados dos noivos e, no fim, o perfil de teste.
+  const ehNoivos = k => !k || k === 'noivos';
+  const grupos = new Map();
+  r.convidados.forEach(x => { const k = ehNoivos(x.padrinhos) ? '' : x.padrinhos; grupos.set(k, [...(grupos.get(k) || []), x]); });
+  const somaPessoas = l => l.reduce((t, x) => t + x.pessoas.length, 0);
+
+  const linhaConvidado = x => {
+    const aberto = S.convDet === x.id;
+    return el('li', { class: 'cv-conv' },
+      el('div', { class: 'cv-topo' },
+        el('div', { class: 'cv-nome' }, el('b', { text: x.pessoas.join(', ') }),
+          el('span', { text: [quandoCurto(x.atualizadoEm || x.criadoEm), cidadeDe(x.meta), aparelhoDe(x.meta, x.metaServidor)].filter(Boolean).join(' · ') })),
+        el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(aberto), onclick: () => { S.convDet = aberto ? null : x.id; redraw(); } }, aberto ? 'Fechar' : 'Detalhes')),
+      aberto ? el('div', { class: 'cv-det' }, detalhesConfirmacao(x.meta, x.metaServidor, x.criadoEm, x.edicoes ? [['Alterada', `${x.edicoes}x (última ${quandoCurto(x.atualizadoEm)})`]] : []),
+        el('div', { class: 'cv-acoes' }, botaoExcluir({ col: 'confirmacoes', acao: 'excluir', id: x.id }, 'Confirmação excluída.'))) : null);
+  };
+  const blocoConvidados = lista => lista && lista.length
+    ? el('div', { class: 'cv-convs' },
+        el('span', { class: 'cv-convs-tit', text: `Convidados deles · ${somaPessoas(lista)}` }),
+        el('ul', { class: 'cv-lista-conv' }, lista.map(linhaConvidado)))
+    : null;
+
+  const cartao = v => {
+    const ok = v.resposta === 'sim', link = linkConvite(v);
+    const edit = S.convEdit === v.slug;
+    const sub = v.teste ? 'Perfil de teste · nunca fica confirmado'
+      : ok ? [quandoCurto(v.respondidoEm), cidadeDe(v.meta), aparelhoDe(v.meta, v.metaServidor)].filter(Boolean).join(' · ')
+      : v.aberturas ? `Abriu ${v.aberturas}x · ainda não confirmou` : 'Ainda não abriu';
+    let det = null;
+    if (S.convDet === v.slug) {
+      const fN = el('input', { type: 'text', maxlength: '80', value: v.convidados, 'aria-label': 'Nomes dos padrinhos' });
+      det = el('div', { class: 'cv-det' },
+        ok ? detalhesConfirmacao(v.meta, v.metaServidor, v.respondidoEm, [['Vezes que abriu o link', v.aberturas]]) : null,
+        el('span', { class: 'cv-link', text: link.replace('https://', '') }),
+        edit ? el('div', { class: 'cv-form' }, fN, el('div', { class: 'cv-acoes' },
+          el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = null; redraw(); } }, 'Cancelar'),
+          el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async e => {
+            if (!fN.value.trim()) return; e.currentTarget.disabled = true;
+            if (await enviar({ col: 'convites', acao: 'salvar', item: { slug: v.slug, convidados: fN.value.trim(), papel: 'Padrinhos' } }, 'Salvo.')) S.convEdit = null;
+            redraw();
+          } }, 'Salvar')))
+        : el('div', { class: 'cv-acoes' }, el('button', { class: 'link-btn', type: 'button', onclick: () => { S.convEdit = v.slug; redraw(); } }, 'Editar nomes'),
+            v.teste ? null : botaoExcluir({ col: 'convites', acao: 'excluir', slug: v.slug }, 'Excluído.')));
     }
-    const cartao = v => {
-      const ok = v.resposta === 'sim', link = linkConvite(v);
-      const edit = S.convEdit === v.slug;
-      const sub = v.teste ? 'Perfil de teste · nunca fica confirmado'
-        : ok ? [quandoCurto(v.respondidoEm), cidadeDe(v.meta), aparelhoDe(v.meta, v.metaServidor)].filter(Boolean).join(' · ')
-        : v.aberturas ? `Abriu ${v.aberturas}x · ainda não confirmou` : 'Ainda não abriu';
-      let det = null;
-      if (S.convDet === v.slug) {
-        const fN = el('input', { type: 'text', maxlength: '80', value: v.convidados, 'aria-label': 'Nomes dos padrinhos' });
-        det = el('div', { class: 'cv-det' },
-          ok ? detalhesConfirmacao(v.meta, v.metaServidor, v.respondidoEm, [['Vezes que abriu o link', v.aberturas]]) : null,
-          el('span', { class: 'cv-link', text: link.replace('https://', '') }),
-          edit ? el('div', { class: 'cv-form' }, fN, el('div', { class: 'cv-acoes' },
-            el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.convEdit = null; redraw(); } }, 'Cancelar'),
-            el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async e => {
-              if (!fN.value.trim()) return; e.currentTarget.disabled = true;
-              if (await enviar({ col: 'convites', acao: 'salvar', item: { slug: v.slug, convidados: fN.value.trim(), papel: 'Padrinhos' } }, 'Salvo.')) S.convEdit = null;
-              redraw();
-            } }, 'Salvar')))
-          : el('div', { class: 'cv-acoes' }, el('button', { class: 'link-btn', type: 'button', onclick: () => { S.convEdit = v.slug; redraw(); } }, 'Editar nomes'),
-              v.teste ? null : botaoExcluir({ col: 'convites', acao: 'excluir', slug: v.slug }, 'Excluído.')));
-      }
-      return el('li', { class: 'cv-item' + (ok ? ' ok' : '') },
-        el('div', { class: 'cv-topo' },
-          el('div', { class: 'cv-nome' }, el('b', { text: v.convidados }), el('span', { text: sub })),
-          el('span', { class: 'cv-sit', text: v.teste ? 'Teste' : ok ? 'Confirmado' : 'Aguardando' })),
-        ok ? el('div', { class: 'cv-pessoas' }, v.pessoas.map(n => el('span', { class: 'tag', text: n }))) : null,
-        el('div', { class: 'cv-acoes' }, v.teste ? botaoAbrir(link) : null, acoesLink(link, `${v.convidados}, Petherson & Anna têm um convite especial para vocês: ${link}`),
-          el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(S.convDet === v.slug), onclick: () => { S.convDet = S.convDet === v.slug ? null : v.slug; S.convEdit = null; redraw(); } }, S.convDet === v.slug ? 'Fechar' : 'Detalhes')),
-        det);
-    };
-    conteudo = [
-      form,
-      r.padrinhos.length + r.teste.length ? el('ul', { class: 'cv-lista' }, [...r.padrinhos, ...r.teste].map(cartao)) : el('p', { class: 'empty', text: 'Nenhum casal de padrinhos.' }),
-      novo.aberto ? null : el('button', { class: 'link-btn', type: 'button', style: 'justify-self:start', onclick: () => { novo.aberto = true; redraw(); } }, '+ Adicionar padrinhos')];
-  } else {
-    // Convidados: o link único em cima e as confirmações separadas pelos padrinhos que convidaram.
-    const grupos = new Map();
-    r.convidados.forEach(x => { const k = x.padrinhos || ''; grupos.set(k, [...(grupos.get(k) || []), x]); });
-    const ordem = [...r.padrinhos.map(v => v.slug).filter(k => grupos.has(k)), ...[...grupos.keys()].filter(k => !r.padrinhos.some(v => v.slug === k))];
-    const item = x => {
-      const aberto = S.convDet === x.id;
-      return el('li', { class: 'cv-item' },
-        el('div', { class: 'cv-topo' },
-          el('div', { class: 'cv-nome' }, el('b', { text: x.pessoas.join(', ') }),
-            el('span', { text: [quandoCurto(x.atualizadoEm || x.criadoEm), cidadeDe(x.meta), aparelhoDe(x.meta, x.metaServidor)].filter(Boolean).join(' · ') })),
-          el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(aberto), onclick: () => { S.convDet = aberto ? null : x.id; redraw(); } }, aberto ? 'Fechar' : 'Detalhes')),
-        aberto ? el('div', { class: 'cv-det' }, detalhesConfirmacao(x.meta, x.metaServidor, x.criadoEm, x.edicoes ? [['Alterada', `${x.edicoes}x (última ${quandoCurto(x.atualizadoEm)})`]] : []),
-          el('div', { class: 'cv-acoes' }, botaoExcluir({ col: 'confirmacoes', acao: 'excluir', id: x.id }, 'Confirmação excluída.'))) : null);
-    };
-    conteudo = [
-      el('div', { class: 'card cv-form' },
-        el('b', { text: 'Link dos convidados' }),
-        el('span', { class: 'cv-link', text: SITE_CONVITE.replace('https://', '') }),
-        el('div', { class: 'cv-acoes' }, botaoAbrir(SITE_CONVITE), acoesLink(SITE_CONVITE, `Petherson & Anna convidam você para o casamento. Confirme sua presença: ${SITE_CONVITE}`))),
-      r.convidados.length ? ordem.map(k => el('section', { class: 'stack', style: 'gap:8px' },
-        el('h3', { class: 'cv-grupo', text: `${k ? nomePad(k) : 'Noivos'} · ${grupos.get(k).reduce((t, x) => t + x.pessoas.length, 0)}` }),
-        el('ul', { class: 'cv-lista' }, grupos.get(k).map(item))))
-        : el('p', { class: 'empty', text: 'Nenhum convidado confirmou ainda.' })];
+    return el('li', { class: 'cv-item' + (ok ? ' ok' : '') + (v.teste ? ' teste' : '') },
+      el('div', { class: 'cv-topo' },
+        el('div', { class: 'cv-nome' }, el('b', { text: v.convidados }), el('span', { text: sub })),
+        el('span', { class: 'cv-sit', text: v.teste ? 'Teste' : ok ? 'Confirmado' : 'Aguardando' })),
+      ok ? el('div', { class: 'cv-pessoas' }, v.pessoas.map(n => el('span', { class: 'tag', text: n }))) : null,
+      el('div', { class: 'cv-acoes' }, v.teste ? botaoAbrir(link) : null, acoesLink(link, `${v.convidados}, Petherson & Anna têm um convite especial para vocês: ${link}`),
+        el('button', { class: 'link-btn', type: 'button', 'aria-expanded': String(S.convDet === v.slug), onclick: () => { S.convDet = S.convDet === v.slug ? null : v.slug; S.convEdit = null; redraw(); } }, S.convDet === v.slug ? 'Fechar' : 'Detalhes')),
+      det,
+      v.teste ? null : blocoConvidados(grupos.get(v.slug)));
+  };
+  // Convidados que escolheram "os noivos" e os de padrinhos que já foram excluídos.
+  const grupoSolto = (titulo, sub, lista) => el('li', { class: 'cv-item' },
+    el('div', { class: 'cv-topo' }, el('div', { class: 'cv-nome' }, el('b', { text: titulo }), el('span', { text: sub }))),
+    el('ul', { class: 'cv-lista-conv' }, lista.map(linhaConvidado)));
+  const soltos = [...grupos.keys()].filter(k => k && !r.padrinhos.some(v => v.slug === k));
+
+  const novo = S.convNovo = S.convNovo || { aberto: false };
+  let form = null;
+  if (novo.aberto) {
+    const f = el('input', { type: 'text', maxlength: '80', placeholder: 'Ex.: João & Maria', 'aria-label': 'Nomes dos padrinhos' });
+    const criar = el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: async () => {
+      const nomes = f.value.trim(); if (!nomes) { f.focus(); return; }
+      criar.disabled = true;
+      if (await enviar({ col: 'convites', acao: 'salvar', item: { convidados: nomes, papel: 'Padrinhos' } }, 'Padrinhos adicionados.')) S.convNovo = { aberto: false };
+      redraw();
+    } }, 'Adicionar');
+    form = el('div', { class: 'card cv-form' }, f, el('div', { class: 'cv-acoes' }, el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { novo.aberto = false; redraw(); } }, 'Cancelar'), criar));
+    setTimeout(() => f.isConnected && f.focus(), 50);
   }
 
-  conteudo = conteudo.flat(2);
+  const itens = [
+    ...r.padrinhos.map(cartao),
+    grupos.has('') ? grupoSolto('Noivos', `Convidados direto pelos noivos · ${somaPessoas(grupos.get(''))}`, grupos.get('')) : null,
+    ...soltos.map(k => grupoSolto(nomePad(k), `Padrinhos removidos · ${somaPessoas(grupos.get(k))}`, grupos.get(k))),
+    ...r.teste.map(cartao),
+  ].filter(Boolean);
+
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     backLink('#/relatorios', 'Relatórios'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Convites' }),
@@ -2366,11 +2382,14 @@ function renderConvites() {
       el('div', {}, el('b', { text: String(r.pessoas) }), el('span', { text: 'confirmados' })),
       el('div', {}, el('b', { text: `${r.padConf.length}/${r.padrinhos.length}` }), el('span', { text: 'padrinhos' })),
       el('div', {}, el('b', { text: String(r.nConv) }), el('span', { text: 'convidados' }))),
-    el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Convites', style: 'display:flex;width:100%' },
-      [['padrinhos', 'Padrinhos', r.padrinhos.length], ['convidados', 'Convidados', r.convidados.length]].map(([k, t, n]) =>
-        el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 8px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k),
-          onclick: () => { S.convAba = k; S.convDet = null; redraw(); } }, t, el('span', { class: 'seg-n', text: String(n) })))),
-    conteudo),
+    el('div', { class: 'cv-link-conv' },
+      el('div', { class: 'cv-nome' }, el('b', { text: 'Link dos convidados' }), el('span', { text: SITE_CONVITE.replace('https://', '') })),
+      el('div', { class: 'cv-acoes' }, botaoAbrir(SITE_CONVITE), acoesLink(SITE_CONVITE, `Petherson & Anna convidam você para o casamento. Confirme sua presença: ${SITE_CONVITE}`))),
+    el('div', { class: 'sec-head' },
+      el('h2', {}, 'Confirmações'),
+      el('button', { class: 'btn btn--sm', type: 'button', 'aria-expanded': String(novo.aberto), onclick: () => { novo.aberto = !novo.aberto; redraw(); } }, novo.aberto ? 'Fechar' : [icon('plus'), 'Padrinhos'])),
+    form,
+    itens.length ? el('ul', { class: 'cv-lista' }, itens) : el('p', { class: 'empty', text: 'Nenhum convite ainda.' })),
   { current: 'relatorios' });
 }
 
