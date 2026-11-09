@@ -575,6 +575,16 @@ textarea { resize: vertical; min-height: 76px; }
 .tl-item.is-concluido .tl-txt { font-weight: 700; }
 .tl-veic { font-size: 12px; color: var(--muted); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tl-veic b { color: var(--ink-2); font: 700 12px var(--cond); letter-spacing: .06em; }
+/* Ícone no lugar da bolinha (09/11/2026), os mesmos do Resumo do dia */
+.tl-item { grid-template-columns: 42px 26px 1fr; }
+.tl-item::before { left: 62px; }
+.tl-item:first-child::before { top: 16px; }
+.tl-item:last-child::before { bottom: calc(100% - 16px); }
+.tl-dot { width: 26px; height: 26px; margin-top: -3px; display: grid; place-items: center; border-width: 1px; border-color: var(--line); background: var(--soft); color: var(--ink-2); }
+.tl-dot svg { width: 14px; height: 14px; }
+.tl-item.is-etapa .tl-dot, .tl-item.is-concluido .tl-dot { color: #fff; }
+.tl-item.is-entrada .tl-dot { border-width: 2px; color: var(--ink); }
+.tl-item.is-sessao .tl-dot, .tl-item.is-retirada .tl-dot, .tl-item.is-estoque .tl-dot { color: #fff; }
 .pres-item + .pres-item { border-top: 1px solid var(--line); }
 .pres-av { position: relative; flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); border: 1px solid var(--line); font: 700 16px/1 var(--cond); letter-spacing: .04em; color: var(--ink-2); }
 .pres-item.is-online .pres-av { background: var(--ink); border-color: var(--ink); color: #fff; }
@@ -758,38 +768,56 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .rt-vivo { width: 7px; height: 7px; border-radius: 50%; background: #2FBF6B; animation: pulso-verde 1.6s ease-out infinite; }
 .rt-badge { position: absolute; top: 10px; right: 10px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #E5484D; color: #fff; font: 700 11px/20px var(--body); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .rt-vivo { animation: none; } }
-/* Resumo do dia (Relatórios > Dia, pedido de 09/11/2026): escolha do dia, números e linha do tempo com um ícone por tipo. */
-.dia-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.dia-seta { width: 40px; height: 40px; flex: none; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); display: grid; place-items: center; }
+/* Resumo do dia (Relatórios > Dia, pedido de 09/11/2026; layout do celular revisto no mesmo dia): cabeçalho
+   centralizado, números em 2 colunas, linha do tempo separada por hora, seções em lista (sem cartão dentro de cartão). */
+.dia-cab { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.dia-cab h1 { margin: 0; }
+.dia-nav { display: grid; grid-template-columns: 44px minmax(0, 220px) 44px; align-items: center; gap: 8px; width: 100%; justify-content: center; }
+.dia-seta { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); display: grid; place-items: center; }
 .dia-seta svg { width: 18px; height: 18px; }
-.dia-seta:disabled { opacity: .35; }
-.dia-qual { display: grid; min-width: 118px; text-align: center; line-height: 1.15; }
-.dia-qual b { font: 700 18px var(--cond); letter-spacing: .03em; text-transform: uppercase; }
-.dia-qual span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.dia-nav input[type="date"] { width: auto; flex: 1; min-width: 140px; max-width: 200px; min-height: 40px; padding: 7px 10px; }
-.dia-nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
-.dia-num { display: grid; gap: 1px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); min-width: 0; }
-@media (max-width: 1023px) { .dia-num:nth-child(5):last-child { grid-column: 1 / -1; } }
-.dia-num b { font: 700 22px/1.1 var(--cond); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dia-num > span:last-child { font-size: 12px; color: var(--muted); }
-.dia-num-ico, .dia-ico { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--soft); color: var(--ink-2); border: 1px solid var(--line); font: 800 11px var(--body); }
-.dia-num-ico { margin-bottom: 6px; }
+.dia-seta:disabled { opacity: .3; }
+.dia-qual { position: relative; display: grid; justify-items: center; gap: 1px; padding: 6px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line-2); line-height: 1.15; }
+.dia-qual b { font: 700 19px var(--cond); letter-spacing: .03em; text-transform: uppercase; }
+.dia-qual > span { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dia-qual > span svg { width: 13px; height: 13px; }
+.dia-data { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; min-height: 0; }
+.dia-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dia-num { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; padding: 11px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); min-width: 0; }
+.dia-num-largo { grid-column: 1 / -1; }
+.dia-num-txt { display: grid; min-width: 0; line-height: 1.15; }
+.dia-num-txt b { font: 700 22px/1.1 var(--cond); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dia-num-txt span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 1024px) { .dia-nums { grid-template-columns: repeat(5, minmax(0, 1fr)); } .dia-num-largo { grid-column: auto; } }
+.dia-num-ico, .dia-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--soft); color: var(--ink-2); border: 1px solid var(--line); font: 800 11px var(--body); }
 .dia-num-ico svg, .dia-ico svg { width: 17px; height: 17px; }
 .dia-h-ico { display: inline-grid; vertical-align: -3px; margin-right: 7px; }
 .dia-h-ico svg { width: 18px; height: 18px; }
+.dia-horas { display: grid; gap: 6px; }
+.dia-sep { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.dia-sep span { font: 700 14px var(--cond); letter-spacing: .04em; padding: 2px 9px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); }
+.dia-sep::after { content: ""; flex: 1; height: 1px; background: var(--line); order: 2; }
+.dia-sep small { order: 3; font-size: 11px; font-weight: 600; color: var(--muted); }
 .dia-lista { list-style: none; margin: 0; padding: 0; }
-.dia-item { display: grid; grid-template-columns: 42px 32px 1fr; gap: 10px; padding: 8px 0; position: relative; }
-.dia-item:not(:last-child)::before { content: ""; position: absolute; left: 67px; top: 42px; bottom: -8px; width: 2px; background: var(--line); }
-.dia-hora { font-size: 12px; font-weight: 600; color: var(--muted); padding-top: 8px; font-variant-numeric: tabular-nums; }
+.dia-item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 11px; padding: 8px 0; position: relative; }
+.dia-item:not(:last-child)::before { content: ""; position: absolute; left: 16px; top: 44px; bottom: -6px; width: 2px; background: var(--line); }
 .dia-ico { border-radius: 50%; position: relative; z-index: 1; }
-.dia-main { display: grid; gap: 1px; min-width: 0; }
-.dia-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.dia-txt { font-size: 14px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; text-decoration: none; }
-.dia-obs { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.dia-main { display: grid; gap: 2px; min-width: 0; }
+.dia-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.dia-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); min-width: 0; }
+.dia-hora { flex: none; font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dia-txt { font-size: 14.5px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; text-decoration: none; }
+.dia-obs { font-size: 12.5px; color: var(--ink-2); overflow-wrap: anywhere; }
 .dia-veic { font-size: 12.5px; color: var(--ink-2); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dia-veic b { font-family: var(--cond); letter-spacing: .06em; }
-.dia-quem { font-size: 12px; color: var(--muted); }
+.dia-quem { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.dia-quem svg { width: 12px; height: 12px; }
+.dia-sec { display: grid; gap: 8px; }
+.dia-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 2px; }
+.dia-sec-head h2 { margin: 0; display: flex; align-items: center; }
+.dia-sec .r-sub + .r-sub { font-size: 12px; }
+.dia-vazio { margin: 0; padding: 14px; text-align: center; border: 1px dashed var(--line-2); border-radius: 14px; }
 .dia-av { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff; font: 700 12px var(--body); }
+.dia-pessoa-n { flex: none; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; background: var(--soft); border: 1px solid var(--line); font: 700 13px var(--body); font-variant-numeric: tabular-nums; }
 /* Cores por tipo (linha do tempo e números) */
 .c-entrada .dia-ico, .c-entrada .dia-num-ico { background: #EAF1FB; border-color: #C9DAF2; color: #1F4E99; }
 .c-etapa .dia-ico, .c-etapa .dia-num-ico { background: var(--ink); border-color: var(--ink); color: #fff; }
@@ -2148,7 +2176,9 @@ const recebidoEm = at => (at.pagamento ? at.pagamento.em : at.concluido && (at.c
 const dataHoraBR = ts => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(ts);
 // Baixa com o dia escolhido fica ao meio-dia em ponto (sem a hora de verdade): mostra só a data.
 const quandoPago = ts => (ts % 60e3 === 0 && new Date(ts).getHours() === 12 && new Date(ts).getMinutes() === 0 ? fmtData(ts) : dataHoraBR(ts));
-const textoPagamento = (at, p, editado) => `Pagamento confirmado${editado ? ' (editado)' : ''}: ${[p.forma, at.valor != null ? fmtBRL(at.valor) : '', p.dia ? `pago em ${brData(p.dia)}` : '', p.obs].filter(Boolean).join(' · ')}`;
+// Valor da baixa = o que faltava receber (total menos a entrada já paga), pedido de 09/11/2026: antes mostrava o total.
+const textoValorBaixa = at => (at.valor == null ? '' : entradaDe(at) > 0 ? `${fmtBRL(aReceberDe(at))} (entrada de ${fmtBRL(entradaDe(at))} já paga, total ${fmtBRL(at.valor)})` : fmtBRL(at.valor));
+const textoPagamento = (at, p, editado) => `Pagamento confirmado${editado ? ' (editado)' : ''}: ${[p.forma, textoValorBaixa(at), p.dia ? `pago em ${brData(p.dia)}` : '', p.obs].filter(Boolean).join(' · ')}`;
 function registrar(at, texto) {
   const u = me();
   at.historico.push({ texto, em: Date.now(), porId: u ? u.id : null, porNome: u ? u.nome : '' });
@@ -2715,7 +2745,7 @@ function renderProblema() {
    sd:avisos:lido:<id>; na primeira vez os antigos não contam). Base para um chat dentro do app (por enquanto só ideia).
    ===================================================================== */
 const TIPO_AVISO = {
-  conclusao: { rot: 'Concluído', ico: 'check', cls: 'ok' },
+  conclusao: { rot: 'Concluído', ico: 'carroOk', cls: 'ok' },
   chamado: { rot: 'Chamado', ico: 'warn', cls: 'danger' },
   estoque: { rot: 'Estoque', ico: 'box', cls: 'warn' },
   personalizado: { rot: 'Aviso', ico: 'bell', cls: '' },
@@ -3231,7 +3261,7 @@ function renderFuncionario(fid) {
     const v = x.at ? DB.veiculos[x.at.placa] || {} : null;
     return el('li', { class: `tl-item is-${x.tipo}${x.aberta ? ' is-aberta' : ''}` },
       el('span', { class: 'tl-hora', text: hora(x.em) }),
-      el('span', { class: 'tl-dot', 'aria-hidden': 'true' }),
+      el('span', { class: 'tl-dot', 'aria-hidden': 'true', html: ICON[x.at ? iconeHist(x.texto) || 'file' : x.tipo === 'sessao' ? 'clock' : x.tipo === 'retirada' ? 'caixaMenos' : /^Entrada/.test(x.texto) ? 'caixaMais' : 'check'] }),
       el('span', { class: 'tl-main' },
         el('span', { class: 'tl-txt', text: x.texto }),
         x.meta ? el('span', { class: 'tl-meta', text: x.meta }) : null,
@@ -3503,9 +3533,9 @@ function navBar(current) {
 /* Histórico do veículo (Controle): agrupado por dia, cada tipo de movimentação com ícone, cor e etiqueta
    próprios, e filtro por grupo (Etapas, Fotos, Alterações). O tipo vem do texto da linha (tipoHist). */
 const HIST_TIPOS = {
-  entrada: { rot: 'Entrada', ico: 'car' },
+  entrada: { rot: 'Entrada', ico: 'carroMais' },
   etapa: { rot: 'Etapa', ico: 'check' },
-  concluido: { rot: '', ico: 'check' },
+  concluido: { rot: '', ico: 'carroOk' },
   controle: { rot: 'Ajuste do Controle', ico: 'shield' },
   foto: { rot: 'Foto', ico: 'camera' },
   valor: { rot: 'Valor', txt: 'R$' },
@@ -3515,6 +3545,13 @@ const HIST_TIPOS = {
   outro: { rot: 'Registro', ico: 'file' },
 };
 const HIST_FILTROS = [['todos', 'Todos', null], ['etapas', 'Etapas', ['entrada', 'etapa', 'opcional', 'concluido', 'controle', 'tipo']], ['fotos', 'Fotos', ['foto']], ['alteracoes', 'Alterações', ['edicao', 'valor', 'outro']]];
+// Ícone de uma linha do histórico do atendimento (veículo, histórico da equipe e Resumo do dia; 09/11/2026):
+// etapa pelo nome (limpeza, desmontagem...), pagamento com a nota e os outros pelo tipo.
+function iconeHist(texto, k = tipoHist(texto)) {
+  if (k === 'etapa') return iconeEtapa(texto.replace(/ concluída( \(sem foto\))?$/, ''));
+  if (/^Pagamento confirmado|^Baixa do pagamento/.test(texto)) return 'dinheiro';
+  return (HIST_TIPOS[k] || {}).ico || null;
+}
 function tipoHist(t) {
   if (/^Entrada do veículo/.test(t)) return 'entrada';
   if (t === 'Serviço concluído') return 'concluido';
@@ -3544,9 +3581,9 @@ function historicoVeiculo(at) {
     const n = Math.min(lista.length, S.abertos[chave] || 8);
     const dias = [];
     for (const h of lista.slice(0, n)) { const r = h.em ? rotDia(h.em) : 'Sem data'; if (!dias.length || dias[dias.length - 1].r !== r) dias.push({ r, itens: [] }); dias[dias.length - 1].itens.push(h); }
-    const item = h => { const t = HIST_TIPOS[h.k];
+    const item = h => { const t = HIST_TIPOS[h.k], ic = iconeHist(h.texto, h.k);
       return el('li', { class: `hv-item is-${h.k}` },
-        el('span', { class: 'hv-ico', 'aria-hidden': 'true' }, t.ico ? icon(t.ico) : t.txt),
+        el('span', { class: 'hv-ico', 'aria-hidden': 'true' }, ic ? icon(ic) : t.txt),
         el('div', { class: 'hv-main' },
           t.rot ? el('span', { class: 'hv-tag', text: t.rot }) : null,
           el('span', { class: 'hv-txt', text: textoHist(h) }),
@@ -3735,7 +3772,7 @@ function resumoPC(all, feitos) {
   if (!isCtrl()) return el('div', { class: 'kpis' },
     card({ escuro: true, ico: 'car', rot: 'Em serviço', num: `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}`, sub: `${all.filter(a => progresso(a) === 0).length} aguardando a primeira etapa` }),
     card({ ico: 'check', rot: 'Etapas concluídas hoje', num: String(nEtapas), sub: 'por toda a equipe' }),
-    card({ ico: 'clock', rot: 'Concluídos nas últimas 24 h', num: String(feitos.length), sub: feitos.length ? `último ${ago(feitos[0].concluidoEm)}` : 'nenhum ainda' }),
+    card({ ico: 'carroOk', rot: 'Concluídos nas últimas 24 h', num: String(feitos.length), sub: feitos.length ? `último ${ago(feitos[0].concluidoEm)}` : 'nenhum ainda' }),
     cardAgenda);
   const t = new Date(), r = calcularRelatorio(isoDia(t.getFullYear(), t.getMonth(), 1), isoDe(new Date(t.getFullYear(), t.getMonth() + 1, 0)));
   const emServ = DB.atendimentos.filter(a => !a.concluido && a.valor != null && !a.pagamento);
@@ -3743,7 +3780,7 @@ function resumoPC(all, feitos) {
   return el('div', { class: 'kpis' },
     card({ escuro: true, href: '#/relatorios', txt: 'R$', rot: `Recebido em ${MESES[t.getMonth()].toLowerCase()}`, num: fmtBRL(r.faturamento),
       sub: [`${r.pagos.length} ${r.pagos.length === 1 ? 'pago' : 'pagos'}`, r.entradas ? `${fmtBRL(r.entradas)} de entradas` : ''].filter(Boolean).join(' · ') }),
-    card({ href: '#/relatorios', ico: 'file', rot: 'A receber', num: fmtBRL(aReceber), sub: `${emServ.length} em serviço · ${r.aguardando} ${r.aguardando === 1 ? 'aguardando' : 'aguardando'} pagamento` }),
+    card({ href: '#/relatorios', ico: 'dinheiro', rot: 'A receber', num: fmtBRL(aReceber), sub: `${emServ.length} em serviço · ${r.aguardando} ${r.aguardando === 1 ? 'aguardando' : 'aguardando'} pagamento` }),
     card({ ico: 'car', rot: 'Em serviço', num: `${all.length} ${all.length === 1 ? 'veículo' : 'veículos'}`, sub: `${nEtapas} ${nEtapas === 1 ? 'etapa concluída' : 'etapas concluídas'} hoje` }),
     cardAgenda);
 }
@@ -3754,7 +3791,7 @@ function atencaoPC() {
   const nomeAt = a => { const v = DB.veiculos[a.placa] || {}; return `${v.descricao ? `${modeloCurto(v.descricao)} · ` : ''}${fmtPlaca(a.placa)}`; };
   if (ctrl) {
     for (const a of concluidosRecentes().filter(pagPendente))
-      add('warn', 'clock', `Pagamento pendente: ${nomeAt(a)}`, `${a.clienteNome || `(${NOME_PENDENTE})`} · concluído ${ago(a.concluidoEm)}${a.valor != null ? ` · falta receber ${fmtBRL(aReceberDe(a))}` : ''}`, `#/veiculo/${esc(a.id)}`);
+      add('warn', 'dinheiro', `Pagamento pendente: ${nomeAt(a)}`, `${a.clienteNome || `(${NOME_PENDENTE})`} · concluído ${ago(a.concluidoEm)}${a.valor != null ? ` · falta receber ${fmtBRL(aReceberDe(a))}` : ''}`, `#/veiculo/${esc(a.id)}`);
     for (const it of itensEmAlerta()) { const sit = situacao(it);
       add(sit.k === 'low' ? 'warn' : 'danger', 'box', `${it.nome}: ${sit.txt.toLowerCase()}`, `Saldo ${fmtQ(saldo(it.id))} ${it.unidade}${it.minimo ? ` · mínimo ${fmtQ(it.minimo)}` : ''}`, '#/estoque'); }
     const cham = chamadosAbertos();
@@ -3762,7 +3799,7 @@ function atencaoPC() {
   }
   const hoje = hojeISO();
   for (const ag of agendaAtiva().filter(a => a.data === hoje && a.status === 'agendado'))
-    add('', 'calendar', `Entrada hoje: ${ag.cliente}`, [ag.servico, ag.marca].filter(Boolean).join(' · ') || 'Agendamento', `#/agenda/${esc(ag.id)}`);
+    add('', 'carroMais', `Entrada hoje: ${ag.cliente}`, [ag.servico, ag.marca].filter(Boolean).join(' · ') || 'Agendamento', `#/agenda/${esc(ag.id)}`);
   if (ctrl) for (const a of ativos().filter(x => x.valor == null))
     add('', 'file', `Sem valor lançado: ${nomeAt(a)}`, [a.clienteNome || `(${NOME_PENDENTE})`, a.tipoNome].filter(Boolean).join(' · '), `#/veiculo/${esc(a.id)}`);
   const MAX = 6, n = itens.length;
@@ -5090,7 +5127,7 @@ function renderStock() {
    Cada linha: tipo (Entrada verde, Retirada laranja, Contagem tracejada), material, observação, hora e quem,
    e à direita a quantidade e o saldo que ficou depois (soma dos movimentos até ali, de todos).
    Controle filtra por tipo e por material; Funcionário vê só as próprias retiradas. */
-const MOV_TIPOS = { entrada: { rot: 'Entrada', txt: '+' }, saida: { rot: 'Retirada', txt: '−' }, ajuste: { rot: 'Contagem', ico: 'check' } };
+const MOV_TIPOS = { entrada: { rot: 'Entrada', ico: 'caixaMais' }, saida: { rot: 'Retirada', ico: 'caixaMenos' }, ajuste: { rot: 'Contagem', ico: 'check' } };
 const MOV_FILTROS = [['todos', 'Todos'], ['entrada', 'Entradas'], ['saida', 'Retiradas'], ['ajuste', 'Contagens']];
 function historicoEstoque(ctrl, u) {
   const chave = 'movimentos', itens = DB.estoque.itens;
@@ -5227,7 +5264,10 @@ function atividadesDoDia(dia) {
         Object.assign(x, { g: 'etapas', c: 'etapa', ico: iconeEtapa(nome), tag: semFoto ? 'Etapa concluída · sem foto' : 'Etapa concluída', titulo: nome }); }
       else if (k === 'opcional' && /^Opcional concluído: /.test(t)) Object.assign(x, { g: 'etapas', c: 'opcional', ico: 'plus', tag: 'Opcional concluído', titulo: t.replace(/^Opcional concluído: /, '') });
       else if (k === 'controle') Object.assign(x, { g: 'etapas', c: 'controle', ico: 'shield', tag: 'Ajuste do Controle', titulo: textoHist({ k, texto: t }) });
-      else if (/^Pagamento confirmado/.test(t)) Object.assign(x, { g: 'pagamentos', c: 'pagamento', ico: 'dinheiro', tag: 'Pagamento', titulo: t.replace(/^Pagamento confirmado(?: \(editado\))?: /, '') });
+      else if (/^Pagamento confirmado/.test(t)) { const p = at.pagamento, ent = entradaDe(at); // valor da baixa (sem a entrada), não o total
+        Object.assign(x, { g: 'pagamentos', c: 'pagamento', ico: 'dinheiro', tag: 'Pagamento',
+          titulo: p && at.valor != null ? [p.forma, fmtBRL(aReceberDe(at)), p.obs].filter(Boolean).join(' · ') : t.replace(/^Pagamento confirmado(?: \(editado\))?: /, ''),
+          obs: p && at.valor != null && ent > 0 ? `Total ${fmtBRL(at.valor)} · entrada de ${fmtBRL(ent)} já paga antes` : '' }); }
       else if (k === 'valor') Object.assign(x, { g: 'pagamentos', c: 'valor', txt: 'R$', tag: 'Valor' });
       else if (k === 'foto') Object.assign(x, { g: 'outros', c: 'foto', ico: 'camera', tag: 'Foto' });
       else if (k === 'opcional') Object.assign(x, { g: 'outros', c: 'opcional', ico: 'plus', tag: 'Opcional' });
@@ -5261,67 +5301,72 @@ function renderDia(diaRaw) {
   const hora = ts => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(ts);
   const dif = Math.round((dataDe(hoje) - dataDe(dia)) / 864e5);
   const rot = dif === 0 ? 'Hoje' : dif === 1 ? 'Ontem' : DIAS_SEMANA[dataDe(dia).getDay()];
-  // Escolha do dia: anterior, data e próximo (sem dias futuros) e "Hoje".
-  const fData = el('input', { type: 'date', value: dia, max: hoje, 'aria-label': 'Escolher o dia' });
+  // Escolha do dia, centralizada: anterior, o dia (toque abre o calendário) e próximo. Sem dias futuros.
+  const fData = el('input', { class: 'dia-data', type: 'date', value: dia, max: hoje, 'aria-label': 'Escolher o dia' });
   fData.addEventListener('change', () => { if (fData.value) go(`#/dia/${fData.value <= hoje ? fData.value : hoje}`); });
+  fData.addEventListener('click', () => { try { fData.showPicker(); } catch {} });
   const nav = el('div', { class: 'dia-nav' },
     el('button', { class: 'dia-seta', type: 'button', 'aria-label': 'Dia anterior', onclick: () => go(`#/dia/${somaDias(dia, -1)}`) }, icon('back')),
-    el('div', { class: 'dia-qual' }, el('b', { text: rot }), el('span', { text: brData(dia) })),
-    el('button', { class: 'dia-seta', type: 'button', 'aria-label': 'Próximo dia', disabled: dia >= hoje, onclick: () => go(`#/dia/${somaDias(dia, 1)}`) }, icon('chev')),
-    fData,
-    dia !== hoje ? el('button', { class: 'btn btn--sm', type: 'button', onclick: () => go('#/dia') }, 'Hoje') : null);
+    el('div', { class: 'dia-qual' }, el('b', { text: rot }), el('span', {}, brData(dia), icon('calendar')), fData),
+    el('button', { class: 'dia-seta', type: 'button', 'aria-label': 'Próximo dia', disabled: dia >= hoje, onclick: () => go(`#/dia/${somaDias(dia, 1)}`) }, icon('chev')));
   // Números do dia
   const r = calcularRelatorio(dia, dia);
-  const placas = n => `${n} ${n === 1 ? 'veículo' : 'veículos'}`;
   const tile = (ico, txt, num, rotulo, cls) => el('div', { class: `dia-num ${cls}` },
     el('span', { class: 'dia-num-ico', 'aria-hidden': 'true', html: ico ? ICON[ico] : null, text: ico ? null : txt }),
-    el('b', { text: num }), el('span', { text: rotulo }));
+    el('span', { class: 'dia-num-txt' }, el('b', { text: num }), el('span', { text: rotulo })));
   const nEnt = qtd('entradas'), nSai = qtd('saidas'), nEtapas = qtd('etapas'), nEst = qtd('estoque');
   const resumo = el('div', { class: 'dia-nums' },
     tile('carroMais', '', String(nEnt), nEnt === 1 ? 'Entrou' : 'Entraram', 'c-entrada'),
-    tile('check', '', String(nEtapas), nEtapas === 1 ? 'Etapa concluída' : 'Etapas concluídas', 'c-etapa'),
     tile('carroOk', '', String(nSai), nSai === 1 ? 'Concluído' : 'Concluídos', 'c-saida'),
-    tile('', 'R$', fmtBRL(r.faturamento), 'Recebido no dia', 'c-pagamento'),
-    tile('box', '', String(nEst), nEst === 1 ? 'Movimento no estoque' : 'Movimentos no estoque', 'c-estoque'));
-  // Linha do tempo
+    tile('check', '', String(nEtapas), nEtapas === 1 ? 'Etapa concluída' : 'Etapas concluídas', 'c-etapa'),
+    tile('box', '', String(nEst), nEst === 1 ? 'Movimento no estoque' : 'Movimentos no estoque', 'c-estoque'),
+    tile('dinheiro', '', fmtBRL(r.faturamento), 'Recebido no dia', 'c-pagamento dia-num-largo'));
+  // Linha do tempo, separada por hora
   const item = x => {
     const v = x.at ? DB.veiculos[x.at.placa] || {} : null;
     const quem = x.porNome ? (x.porId && x.porId === (me() || {}).id ? 'Você' : x.porNome) : '';
     return el('li', { class: `dia-item c-${x.c}` },
-      el('span', { class: 'dia-hora', text: hora(x.em) }),
       el('span', { class: 'dia-ico', 'aria-hidden': 'true', html: x.ico ? ICON[x.ico] : null, text: x.ico ? null : x.txt }),
       el('span', { class: 'dia-main' },
-        el('span', { class: 'dia-tag', text: x.tag }),
+        el('span', { class: 'dia-topo' }, el('span', { class: 'dia-tag', text: x.tag }), el('span', { class: 'dia-hora', text: hora(x.em) })),
         x.href ? el('a', { class: 'dia-txt', href: x.href, text: x.titulo }) : el('span', { class: 'dia-txt', text: x.titulo }),
         x.obs ? el('span', { class: 'dia-obs', text: x.obs }) : null,
         x.at ? el('a', { class: 'dia-veic', href: `#/veiculo/${esc(x.at.id)}` }, el('b', { text: fmtPlaca(x.at.placa) }),
           [v.descricao ? modeloCurto(v.descricao) : '', x.at.clienteNome || ''].filter(Boolean).map(s => ` · ${s}`).join('')) : null,
-        quem ? el('span', { class: 'dia-quem', text: quem }) : null));
+        quem ? el('span', { class: 'dia-quem' }, icon('user'), quem) : null));
   };
   const limite = S.diaMais === dia ? Infinity : 40;
+  const horas = [];
+  for (const x of vistos.slice(0, limite)) { const h = new Date(x.em).getHours(); if (!horas.length || horas[horas.length - 1].h !== h) horas.push({ h, itens: [] }); horas[horas.length - 1].itens.push(x); }
   const filtros = lista.length ? el('div', { class: 'hv-filtros', role: 'group', 'aria-label': 'Filtrar o dia' }, DIA_FILTROS.map(([k, t]) => {
     const n = k === 'todos' ? lista.length : qtd(k);
     return k !== 'todos' && !n && k !== filtro ? null : el('button', { type: 'button', 'aria-pressed': String(k === filtro),
       onclick: () => { S.diaFiltro = k; redraw(); } }, t, el('span', { class: 'hv-qtd', text: String(n) }));
   })) : null;
-  const linhaTempo = el('div', { class: 'card' },
+  const linhaTempo = el('div', { class: 'card dia-tempo' },
     el('div', { class: 'card-head' }, el('h2', { text: 'O que aconteceu' }), el('span', { class: 'count', text: lista.length ? `${lista.length} ${lista.length === 1 ? 'registro' : 'registros'}` : '' })),
     filtros,
-    vistos.length ? el('ol', { class: 'dia-lista' }, vistos.slice(0, limite).map(item))
+    vistos.length ? el('div', { class: 'dia-horas' }, horas.map(g => el('section', { class: 'dia-bloco' },
+        el('h3', { class: 'dia-sep' }, el('span', { text: `${pad2(g.h)}h` }), el('small', { text: `${g.itens.length} ${g.itens.length === 1 ? 'registro' : 'registros'}` })),
+        el('ol', { class: 'dia-lista' }, g.itens.map(item)))))
       : el('p', { class: 'hint', text: lista.length ? 'Nada deste tipo no dia.' : 'Nenhuma movimentação registrada neste dia.' }),
     vistos.length > limite ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.diaMais = dia; redraw(); } }, `Mostrar mais (${vistos.length - limite})`) : null);
-  // Veículos que entraram e que foram concluídos
+  // Seções em lista (sem cartão dentro de cartão)
+  const secao = (titulo, ico, qtdTxt, conteudo, extra) => el('section', { class: 'dia-sec' },
+    el('div', { class: 'dia-sec-head' }, el('h2', {}, el('span', { class: 'dia-h-ico', 'aria-hidden': 'true', html: ICON[ico] }), titulo), extra || el('span', { class: 'count', text: qtdTxt })),
+    conteudo);
   const linhaVeic = (at, quando) => { const v = DB.veiculos[at.placa] || {}, capa = capaDe(at);
     return el('li', {}, el('a', { class: 'r', href: `#/veiculo/${esc(at.id)}`, style: 'color:inherit;text-decoration:none' },
       el('span', { class: 'r-thumb' }, capa ? photoImg(capa, '') : null),
-      el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(at.placa) }), el('span', { class: 'r-sub', text: [at.clienteNome || NOME_PENDENTE, v.descricao ? modeloCurto(v.descricao) : '', at.tipoNome].filter(Boolean).join(' · ') })),
-      el('span', { class: 'r-side' }, el('div', { text: hora(quando) }), at.concluido ? null : el('div', { text: etapaAtual(at) }))));
+      el('span', { class: 'r-main' }, el('span', { class: 'r-plate', text: fmtPlaca(at.placa) }), el('span', { class: 'r-sub', text: [at.clienteNome || NOME_PENDENTE, v.descricao ? modeloCurto(v.descricao) : ''].filter(Boolean).join(' · ') }),
+        el('span', { class: 'r-sub', text: at.concluido ? at.tipoNome || '' : `${at.tipoNome ? `${at.tipoNome} · ` : ''}${etapaAtual(at)}` })),
+      el('span', { class: 'r-side', text: hora(quando) })));
   };
-  const unicos = g => { const vistosId = new Set(); return lista.filter(x => x.g === g && x.at && !vistosId.has(x.at.id) && vistosId.add(x.at.id)).reverse(); };
+  const unicos = g => { const ids = new Set(); return lista.filter(x => x.g === g && x.at && !ids.has(x.at.id) && ids.add(x.at.id)).reverse(); };
   const entraram = unicos('entradas'), sairam = unicos('saidas');
-  const cardVeic = (titulo, ico, xs, vazio) => el('div', { class: 'card' },
-    el('div', { class: 'card-head' }, el('h2', {}, el('span', { class: 'dia-h-ico', 'aria-hidden': 'true', html: ICON[ico] }), titulo), el('span', { class: 'count', text: xs.length ? placas(xs.length) : '' })),
-    xs.length ? el('ul', { class: 'rows' }, xs.map(x => linhaVeic(x.at, x.em))) : el('p', { class: 'hint', text: vazio }));
+  const veic = n => (n ? `${n} ${n === 1 ? 'veículo' : 'veículos'}` : '');
+  const secVeic = (titulo, ico, xs, vazio) => secao(titulo, ico, veic(xs.length),
+    xs.length ? el('ul', { class: 'rows' }, xs.map(x => linhaVeic(x.at, x.em))) : el('p', { class: 'hint dia-vazio', text: vazio }));
   // Equipe: quem fez o quê no dia
   const porPessoa = new Map();
   for (const x of lista) { if (!x.porNome) continue; const k = x.porId || x.porNome;
@@ -5330,34 +5375,34 @@ function renderDia(diaRaw) {
   const NOMES_C = { entrada: ['entrada', 'entradas'], etapa: ['etapa', 'etapas'], opcional: ['opcional', 'opcionais'], saida: ['concluído', 'concluídos'], foto: ['foto', 'fotos'],
     'est-saida': ['retirada', 'retiradas'], 'est-entrada': ['entrada no estoque', 'entradas no estoque'], pagamento: ['pagamento', 'pagamentos'] };
   const equipe = [...porPessoa.values()].sort((a, b) => b.n - a.n);
-  const cardEquipe = el('div', { class: 'card' },
-    el('div', { class: 'card-head' }, el('h2', { text: 'Equipe no dia' }), el('span', { class: 'count', text: equipe.length ? `${equipe.length} ${equipe.length === 1 ? 'pessoa' : 'pessoas'}` : '' })),
+  const secEquipe = secao('Equipe no dia', 'users', equipe.length ? `${equipe.length} ${equipe.length === 1 ? 'pessoa' : 'pessoas'}` : '',
     equipe.length ? el('ul', { class: 'rows' }, equipe.map(p => {
       const det = Object.entries(p.g).filter(([c]) => NOMES_C[c]).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${n} ${NOMES_C[c][n === 1 ? 0 : 1]}`);
       const conteudo = [el('span', { class: 'dia-av', 'aria-hidden': 'true', text: iniciais(p.nome) }),
         el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: p.nome }), el('span', { class: 'r-sub', style: 'white-space:normal', text: det.join(' · ') || 'Alterações' })),
-        el('span', { class: 'r-side' }, el('b', { style: 'color:var(--ink)', text: String(p.n) }))];
+        el('span', { class: 'dia-pessoa-n', text: String(p.n) })];
       return el('li', {}, p.id && DB.funcionarios.some(f => f.id === p.id)
         ? el('a', { class: 'r', href: `#/equipe/${esc(p.id)}`, style: 'color:inherit;text-decoration:none' }, ...conteudo) : el('div', { class: 'r' }, ...conteudo));
-    })) : el('p', { class: 'hint', text: 'Ninguém registrou nada neste dia.' }));
-  // Agenda do dia: entradas marcadas, entregas previstas e eventos
+    })) : el('p', { class: 'hint dia-vazio', text: 'Ninguém registrou nada neste dia.' }));
+  // Agenda do dia: entradas marcadas, entregas previstas e eventos (só quando tem)
   const ag = agendaAtiva().filter(a => a.status !== 'cancelado');
   const agEnt = ag.filter(a => a.data === dia), agEntrega = ag.filter(a => a.prazo && entregaDe(a) === dia), evs = eventosDoDia(dia);
-  const SIT = { agendado: 'Agendado', 'em serviço': 'Em serviço', concluido: 'Concluído', 'concluído': 'Concluído' };
   const linhaAg = (a, o) => el('li', {}, el('a', { class: 'r', href: `#/agenda/${esc(a.id)}`, style: 'color:inherit;text-decoration:none' },
     el('span', { class: 'r-main' }, el('span', { class: 'r-title', text: a.cliente }), el('span', { class: 'r-sub', text: [o, a.servico, a.marca].filter(Boolean).join(' · ') })),
-    el('span', { class: 'r-side' }, el('span', { class: 'tag', text: SIT[a.status] || a.status || '' }))));
-  const cardAgenda = agEnt.length || agEntrega.length || evs.length ? el('div', { class: 'card' },
-    el('div', { class: 'card-head' }, el('h2', {}, el('span', { class: 'dia-h-ico', 'aria-hidden': 'true', html: ICON.calendar }), 'Agenda do dia'), el('a', { class: 'link-btn', href: '#/agenda', text: 'Abrir agenda' })),
-    evs.map(e => el('p', { class: 'hint', style: 'margin:0' }, el('span', { class: 'tag tag--warn', text: 'Evento' }), ` ${e.titulo}`)),
-    agEnt.length || agEntrega.length ? el('ul', { class: 'rows' }, agEnt.map(a => linhaAg(a, 'Entrada')), agEntrega.map(a => linhaAg(a, 'Entrega prevista'))) : null) : null;
-  const body = el('div', { class: 'stack-lg', style: 'max-width:720px' },
+    el('span', { class: 'tag', text: STATUS_AG[a.status] || a.status || '' })));
+  const secAgenda = agEnt.length || agEntrega.length || evs.length ? secao('Agenda do dia', 'calendar', '',
+    el('div', { class: 'stack', style: 'gap:8px' },
+      evs.map(e => el('p', { class: 'hint', style: 'margin:0' }, el('span', { class: 'tag tag--warn', text: 'Evento' }), ` ${e.titulo}`)),
+      agEnt.length || agEntrega.length ? el('ul', { class: 'rows' }, agEnt.map(a => linhaAg(a, 'Entrada')), agEntrega.map(a => linhaAg(a, 'Entrega prevista'))) : null),
+    el('a', { class: 'link-btn', href: '#/agenda', text: 'Abrir agenda' })) : null;
+  const body = el('div', { class: 'stack-lg dia-tela', style: 'max-width:720px' },
     backLink('#/relatorios', 'Relatórios'),
-    el('div', { class: 'stack' }, el('div', { class: 'page-head' }, el('h1', { text: 'Resumo do dia' })), nav),
+    el('div', { class: 'dia-cab' }, el('h1', { text: 'Resumo do dia' }), nav,
+      dia !== hoje ? el('button', { class: 'link-btn', type: 'button', onclick: () => go('#/dia') }, 'Voltar para hoje') : null),
     resumo);
-  const colA = [linhaTempo], colB = [cardVeic('Entraram', 'carroMais', entraram, 'Nenhum veículo entrou neste dia.'), cardVeic('Concluídos', 'carroOk', sairam, 'Nenhum serviço concluído neste dia.'), cardEquipe, cardAgenda].filter(Boolean);
-  if (ePC()) { body.style.maxWidth = '1180px'; body.append(el('div', { class: 'pc-colunas' }, el('div', { class: 'stack' }, ...colA), el('div', { class: 'stack' }, ...colB))); }
-  else body.append(...colB.slice(0, 2), ...colA, ...colB.slice(2));
+  const lado = [secVeic('Entraram', 'carroMais', entraram, 'Nenhum veículo entrou neste dia.'), secVeic('Concluídos', 'carroOk', sairam, 'Nenhum serviço concluído neste dia.'), secEquipe, secAgenda].filter(Boolean);
+  if (ePC()) { body.style.maxWidth = '1180px'; body.append(el('div', { class: 'pc-colunas' }, el('div', { class: 'stack' }, linhaTempo), el('div', { class: 'stack-lg' }, ...lado))); }
+  else body.append(linhaTempo, ...lado);
   shell(body, { current: 'relatorios' });
 }
 
