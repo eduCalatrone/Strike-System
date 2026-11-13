@@ -768,6 +768,46 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .rt-vivo { width: 7px; height: 7px; border-radius: 50%; background: #2FBF6B; animation: pulso-verde 1.6s ease-out infinite; }
 .rt-badge { position: absolute; top: 10px; right: 10px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #E5484D; color: #fff; font: 700 11px/20px var(--body); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .rt-vivo { animation: none; } }
+/* ---------- Mais (13/11/2026) e Gerador de protocolo ---------- */
+/* Mais: o botão Relatórios do menu virou "Mais", com os atalhos que ficavam no topo de Relatórios. */
+.mais-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mais-grade .rt-tit { font-size: clamp(12px, 3.5vw, 16px); }
+/* Fontes do protocolo (as mesmas do modelo; só baixam quando o protocolo aparece na tela) */
+@font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-700.woff2') format('woff2'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-400.woff2') format('woff2'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'SDProtoInter'; src: url('/modelo-protocolo/fontes/inter-400.woff2') format('woff2'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'SDProtoInter'; src: url('/modelo-protocolo/fontes/inter-600.woff2') format('woff2'); font-weight: 600; font-display: block; }
+/* O CSS do documento (.pdoc) fica em PROTO_CSS no script: vai também dentro da imagem gerada. */
+/* Tela do gerador */
+.proto-cols { display: grid; gap: 16px; align-items: start; }
+.proto-form { display: grid; gap: 14px; min-width: 0; }
+.proto-lado { display: grid; gap: 12px; min-width: 0; }
+.proto-prev { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.proto-prev .pdoc { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.proto-captura { position: fixed; left: -12000px; top: 0; pointer-events: none; }
+.proto-check { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 479px) { .proto-check { grid-template-columns: 1fr; } }
+.proto-form input[type="date"], .proto-form input[type="time"] { min-width: 0; max-width: 100%; }
+.proto-extra { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+.proto-extra .row { align-items: center; }
+.proto-extra .row > .proto-x { flex: 0 0 40px; }
+.proto-x { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); display: grid; place-items: center; font-size: 20px; line-height: 1; color: var(--muted); }
+.proto-v { flex: 0 0 120px !important; }
+.proto-resumo { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.proto-resumo b { color: var(--ink); }
+.proto-avisos { display: grid; gap: 6px; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); font-size: 13px; list-style: none; }
+.proto-bloqueio { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 600; }
+.proto-rec { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.proto-rec button { flex: none; display: grid; gap: 1px; text-align: left; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); max-width: 200px; }
+.proto-rec b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proto-rec span { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.proto-marcar { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.proto-marcar input { width: 18px; height: 18px; accent-color: var(--ink); }
+input[type="time"] { width: 100%; border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-size: 16px; min-height: 46px; }
+@media (min-width: 1024px) {
+  .proto-cols { grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); }
+  .proto-lado { position: sticky; top: 16px; }
+}
 /* Resumo do dia (Relatórios > Dia, pedido de 09/11/2026; layout do celular revisto no mesmo dia): cabeçalho
    centralizado, números em 2 colunas, linha do tempo separada por hora, seções em lista (sem cartão dentro de cartão). */
 .dia-cab { display: grid; justify-items: center; gap: 10px; text-align: center; }
@@ -1395,6 +1435,8 @@ const ICON = {
   dinheiro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v.01M18 14.5v.01"/></svg>',
   caixaMais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5V8l-8-4.5L4 8v8l8 4.5 1.5-.8"/><path d="M4 8l8 4.5L20 8M12 12.5v8"/><path d="M18.5 15v6M15.5 18h6"/></svg>',
   caixaMenos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5V8l-8-4.5L4 8v8l8 4.5 1.5-.8"/><path d="M4 8l8 4.5L20 8M12 12.5v8"/><path d="M15.5 18h6"/></svg>',
+  mais: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  protocolo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8.5 12.5h7M8.5 16.5h4.5"/></svg>',
   diaOk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/></svg>',
 };
 const icon = name => el('span', { html: ICON[name], 'aria-hidden': 'true', style: 'display:contents' });
@@ -1762,7 +1804,7 @@ async function commitAgora(fn) {
 // Só troca os dados em segundo plano quando dá para redesenhar a tela sem atrapalhar quem está usando.
 function podeRedesenhar() {
   const [r] = parts();
-  if (['placa', 'novo', 'ajustes', 'relatorios', 'problema'].includes(r)) return false;
+  if (['placa', 'novo', 'ajustes', 'relatorios', 'problema', 'protocolo'].includes(r)) return false;
   if (r === 'agenda' && (parts()[1] === 'novo' || parts()[1] === 'evento' || parts()[2] === 'editar')) return false; // formulário de agendamento ou de evento aberto
   if (r === 'estoque' && S.stockOpen) return false;
   if (S.ocupado) return false;
@@ -2504,7 +2546,7 @@ function secaoChamados(redraw) {
 function renderChamados() {
   const redraw = () => { const y = window.scrollY; renderChamados(); window.scrollTo(0, y); };
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
-    backLink('#/relatorios', 'Relatórios'),
+    backLink('#/mais', 'Mais'),
     el('h1', { text: 'Chamados' }),
     secaoChamados(redraw)), { current: 'relatorios' });
 }
@@ -2670,7 +2712,7 @@ function renderConvites() {
   ].filter(Boolean);
 
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
-    backLink('#/relatorios', 'Relatórios'),
+    backLink('#/mais', 'Mais'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Convites' }),
       r.pessoas ? el('button', { class: 'btn btn--sm', type: 'button', onclick: copiarPresenca }, 'Copiar lista') : null),
     el('div', { class: 'cv-resumo' },
@@ -3049,7 +3091,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', dia: 'Resumo do dia', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', dia: 'Resumo do dia', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites', mais: 'Mais', protocolo: 'Protocolo' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -3143,7 +3185,7 @@ function renderEquipe() {
   equipeChave = '';
   desenharEquipe(card);
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
-    backLink('#/relatorios', 'Relatórios'),
+    backLink('#/mais', 'Mais'),
     el('div', { class: 'page-head' }, el('h1', { text: 'Status da equipe' }), el('span', { class: 'pres-aovivo' }, el('i', { 'aria-hidden': 'true' }), 'Ao vivo')),
     card),
     { current: 'relatorios' });
@@ -3332,6 +3374,8 @@ function route(opts) {
     case 'problema': return renderProblema();
     case 'chamados': return isCtrl() ? renderChamados() : go('#/notificacoes'); // aviso de chamado no celular do Funcionário
     case 'convites': return isCtrl() ? renderConvites() : go('#/inicio');
+    case 'mais': if (isCtrl()) avisarPresenca({ forcar: true }); return isCtrl() ? renderMais() : go('#/inicio');
+    case 'protocolo': return isCtrl() ? renderProtocolo() : go('#/inicio');
     case 'notificacoes': return renderAvisos();
     default: return renderHome();
   }
@@ -3469,7 +3513,7 @@ const ePC = () => MQ_PC.matches;
 try { MQ_PC.addEventListener('change', () => { if (!MODO_CLIENTE && DB && me() && podeRedesenhar()) redesenhar(); }); } catch {}
 function barraLateral() {
   const u = me(), ctrl = u.tipo === 'controle', [r] = parts();
-  const ativo = { veiculo: 'inicio', novo: 'placa', convites: 'relatorios' }[r] || r || 'inicio';
+  const ativo = { veiculo: 'inicio', novo: 'placa', convites: 'relatorios', mais: 'relatorios' }[r] || r || 'inicio';
   const item = (href, key, label, ico, { n = 0, tom = '', cls = '', aria = null } = {}) => el('a', {
     class: 'lat-item' + (cls ? ` ${cls}` : ''), href, 'aria-current': ativo === key ? 'page' : null, 'aria-label': aria },
     el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON[ico] }), el('span', { class: 'lat-txt', text: label }),
@@ -3491,6 +3535,7 @@ function barraLateral() {
     el('div', { class: 'lat-sec', text: 'Ferramentas' }),
     item('#/notificacoes', 'notificacoes', 'Notificações', 'bell', { n: nAvisos, tom: 'alerta', aria: nAvisos ? `Notificações, ${nAvisos} ${nAvisos === 1 ? 'nova' : 'novas'}` : null }),
     ctrl ? item('#/equipe', 'equipe', 'Status da equipe', 'users') : null,
+    ctrl ? item('#/protocolo', 'protocolo', 'Gerar protocolo', 'protocolo') : null,
     ctrl ? item('#/chamados', 'chamados', 'Chamados', 'warn', { n: nCham, tom: 'alerta', aria: nCham ? `Chamados, ${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : null }) : null,
     ctrl ? null : item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }),
     ctrl ? item('#/ajustes', 'ajustes', 'Ajustes', 'gear') : null,
@@ -3522,9 +3567,11 @@ function navBar(current) {
   ler.setAttribute('aria-label', 'Adicionar veículo');
   const agenda = item('#/agenda', 'agenda', 'Agenda', 'calendar');
   // "Adicionar" fica no meio. Ajustes do Controle ficam na engrenagem do topo.
-  const nCham = isCtrl() ? chamadosAbertos().length : 0; // problema relatado em aberto: bolinha vermelha em Relatórios
-  const relatorios = item('#/relatorios', 'relatorios', 'Relatórios', 'chart', nCham ? 'has-chamado' : '');
-  if (nCham) relatorios.setAttribute('aria-label', `Relatórios, ${nCham} ${nCham === 1 ? 'chamado aberto' : 'chamados abertos'}`);
+  // "Mais" (13/11/2026) no lugar de Relatórios: abre Relatórios, Histórico, Dia, Equipe, Chamados, Protocolo e Convites.
+  // As telas de dentro continuam com current 'relatorios', então o botão fica marcado nelas.
+  const nCham = isCtrl() ? chamadosAbertos().length : 0; // problema relatado em aberto: bolinha vermelha em Mais
+  const relatorios = item('#/mais', 'relatorios', 'Mais', 'mais', nCham ? 'has-chamado' : '');
+  if (nCham) relatorios.setAttribute('aria-label', `Mais, ${nCham} ${nCham === 1 ? 'chamado aberto' : 'chamados abertos'}`);
   const items = isCtrl()
     ? [inicio, agenda, ler, estoque, relatorios]
     : [inicio, agenda, ler, estoque, item('#/problema', 'problema', 'Problema', 'warn', 'nav-problema')]; // 5 botões: "Adicionar" no meio
@@ -5396,7 +5443,7 @@ function renderDia(diaRaw) {
       agEnt.length || agEntrega.length ? el('ul', { class: 'rows' }, agEnt.map(a => linhaAg(a, 'Entrada')), agEntrega.map(a => linhaAg(a, 'Entrega prevista'))) : null),
     el('a', { class: 'link-btn', href: '#/agenda', text: 'Abrir agenda' })) : null;
   const body = el('div', { class: 'stack-lg dia-tela', style: 'max-width:720px' },
-    backLink('#/relatorios', 'Relatórios'),
+    backLink('#/mais', 'Mais'),
     el('div', { class: 'dia-cab' }, el('h1', { text: 'Resumo do dia' }), nav,
       dia !== hoje ? el('button', { class: 'link-btn', type: 'button', onclick: () => go('#/dia') }, 'Voltar para hoje') : null),
     resumo);
@@ -6095,6 +6142,7 @@ function renderAgendaItem(idRaw) {
         el('div', { class: 'veh-head' }, el('h1', { text: a.cliente }), el('span', { class: 'veh-sub', text: STATUS_AG[a.status] })),
         ctrl ? el('a', { class: 'btn btn--sm', href: `#/agenda/${esc(a.id)}/editar`, style: 'flex:none' }, icon('edit'), 'Editar') : null),
       entradaBtn,
+      ctrl ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.protoAg = a.id; go('#/protocolo'); } }, icon('protocolo'), 'Gerar protocolo') : null,
       el('div', { class: 'card' }, el('dl', { class: 'kv' },
         linha('Serviço', a.servico), linha('Veículo', a.marca), linha('Entrada', brData(a.data)),
         linha('Entrega prevista', a.prazo ? `${brData(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : 'No mesmo dia'),
@@ -6341,29 +6389,13 @@ function renderRelatorios() {
   // A receber dos serviços em andamento (valor menos a entrada paga).
   const emServ = DB.atendimentos.filter(a => !a.concluido && a.valor != null && !a.pagamento); // com baixa já foi recebido
   const aReceber = round2(emServ.reduce((t, a) => t + aReceberDe(a), 0));
-  const nConc = DB.atendimentos.filter(a => a.concluido).length, nCham = chamadosAbertos().length;
   const verTodos = S.rel.todos;
   const situacaoPag = a => (a.valor == null ? 'Sem valor' : recebidoEm(a) != null ? 'Pago' : 'Pendente');
   const linhasServ = r.concluidos.map(a => [brDia(isoDe(new Date(a.concluidoEm))), fmtPlaca(a.placa), a.clienteNome || '', a.valor != null ? fmtBRL(a.valor) : 'Sem valor', situacaoPag(a)]);
 
   const body = el('div', { class: 'stack-lg', style: 'max-width:720px' },
-    // Atalhos no topo: Histórico, Dia (resumo do dia), Equipe (ao vivo) e Chamados.
-    el('div', { class: 'rel-atalhos' },
-        el('a', { class: 'rel-tile claro', href: '#/historico', 'aria-label': `Histórico de serviços, ${nConc} concluídos` },
-          el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.clock }),
-          el('span', { class: 'rt-tit', text: 'Histórico' }),
-          el('span', { class: 'rt-sub', text: `${nConc} ${nConc === 1 ? 'concluído' : 'concluídos'}` })),
-        el('a', { class: 'rel-tile claro', href: '#/dia', 'aria-label': 'Resumo do dia: tudo o que aconteceu num dia' },
-          el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.diaOk }),
-          el('span', { class: 'rt-tit', text: 'Dia' }),
-          el('span', { class: 'rt-sub', text: 'Resumo do dia' })),
-        (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
-        el('a', { class: 'rel-tile', href: '#/chamados', 'aria-label': nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' },
-          el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON.warn }),
-          nCham ? el('span', { class: 'rt-badge', 'aria-hidden': 'true', text: String(nCham) }) : null,
-          el('span', { class: 'rt-tit', text: 'Chamados' }),
-          el('span', { class: 'rt-sub', text: nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto' }))),
-    botaoConvites(),
+    // Os atalhos (Histórico, Dia, Equipe, Chamados, Convites) foram para a tela Mais (13/11/2026).
+    backLink('#/mais', 'Mais'),
     // Título (com o PDF) logo acima do período
     el('div', { class: 'rel-topo' },
       el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Relatórios' }), pdfBtn),
@@ -6413,6 +6445,571 @@ function renderRelatorios() {
     if (secs.length === 2) { const col = el('div', { class: 'pc-colunas' }); secs[0].before(col); col.append(...secs); }
   }
   shell(body, { current: 'relatorios' });
+}
+
+/* =====================================================================
+   Tela Mais (Controle; pedido de 13/11/2026). O botão Relatórios do menu de baixo virou "Mais", com os atalhos
+   que ficavam no topo de Relatórios (Relatórios, Histórico, Dia, Equipe, Chamados), o Gerador de protocolo e os
+   Convites. Agenda e Estoque continuam no menu. As telas de dentro usam current 'relatorios' (botão Mais marcado).
+   ===================================================================== */
+function renderMais() {
+  const nConc = DB.atendimentos.filter(a => a.concluido).length, nCham = chamadosAbertos().length;
+  const t = new Date();
+  let fat = null;
+  try { fat = calcularRelatorio(isoDe(new Date(t.getFullYear(), t.getMonth(), 1)), hojeISO()).faturamento; } catch {}
+  const tile = (href, ico, tit, sub, { claro = false, aria = null, badge = 0 } = {}) => el('a', { class: 'rel-tile' + (claro ? ' claro' : ''), href, 'aria-label': aria },
+    el('span', { class: 'rt-ico', 'aria-hidden': 'true', html: ICON[ico] }),
+    badge ? el('span', { class: 'rt-badge', 'aria-hidden': 'true', text: String(badge) }) : null,
+    el('span', { class: 'rt-tit', text: tit }),
+    el('span', { class: 'rt-sub', text: sub }));
+  shell(el('div', { class: 'stack', style: 'max-width:720px' },
+    el('div', { class: 'page-head' }, el('h1', { text: 'Mais' })),
+    el('div', { class: 'mais-grade' },
+      tile('#/relatorios', 'chart', 'Relatórios', fat != null ? `${fmtBRL(fat)} no mês` : 'Faturado e estoque', { claro: true, aria: 'Relatórios: faturado, serviços e estoque' }),
+      tile('#/historico', 'clock', 'Histórico', `${nConc} ${nConc === 1 ? 'concluído' : 'concluídos'}`, { claro: true, aria: `Histórico de serviços, ${nConc} concluídos` }),
+      tile('#/dia', 'diaOk', 'Dia', 'Resumo do dia', { claro: true, aria: 'Resumo do dia: tudo o que aconteceu num dia' }),
+      (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
+      tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
+      tile('#/protocolo', 'protocolo', 'Protocolo', 'Gerar e baixar', { aria: 'Gerar protocolo de agendamento ou ordem de serviço' })),
+    botaoConvites()), { current: 'relatorios' });
+}
+
+/* =====================================================================
+   Gerador de protocolo (Controle; pedido de 13/11/2026). Substitui os protocolos feitos por chat no Claude.
+   Monta o Protocolo de Agendamento ou a Ordem de Serviço no mesmo layout do modelo em branco (1024 px,
+   modelo-protocolo/), mostra a prévia e gera o PNG (2048 px) no próprio navegador.
+   Nada vai para o banco por enquanto: o rascunho e os últimos gerados ficam neste aparelho (localStorage).
+   Regras vindas do CLAUDE.md dos protocolos: nome do arquivo = nome do cliente; sem data não gera; dia da semana
+   sempre do calendário; campo vazio = "---"; 30% de entrada por padrão; sem entrada tira a 1ª cláusula.
+   ===================================================================== */
+const PROTO_CHECK_CABINE = ['Higienização interna completa', 'Desmontagem técnica', 'Vedação dos pontos críticos', 'Montagem e inspeção final'];
+const PROTO_DESC_CABINE = 'Isolamento e vedação interna e externa para redução dos pontos de entrada de poeira e impurezas.';
+const PROTO_ITEM_CABINE = 'Isolamento e vedação interna e externa contra entrada de poeira.';
+const PROTO_CATALOGO = [
+  { k: 'cabine-strada', nome: 'Cabine Blindada (Strada)', titulo: 'Protocolo Cabine Blindada', valor: 3100, desc: PROTO_DESC_CABINE, item: PROTO_ITEM_CABINE, check: PROTO_CHECK_CABINE },
+  { k: 'cabine-toro', nome: 'Cabine Blindada (Toro)', titulo: 'Protocolo Cabine Blindada', valor: 3600, desc: PROTO_DESC_CABINE, item: PROTO_ITEM_CABINE, check: PROTO_CHECK_CABINE },
+  { k: 'carpete', nome: 'Carpete', valor: null, desc: 'Revestimento de carpete do veículo.', extra: true },
+  { k: 'motor', nome: 'Tratamento de Motor', valor: 480, desc: 'Detalhamento completo do cofre do motor com aplicação de verniz protetivo contra oxidação.', extra: true },
+  { k: 'enceramento', nome: 'Enceramento', valor: 520, desc: 'Brilho e proteção da pintura.', extra: true },
+  { k: 'basic', nome: 'Basic', valor: 375, desc: 'Lavação externa, aspiração completa do interior, painel, console, portas e tapetes limpos, plásticos com acabamento e hidratação.' },
+  { k: 'interior-detail', nome: 'Interior Detail', valor: 750, desc: 'Limpeza profunda de portas e painéis, tapetes com limpeza detalhada, cantos e trilhos com limpeza reforçada.' },
+  { k: 'interior-care', nome: 'Interior Care', valor: 1180, desc: 'Higienização profunda dos bancos, bactericida e hidratação de couros e plásticos.', extra: true },
+  { k: 'interior-premium', nome: 'Interior Premium', valor: 1600, desc: 'Higienização completa com desmontagem dos bancos: teto, cintos, borrachas, carpetes, assoalho e ozônio.' },
+  { k: 'polimento', nome: 'Polimento Técnico', valor: 1400, desc: 'Correção, refino e proteção da pintura em 3 etapas de máquina.', check: ['Rodas e caixas de rodas', 'Preparação da pintura', 'Corte e refino do verniz', 'Lustro e proteção'] },
+  { k: 'vitrificacao', nome: 'Vitrificação (Ceramic Coating)', valor: 3900, desc: 'Inclui polimento técnico completo. Durabilidade de até 5 anos.' },
+];
+const PROTO_CLAUSULAS = [
+  'A entrada garante a reserva da agenda e será abatida do valor final.',
+  'O prazo pode variar conforme o estado do veículo e a inspeção inicial.',
+  'Ajustes de prazo e acréscimos de valor poderão ser realizados e serão notificados previamente ao cliente.',
+  'Retirada e entrega do veículo não fazem parte do serviço contratado, salvo quando acordadas expressamente. Qualquer deslocamento fica sujeito às condições definidas pela Strike Details.',
+  'Qualquer serviço adicional será executado somente com autorização do cliente.',
+];
+const PROTO_SVG_CHK = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10.2" stroke="#24872d" stroke-width="1.8"/><path d="M7.4 12.3l3.1 3.1 6.1-6.3" stroke="#24872d" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const PROTO_SVG_BADGE = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M7.2 12.3l3.2 3.2 6.4-6.6" stroke="#028c2d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const PROTO_RASC = 'sd:protocolo:rascunho', PROTO_REC = 'sd:protocolos:recentes';
+const DIA_CURTO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+const svgNo = html => { const t = document.createElement('template'); t.innerHTML = html; return t.content.firstChild; };
+const lsLer = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
+const lsGravar = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+// Dados como devem sair no documento (o que foi digitado continua igual no formulário).
+const protoNome = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase().split(' ')
+  .map((w, i) => (i && /^(de|da|do|das|dos|e)$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
+function protoTel(t) {
+  const bruto = String(t || '').trim();
+  let d = bruto.replace(/\D/g, '');
+  if (!d) return { txt: '', aviso: null };
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
+  if (d.length === 11) return { txt: `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`, aviso: null };
+  if (d.length === 10) return { txt: `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`, aviso: 'Telefone com 8 dígitos depois do DDD (celular tem 9). Confira com o cliente.' };
+  return { txt: bruto, aviso: 'Telefone fora do padrão (DDD + 9 dígitos). Sai como foi digitado.' };
+}
+// "Nova Mamoré — Rondônia (RO)" vira "Nova Mamoré - RO"; nunca travessão longo.
+const protoCidade = t => String(t || '').trim().replace(/\s*[—–-]\s*[^()—–-]*\((\w{2})\)\s*$/, ' - $1').replace(/\s*[—–]\s*/g, ' - ');
+const protoVeiculo = t => String(t || '').trim().replace(/\s+/g, ' ').replace(/\b(\d{2})\/(\d{2})\b/, '20$1/20$2');
+function protoKm(t) {
+  const s = String(t || '').trim();
+  if (!s) return '';
+  if (/^(0|zero)(\s*km)?$/i.test(s)) return '0 km';
+  const n = parseNum(s.replace(/\s*km$/i, ''));
+  return isNaN(n) ? s : `${n.toLocaleString('pt-BR')} km`;
+}
+const protoPlaca = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const protoDia = (k, h) => `${brData(k)} (${DIA_CURTO[dataDe(k).getDay()]})${h ? ` • ${h}` : ''}`;
+const protoCurto = titulo => String(titulo || '').replace(/^protocolo\s+/i, '').trim();
+const protoArquivo = e => `${protoNome(e.cliente.nome).replace(/[\\/:*?"<>|]/g, '').trim() || 'Protocolo'}.png`;
+
+function protoNovo() {
+  const e = { v: 1, id: uid(), tipo: 'agendamento', agId: null,
+    cliente: { nome: '', tel: '', cidade: '', end: '', email: '' },
+    veiculo: { modelo: '', cor: '', km: '', placa: '' },
+    serv: null, extras: [], nota: '',
+    datas: { ent: '', entH: '', sai: '', saiH: '', semData: false },
+    os: { data: '', status: 'feito' },
+    pag: { modo: 'pct', pct: '30', ent: '' }, leg: '', obs: '' };
+  protoPreset(e, 'cabine-strada');
+  return e;
+}
+function protoPreset(e, k) {
+  const p = PROTO_CATALOGO.find(x => x.k === k);
+  e.serv = p
+    ? { k, titulo: p.titulo || p.nome, desc: p.desc, item: p.item || p.desc, valor: p.valor != null ? fmtQ(p.valor) : '', checkOn: !!p.check, check: p.check ? [...p.check] : ['', '', '', ''] }
+    : { k: 'livre', titulo: '', desc: '', item: '', valor: '', checkOn: false, check: ['', '', '', ''] };
+}
+function protoPresetPorNome(servico, marca) {
+  const s = String(servico || '').toLowerCase(), m = `${servico || ''} ${marca || ''}`.toLowerCase();
+  if (/cabine/.test(s)) return /toro/.test(m) ? 'cabine-toro' : 'cabine-strada';
+  const p = PROTO_CATALOGO.find(x => !/cabine/.test(x.k) && s && (s.includes(protoCurto(x.nome).toLowerCase()) || protoCurto(x.nome).toLowerCase().includes(s)));
+  return p ? p.k : null;
+}
+// Preenche com um agendamento da Agenda: cliente, telefone, veículo (marca), serviço, datas e valores.
+function protoDeAgenda(e, a) {
+  e.agId = a.id; e.tipo = 'agendamento';
+  e.cliente.nome = a.cliente || ''; e.cliente.tel = a.tel || '';
+  if (a.marca) e.veiculo.modelo = a.marca;
+  e.datas = { ent: a.data || '', entH: '', sai: a.data ? entregaDe(a) : '', saiH: '', semData: false };
+  const k = protoPresetPorNome(a.servico, a.marca);
+  protoPreset(e, k || 'livre');
+  if (!k) e.serv.titulo = a.servico || '';
+  e.extras = [];
+  if (a.valor != null) {
+    e.serv.valor = fmtQ(a.valor);
+    const ent = entradaDe(a);
+    if (ent > 0 && Math.abs(ent - round2(a.valor * 0.3)) > 0.01) e.pag = { modo: 'valor', pct: '30', ent: fmtQ(ent) };
+    else e.pag = { modo: 'pct', pct: '30', ent: '' };
+  }
+}
+
+// Contas, textos e conferências do protocolo. bloqueio = motivo para não gerar (ex.: sem data).
+function protoCalc(e) {
+  const num = v => { const t = String(v == null ? '' : v).trim(); if (!t) return null; const n = parseNum(t); return isNaN(n) ? NaN : n; };
+  const ok = v => (v == null || Number.isNaN(v) ? 0 : v);
+  const os = e.tipo === 'os', avisos = [];
+  const base = num(e.serv.valor);
+  if (Number.isNaN(base)) avisos.push('Valor do serviço inválido. Use só números, como 3100 ou 3.100,00.');
+  const extras = e.extras.map(x => ({ ...x, val: num(x.v) }));
+  if (extras.some(x => Number.isNaN(x.val))) avisos.push('Algum valor de item extra está inválido.');
+  const comValor = extras.filter(x => x.tipo === 'valor'), brindes = extras.filter(x => x.tipo === 'brinde'), descontos = extras.filter(x => x.tipo === 'desconto');
+  const desconto = round2(descontos.reduce((t, x) => t + ok(x.val), 0));
+  const total = round2(ok(base) + comValor.reduce((t, x) => t + ok(x.val), 0) - desconto);
+  const modo = os ? (e.pag.modo === 'valor' ? 'valor' : 'none') : e.pag.modo;
+  let entrada = null;
+  if (modo === 'pct') { const p = num(e.pag.pct); entrada = round2(total * (p == null || Number.isNaN(p) ? 30 : p) / 100); }
+  else if (modo === 'valor') { const v = num(e.pag.ent); if (Number.isNaN(v)) avisos.push('Valor da entrada inválido.'); entrada = ok(v); }
+  else if (modo === 'zero') entrada = 0;
+  const saldo = entrada == null ? null : round2(total - entrada);
+  if (entrada != null && entrada > total) avisos.push('A entrada está maior que o total.');
+  if (!total) avisos.push('Total em R$ 0,00. Confira os valores.');
+  const tel = protoTel(e.cliente.tel);
+  if (tel.aviso) avisos.push(tel.aviso);
+  if (!e.veiculo.modelo.trim()) avisos.push('Sem o modelo do veículo: sai "---".');
+  // Legenda do total (ex.: "Cabine Blindada R$ 2.800,00 + carpete R$ 960,00")
+  const curto = protoCurto(e.serv.titulo) || 'Serviço';
+  const nomeX = x => (x.n || '').trim().toLowerCase() || 'item';
+  let legAuto = os ? '' : 'Valor do serviço / investimento total';
+  if (desconto) legAuto = `Serviços ${fmtBRL(round2(total + desconto))} com desconto de ${fmtBRL(desconto)}`;
+  else if (comValor.length) legAuto = `${curto} ${fmtBRL(ok(base))} + ${comValor.map(x => `${nomeX(x)} ${fmtBRL(ok(x.val))}`).join(' + ')}${brindes.length ? ` + ${brindes.map(nomeX).join(' + ')} de brinde` : ''}`;
+  else if (brindes.length) legAuto = `${curto} + ${brindes.map(nomeX).join(' + ')} de brinde`;
+  // Datas: dia da semana sempre do calendário.
+  let bloqueio = null, entTxt = 'A definir', saiTxt = 'A definir', execTxt = 'A definir', osTxt = '';
+  if (!os) {
+    const d = e.datas;
+    if (!d.semData) {
+      if (!d.ent || !d.sai) bloqueio = 'Coloque a data de entrada e a de entrega (ou marque "Sem data definida").';
+      else if (d.sai < d.ent) bloqueio = 'A entrega está antes da entrada.';
+      else {
+        const n = Math.round((dataDe(d.sai) - dataDe(d.ent)) / 864e5);
+        entTxt = protoDia(d.ent, d.entH); saiTxt = protoDia(d.sai, d.saiH); execTxt = n <= 1 ? '1 dia' : `${n} dias`;
+      }
+    }
+  } else if (!e.os.data) bloqueio = 'Coloque a data de execução.';
+  else osTxt = protoDia(e.os.data, '');
+  if (!e.cliente.nome.trim()) bloqueio = 'Coloque o nome do cliente.';
+  return { os, base, extras, comValor, brindes, desconto, total, modo, entrada, saldo, avisos, bloqueio,
+    legenda: e.leg.trim() || legAuto, legAuto, entTxt, saiTxt, execTxt, osTxt,
+    nome: protoNome(e.cliente.nome), tel: tel.txt, cidade: protoCidade(e.cliente.cidade), modelo: protoVeiculo(e.veiculo.modelo),
+    km: protoKm(e.veiculo.km), placa: protoPlaca(e.veiculo.placa) };
+}
+
+// O documento em si (mesmo HTML/CSS do modelo em branco, com as classes pd-).
+function protoDoc(e, rec) {
+  const c = protoCalc(e), os = c.os;
+  const D = (cls, kids = [], extra = {}) => el('div', { class: cls, ...extra }, ...[].concat(kids));
+  const T = (cls, txt) => el('div', { class: cls, text: txt });
+  const N = v => (String(v || '').trim() || '---');
+  const blk = (lbl, val, tam = 'pd-md') => D('pd-blk', [T('pd-lbl', lbl), T(`pd-val ${tam}`, N(val))]);
+  const linha = (n, d, v, cor, primeira) => D('pd-addon' + (primeira ? ' pd-primeira' : ''), [
+    D('', [T('pd-addon-t', N(n)), d ? T('pd-addon-d', d) : null]),
+    el('div', { class: 'pd-addon-v', style: cor ? `color:${cor}` : null, text: v })]);
+  const valX = x => (x.tipo === 'brinde' ? ['Brinde', '#24872d'] : x.tipo === 'desconto' ? [`- ${fmtBRL(x.val || 0)}`, '#24872d'] : [x.val != null && !Number.isNaN(x.val) ? fmtBRL(x.val) : '---']);
+  const extrasL = c.extras.map(x => linha(x.n || (x.tipo === 'desconto' ? 'Desconto' : ''), x.d, ...valX(x)));
+  const temCheck = e.serv.checkOn && e.serv.check.some(t => t.trim());
+  const rot = os ? (e.os.status === 'andamento' ? 'Serviço em execução' : 'Serviço executado') : 'Procedimento contratado';
+  const nota = e.nota.trim() ? el('div', { class: 'pd-nota' }, el('b', { text: 'Observação: ' }), e.nota.trim()) : null;
+  const servCard = temCheck || !c.extras.length
+    ? D('pd-card', [T('pd-lbl', rot), T('pd-proc-t', N(e.serv.titulo)), e.serv.desc.trim() ? T('pd-proc-d', e.serv.desc.trim()) : null,
+      temCheck ? D('pd-checks', e.serv.check.filter(t => t.trim()).map(t => el('div', { class: 'pd-chk' }, svgNo(PROTO_SVG_CHK), t.trim()))) : null,
+      ...extrasL, nota])
+    : D('pd-card', [T('pd-lbl', os ? rot : 'Serviços contratados'),
+      linha(protoCurto(e.serv.titulo) || e.serv.titulo, (e.serv.item || e.serv.desc).trim(), c.base != null && !Number.isNaN(c.base) ? fmtBRL(c.base) : '---', null, true),
+      ...extrasL, nota]);
+  const tempo = os
+    ? (c.osTxt ? D('pd-card', [T('pd-lbl', 'Data de execução'), T('pd-val pd-md', c.osTxt)]) : null)
+    : D('pd-card', [T('pd-lbl', 'Cronograma'), D('pd-timeline', [
+      D('pd-tl-lbl', [el('span', { text: 'Entrada' }), el('span', { text: 'Execução' }), el('span', { text: 'Entrega estimada' })]),
+      D('pd-tl-bar', [D('pd-tl-line'), D('pd-dot'), D('pd-dot pd-mid'), D('pd-dot pd-end')]),
+      D('pd-tl-val', [el('span', { text: c.entTxt }), el('span', { text: c.execTxt }), el('span', { text: c.saiTxt })])])]);
+  const dir = c.entrada == null || (os && !c.entrada) ? null : D('pd-m-right', [
+    T('pd-lbl', os ? 'Entrada paga' : 'Entrada paga / agendamento pago'),
+    el('div', { class: 'pd-m-green', style: c.entrada ? null : 'color:#8b9095', text: fmtBRL(c.entrada) }),
+    D('pd-m-div'),
+    T('pd-lbl', os ? 'A receber' : 'Saldo na entrega'),
+    T('pd-m-white', fmtBRL(c.saldo))]);
+  const money = D('pd-money' + (dir ? '' : ' pd-uma'), [
+    D('', [T('pd-lbl', os ? 'Total da ordem de serviço' : 'Investimento'), T('pd-m-total', fmtBRL(c.total)), c.legenda ? T('pd-m-cap', c.legenda) : null]), dir]);
+  let badge, itens;
+  if (!os) { badge = 'AGENDAMENTO CONFIRMADO'; itens = c.modo === 'zero' || c.modo === 'none' ? PROTO_CLAUSULAS.slice(1) : PROTO_CLAUSULAS; }
+  else if (e.os.status === 'andamento') { badge = 'SERVIÇO EM EXECUÇÃO'; itens = PROTO_CLAUSULAS.slice(1); }
+  else { badge = 'SERVIÇO EXECUTADO'; itens = [`Ordem de serviço referente a serviço já executado${e.os.data ? ` em ${brData(e.os.data)}` : ''}.`]; }
+  if (e.obs.trim()) itens = [...itens, e.obs.trim()];
+  return D('pdoc', [
+    D('pd-hdr', [el('img', { class: 'pd-band', src: rec ? rec.topo : '/modelo-protocolo/topo.png', alt: '' }), T('pd-hdr-sub', 'STRIKE DETAILS ESTÉTICA AUTOMOTIVA')]),
+    D('pd-wrap', [
+      T('pd-h1', os ? 'ORDEM DE SERVIÇO' : 'PROTOCOLO DE AGENDAMENTO'),
+      T('pd-sub', `${protoCurto(e.serv.titulo) || 'Serviço'} • Método Strike Details`),
+      D('pd-rule'),
+      D('pd-card', D('pd-grid2', [
+        D('pd-col-l', [blk('Cliente', c.nome, 'pd-lg'), blk('Endereço', e.cliente.end), blk('Telefone / WhatsApp', c.tel), blk('E-mail', e.cliente.email)]),
+        D('pd-col-r', [blk('Veículo', c.modelo, 'pd-lg'),
+          D('pd-blk pd-mini', [D('', [T('pd-lbl', 'Cor'), T('pd-val pd-md', N(e.veiculo.cor))]), D('', [T('pd-lbl', 'Quilometragem'), T('pd-val pd-md', N(c.km))])]),
+          blk('Placa', c.placa), blk('Cidade', c.cidade)])])),
+      servCard, tempo, money,
+      D('pd-card', D('pd-foot', [
+        D('pd-badge', [svgNo(PROTO_SVG_BADGE), el('span', { text: badge })]),
+        D('', itens.map(t => T('pd-li', t)))]))]),
+    el('img', { class: 'pd-band', src: rec ? rec.rodape : '/modelo-protocolo/rodape.png', alt: '' })], { role: 'img', 'aria-label': `Protocolo de ${c.nome || 'cliente'}` });
+}
+
+// CSS do documento (1024 px, igual ao modelo em branco; classes pd- para não misturar com as do sistema).
+// Vai na página (prévia) e dentro da imagem gerada.
+const PROTO_CSS = `
+.pdoc { width: 1024px; background: #fff; color: #141618; font: 400 16px/normal 'SDProtoInter', sans-serif; -webkit-font-smoothing: antialiased; text-align: left; }
+.pdoc div, .pdoc span, .pdoc img { margin: 0; padding: 0; box-sizing: border-box; }
+.pdoc img.pd-band { display: block; width: 1024px; max-width: none; }
+.pd-hdr { position: relative; width: 1024px; }
+.pd-hdr-sub { position: absolute; top: 135px; left: 0; width: 1024px; text-align: center; font: 700 16px/normal 'SDProtoCond', sans-serif; letter-spacing: 3.4px; color: #e9e9e9; }
+.pdoc .pd-wrap { padding: 34px 68px 30px 68px; }
+.pd-h1 { font: 700 47px/1.02 'SDProtoCond', sans-serif; letter-spacing: -.3px; color: #141618; }
+.pdoc .pd-sub { font: 700 16px/normal 'SDProtoCond', sans-serif; letter-spacing: 2.4px; color: #6f757a; margin-top: 9px; text-transform: uppercase; }
+.pdoc .pd-rule { border-top: 3px solid #141618; margin-top: 14px; }
+.pdoc .pd-card { border: 1px solid #e9eaec; border-radius: 16px; background: #fcfcfd; padding: 26px 30px; margin-top: 20px; }
+.pd-lbl { font: 700 14px/normal 'SDProtoCond', sans-serif; letter-spacing: 1.7px; color: #8b9095; text-transform: uppercase; }
+.pd-val { font-family: 'SDProtoCond', sans-serif; font-weight: 700; color: #141618; overflow-wrap: anywhere; }
+.pdoc .pd-lg { font-size: 29px; margin-top: 5px; line-height: 1.15; }
+.pdoc .pd-md { font-size: 21px; margin-top: 4px; line-height: 1.25; }
+.pd-grid2 { display: grid; grid-template-columns: 1fr 1fr; }
+.pdoc .pd-col-r { border-left: 1px solid #e2e3e6; padding-left: 34px; }
+.pdoc .pd-col-l { padding-right: 34px; }
+.pdoc .pd-blk { margin-top: 20px; }
+.pdoc .pd-blk:first-child { margin-top: 0; }
+.pd-mini { display: grid; grid-template-columns: 1fr 1fr; }
+.pdoc .pd-proc-t { font: 700 33px/normal 'SDProtoCond', sans-serif; color: #141618; margin-top: 4px; }
+.pdoc .pd-proc-d { font-size: 17px; color: #4a4f54; margin-top: 6px; }
+.pdoc .pd-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 30px; margin-top: 22px; }
+.pd-chk { display: flex; align-items: center; gap: 12px; font-size: 18px; color: #26292c; }
+.pd-chk svg { flex: 0 0 auto; display: block; }
+.pdoc .pd-addon { border-top: 1px solid #e2e3e6; margin-top: 22px; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.pdoc .pd-addon.pd-primeira { border-top: 0; margin-top: 14px; padding-top: 0; }
+.pd-addon-t { font: 700 19px/normal 'SDProtoCond', sans-serif; color: #141618; }
+.pdoc .pd-addon-d { font-size: 15.5px; color: #4a4f54; margin-top: 3px; }
+.pd-addon-v { font: 700 24px/normal 'SDProtoCond', sans-serif; color: #141618; white-space: nowrap; }
+.pdoc .pd-nota { margin-top: 18px; background: #f3f4f5; border-radius: 10px; padding: 14px 18px; font-size: 14.5px; color: #4a4f54; line-height: 1.45; }
+.pd-nota b { color: #26292c; font-weight: 600; }
+.pdoc .pd-timeline { margin-top: 16px; }
+.pd-tl-lbl, .pd-tl-val { display: grid; grid-template-columns: 1fr 1fr 1fr; font-family: 'SDProtoCond', sans-serif; font-weight: 700; }
+.pd-tl-lbl { font-size: 14px; letter-spacing: 1.7px; color: #6f757a; }
+.pd-tl-val { font-size: 20px; color: #141618; }
+.pd-tl-lbl span:nth-child(2), .pd-tl-val span:nth-child(2) { text-align: center; }
+.pd-tl-lbl span:nth-child(3), .pd-tl-val span:nth-child(3) { text-align: right; }
+.pdoc .pd-tl-bar { position: relative; height: 16px; margin: 12px 0 10px 0; }
+.pdoc .pd-tl-line { position: absolute; top: 7px; left: 8px; right: 8px; height: 3px; background: #dcdee1; }
+.pdoc .pd-dot { position: absolute; top: 0; width: 16px; height: 16px; border-radius: 50%; background: #141618; }
+.pdoc .pd-dot.pd-mid { left: 50%; margin-left: -8px; background: #5b6167; }
+.pdoc .pd-dot.pd-end { right: 0; }
+.pdoc .pd-money { background: #060606; border-radius: 16px; padding: 28px 34px; margin-top: 20px; display: grid; grid-template-columns: 1.15fr 1fr; color: #fff; }
+.pdoc .pd-money.pd-uma { grid-template-columns: 1fr; }
+.pd-money .pd-lbl { color: #b9bec3; }
+.pdoc .pd-m-total { font: 700 60px/1.05 'SDProtoCond', sans-serif; margin-top: 6px; letter-spacing: -1px; }
+.pdoc .pd-m-cap { font-size: 16px; color: #c4c9ce; margin-top: 8px; }
+.pdoc .pd-m-right { border-left: 1px solid #3a3d40; padding-left: 32px; }
+.pdoc .pd-m-green { font: 700 40px/normal 'SDProtoCond', sans-serif; color: #26f356; margin-top: 4px; }
+.pdoc .pd-m-div { border-top: 1px solid #3a3d40; margin: 14px 0; }
+.pdoc .pd-m-white { font: 700 34px/normal 'SDProtoCond', sans-serif; color: #fff; margin-top: 4px; }
+.pd-foot { display: grid; grid-template-columns: auto 1fr; gap: 26px; align-items: center; }
+.pdoc .pd-badge { display: flex; align-items: center; gap: 11px; background: #028c2d; border-radius: 11px; padding: 15px 22px; }
+.pd-badge svg { display: block; flex: none; }
+.pd-badge span { font: italic 700 21px/normal 'SDProtoCond', sans-serif; letter-spacing: .6px; color: #fff; white-space: nowrap; }
+.pdoc .pd-li { position: relative; padding-left: 20px; font-size: 15.5px; color: #3d4247; line-height: 1.55; margin-bottom: 7px; }
+.pdoc .pd-li:last-child { margin-bottom: 0; }
+.pd-li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: #5b6167; }
+`;
+document.head.append(el('style', { text: PROTO_CSS }));
+
+/* PNG de 2048 px (escala 2), como os gerados pelo chat. Sem biblioteca: o próprio navegador desenha o documento
+   (SVG com foreignObject num canvas), então o texto sai igual à prévia. Fontes e faixas vão dentro do SVG em
+   data URL (imagem SVG não busca nada fora). Com html2canvas o texto saía uns pixels mais baixo. */
+const PROTO_FONTES = ['700 16px SDProtoCond', '400 16px SDProtoCond', '400 16px SDProtoInter', '600 16px SDProtoInter'];
+const protoFontes = () => Promise.all(PROTO_FONTES.map(f => document.fonts.load(f)));
+const paraDataURL = async url => {
+  const r = await fetch(url); if (!r.ok) throw new Error(`recurso ${url}`);
+  const b = await r.blob();
+  return new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
+};
+let protoRecP = null;
+function protoRecursos() {
+  const M = '/modelo-protocolo/';
+  if (!protoRecP) protoRecP = Promise.all([
+    'fontes/roboto-condensed-700.woff2', 'fontes/roboto-condensed-400.woff2', 'fontes/inter-400.woff2', 'fontes/inter-600.woff2', 'topo.png', 'rodape.png',
+  ].map(f => paraDataURL(M + f))).then(([c7, c4, i4, i6, topo, rodape]) => ({
+    topo, rodape,
+    fontes: [['SDProtoCond', 700, c7], ['SDProtoCond', 400, c4], ['SDProtoInter', 400, i4], ['SDProtoInter', 600, i6]]
+      .map(([f, w, u]) => `@font-face{font-family:'${f}';src:url(${u}) format('woff2');font-weight:${w};font-style:normal;}`).join(''),
+  })).catch(err => { protoRecP = null; throw err; });
+  return protoRecP;
+}
+const carregarImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('img')); i.src = src; });
+async function protoPNG(e) {
+  const [rec] = await Promise.all([protoRecursos(), protoFontes()]);
+  // Mede a altura com o documento montado fora da tela (mesmas fontes da prévia).
+  const doc = protoDoc(e, rec), host = el('div', { class: 'proto-captura', 'aria-hidden': 'true' }, doc);
+  document.body.append(host);
+  let h;
+  try { await Promise.all([...doc.querySelectorAll('img')].map(i => (i.decode ? i.decode().catch(() => {}) : null))); h = Math.ceil(doc.getBoundingClientRect().height); }
+  finally { host.remove(); }
+  const html = new XMLSerializer().serializeToString(doc);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${1024 * 2}" height="${h * 2}" viewBox="0 0 1024 ${h}">`
+    + `<foreignObject x="0" y="0" width="1024" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml" style="width:1024px;margin:0;padding:0">`
+    + `<style>${rec.fontes}${PROTO_CSS}</style>${html}</div></foreignObject></svg>`;
+  const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  // O Safari às vezes desenha a primeira vez sem as fontes: carrega duas vezes e usa a segunda.
+  await carregarImg(src);
+  await new Promise(r => setTimeout(r, 120));
+  const img = await carregarImg(src);
+  const cv = el('canvas', { width: String(1024 * 2), height: String(h * 2) });
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(img, 0, 0, cv.width, cv.height);
+  return new Promise((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('png'))), 'image/png'));
+}
+function protoGuardarRecente(e) {
+  const lista = lsLer(PROTO_REC, []).filter(x => x.id !== e.id);
+  lista.unshift({ id: e.id, em: Date.now(), estado: JSON.parse(JSON.stringify(e)) });
+  lsGravar(PROTO_REC, lista.slice(0, 20));
+}
+
+function renderProtocolo() {
+  // Estado: vindo da Agenda ("Gerar protocolo"), o rascunho deste aparelho ou um novo.
+  let e = S.proto || lsLer(PROTO_RASC, null);
+  if (!e || e.v !== 1) e = protoNovo();
+  if (S.protoAg) { const a = agendaAtiva().find(x => x.id === S.protoAg); S.protoAg = null; if (a) { e = protoNovo(); protoDeAgenda(e, a); } }
+  S.proto = e;
+  let cache = null, timer = null; // PNG já gerado para este estado (chave = JSON)
+  const chave = () => JSON.stringify(e);
+  const form = el('div', { class: 'proto-form' });
+  const prev = el('div', { class: 'proto-prev' });
+  const info = el('div', { class: 'stack', style: 'gap:10px' });
+  const resumo = el('div', { class: 'proto-resumo' });
+  const hintDatas = el('p', { class: 'hint' });
+  const legInput = { el: null };
+
+  const salvar = () => lsGravar(PROTO_RASC, e);
+  const mudou = () => { clearTimeout(timer); timer = setTimeout(() => { salvar(); atualizar(); }, 140); };
+  const inp = (obj, key, props = {}) => {
+    const { tag = 'input', ...p } = props;
+    const i = el(tag, { type: tag === 'input' ? 'text' : null, autocomplete: 'off', ...p });
+    i.value = obj[key] == null ? '' : obj[key];
+    const ler = () => { if (obj[key] === i.value) return; obj[key] = i.value; mudou(); };
+    i.addEventListener('input', ler); i.addEventListener('change', ler); // data e hora no iPhone avisam só no change
+    return i;
+  };
+  const fld = (rot, i, extra) => el('label', { class: 'field' }, el('span', { class: 'label', text: rot }), i, extra || null);
+  const secao = (tit, ...kids) => el('section', { class: 'card' }, el('h3', { text: tit }), ...kids);
+  const seg = (opcoes, atual, onEscolha, label) => el('div', { class: 'seg seg-linha', role: 'group', 'aria-label': label },
+    opcoes.map(([k, t]) => el('button', { type: 'button', 'aria-pressed': String(atual === k), onclick: () => { onEscolha(k); desenhar(); mudou(); } }, t)));
+  const marcar = (obj, key, txt, depois) => {
+    const c = el('input', { type: 'checkbox' }); c.checked = !!obj[key];
+    c.addEventListener('change', () => { obj[key] = c.checked; if (depois) depois(); else mudou(); });
+    return el('label', { class: 'proto-marcar' }, c, txt);
+  };
+
+  function desenhar() {
+    const os = e.tipo === 'os';
+    // Agendamentos para puxar os dados (agendados de 7 dias atrás em diante, do mais perto ao mais longe).
+    const desde = somaDias(hojeISO(), -7);
+    const ags = agendaAtiva().filter(a => a.status === 'agendado' && a.data >= desde).sort((a, b) => a.data.localeCompare(b.data));
+    const fAg = ags.length ? el('select', { 'aria-label': 'Puxar os dados de um agendamento' },
+      el('option', { value: '', text: e.agId && ags.some(a => a.id === e.agId) ? 'Puxar de outro agendamento…' : 'Puxar os dados de um agendamento…' }),
+      ags.map(a => el('option', { value: a.id, text: `${brData(a.data).slice(0, 5)} · ${a.cliente}${a.servico ? ` · ${a.servico}` : ''}` }))) : null;
+    if (fAg) fAg.addEventListener('change', () => { const a = ags.find(x => x.id === fAg.value); if (a) { protoDeAgenda(e, a); desenhar(); mudou(); toast(`Dados de ${protoNome(a.cliente)} preenchidos.`); } });
+
+    // Serviço: catálogo (valores mudam: o valor fica editável).
+    const fPreset = el('select', { 'aria-label': 'Serviço do catálogo' },
+      PROTO_CATALOGO.map(p => el('option', { value: p.k, text: `${p.nome}${p.valor != null ? ` · ${fmtBRL(p.valor)}` : ''}` })),
+      el('option', { value: 'livre', text: 'Outro (escrever)' }));
+    fPreset.value = e.serv.k || 'livre';
+    fPreset.addEventListener('change', () => { protoPreset(e, fPreset.value); desenhar(); mudou(); });
+
+    const checks = e.serv.checkOn ? el('div', { class: 'proto-check' }, e.serv.check.map((t, i) => inp(e.serv.check, i, { maxlength: '40', placeholder: `Item ${i + 1}`, 'aria-label': `Item ${i + 1} do checklist` }))) : null;
+
+    // Itens extras: valor, brinde (não soma) ou desconto (subtrai).
+    const extras = e.extras.map((x, i) => el('div', { class: 'proto-extra' },
+      el('div', { class: 'row' },
+        inp(x, 'n', { maxlength: '60', placeholder: x.tipo === 'desconto' ? 'Desconto' : 'Nome do item', 'aria-label': 'Nome do item' }),
+        x.tipo === 'brinde' ? null : inp(x, 'v', { class: 'proto-v', inputmode: 'decimal', placeholder: '0,00', 'aria-label': 'Valor do item' }),
+        el('button', { class: 'proto-x', type: 'button', 'aria-label': 'Tirar item', onclick: () => { e.extras.splice(i, 1); desenhar(); mudou(); } }, '×')),
+      x.tipo === 'desconto' ? null : inp(x, 'd', { maxlength: '120', placeholder: 'Descrição curta (opcional)', 'aria-label': 'Descrição do item' }),
+      seg([['valor', 'Valor'], ['brinde', 'Brinde'], ['desconto', 'Desconto']], x.tipo, k => { x.tipo = k; if (k === 'desconto' && !x.n) x.n = 'Desconto'; }, 'Tipo do item')));
+    const fAdd = el('select', { 'aria-label': 'Adicionar item extra' },
+      el('option', { value: '', text: '+ Adicionar item extra…' }),
+      PROTO_CATALOGO.filter(p => p.extra).map(p => el('option', { value: p.k, text: `${p.nome}${p.valor != null ? ` · ${fmtBRL(p.valor)}` : ''}` })),
+      el('option', { value: 'outro', text: 'Outro item' }), el('option', { value: 'brinde', text: 'Brinde' }), el('option', { value: 'desconto', text: 'Desconto' }));
+    fAdd.addEventListener('change', () => {
+      const k = fAdd.value; if (!k) return;
+      const p = PROTO_CATALOGO.find(x => x.k === k);
+      e.extras.push(p ? { n: p.nome, d: p.desc, v: p.valor != null ? fmtQ(p.valor) : '', tipo: 'valor' }
+        : { n: k === 'desconto' ? 'Desconto' : '', d: '', v: '', tipo: k === 'outro' ? 'valor' : k });
+      desenhar(); mudou();
+      const novos = form.querySelectorAll('.proto-extra'); const ult = novos[novos.length - 1];
+      if (ult) { const alvo = p && p.valor == null ? ult.querySelector('.proto-v') : !p ? ult.querySelector('input') : null; if (alvo) alvo.focus(); }
+    });
+
+    const datas = os
+      ? [fld('Data de execução', inp(e.os, 'data', { type: 'date' })),
+        seg([['feito', 'Executado'], ['andamento', 'Em andamento']], e.os.status, k => { e.os.status = k; }, 'Situação do serviço')]
+      : [el('div', { class: 'row' }, fld('Entrada', inp(e.datas, 'ent', { type: 'date' })), fld('Hora (opcional)', inp(e.datas, 'entH', { type: 'time' }))),
+        el('div', { class: 'row' }, fld('Entrega', inp(e.datas, 'sai', { type: 'date' })), fld('Hora (opcional)', inp(e.datas, 'saiH', { type: 'time' }))),
+        hintDatas,
+        marcar(e.datas, 'semData', 'Sem data definida (sai "A definir")')];
+
+    const modos = os ? [['none', 'Sem entrada'], ['valor', 'Teve entrada']] : [['pct', '30%'], ['valor', 'Valor fixo'], ['zero', 'Sem entrada'], ['none', 'À vista']];
+    const modoAtual = os ? (e.pag.modo === 'valor' ? 'valor' : 'none') : e.pag.modo;
+    const fLeg = inp(e, 'leg', { maxlength: '140' }); legInput.el = fLeg;
+
+    preencher(form,
+      fAg,
+      seg([['agendamento', 'Agendamento'], ['os', 'Ordem de serviço']], e.tipo, k => { e.tipo = k; }, 'Tipo do documento'),
+      secao('Cliente',
+        fld('Nome completo', inp(e.cliente, 'nome', { maxlength: '80', autocapitalize: 'words', placeholder: 'Como vai no protocolo e no nome do arquivo' })),
+        el('div', { class: 'row' }, fld('Telefone', inp(e.cliente, 'tel', { type: 'tel', inputmode: 'tel', maxlength: '30', placeholder: '(69) 99999-9999' })), fld('Cidade', inp(e.cliente, 'cidade', { maxlength: '60', placeholder: 'Jaru - RO' }))),
+        fld('Endereço', inp(e.cliente, 'end', { maxlength: '100', placeholder: 'Opcional' })),
+        fld('E-mail', inp(e.cliente, 'email', { inputmode: 'email', autocapitalize: 'none', maxlength: '100', placeholder: 'Opcional' }))),
+      secao('Veículo',
+        fld('Modelo e ano', inp(e.veiculo, 'modelo', { maxlength: '60', placeholder: 'Fiat Strada Ranch 2026/2026' })),
+        el('div', { class: 'row' }, fld('Placa', inp(e.veiculo, 'placa', { maxlength: '8', autocapitalize: 'characters', placeholder: 'ABC1D23' })), fld('Cor', inp(e.veiculo, 'cor', { maxlength: '30' }))),
+        fld('Quilometragem', inp(e.veiculo, 'km', { inputmode: 'numeric', maxlength: '20', placeholder: '7500 ou zero' }))),
+      secao('Serviço',
+        fPreset,
+        el('div', { class: 'row' }, fld('Nome do serviço', inp(e.serv, 'titulo', { maxlength: '60' })), fld('Valor (R$)', inp(e.serv, 'valor', { inputmode: 'decimal', placeholder: '0,00' }))),
+        fld('Descrição', inp(e.serv, 'desc', { tag: 'textarea', rows: '2', maxlength: '200' })),
+        marcar(e.serv, 'checkOn', 'Checklist (4 itens)', () => { desenhar(); mudou(); }),
+        checks,
+        ...extras, fAdd,
+        fld('Observação no cartão (opcional)', inp(e, 'nota', { maxlength: '200', placeholder: 'Ex.: esse pacote já inclui lavagem externa' }))),
+      secao(os ? 'Data' : 'Datas', ...datas),
+      secao('Pagamento',
+        seg(modos, modoAtual, k => { e.pag.modo = k; }, 'Pagamento'),
+        modoAtual === 'pct' ? fld('Entrada (%)', inp(e.pag, 'pct', { inputmode: 'decimal', maxlength: '5' })) : null,
+        modoAtual === 'valor' ? fld('Entrada paga (R$)', inp(e.pag, 'ent', { inputmode: 'decimal', placeholder: '0,00' })) : null,
+        fld('Legenda do total', fLeg),
+        resumo),
+      secao('Observação extra', el('p', { class: 'hint', text: 'Entra como mais um item nas observações, só neste protocolo.' }), inp(e, 'obs', { tag: 'textarea', rows: '2', maxlength: '300' })));
+  }
+
+  // Prévia (o mesmo documento, reduzido para caber) + conferências + botões.
+  const escala = () => { const d = prev.firstChild; if (!d) return; const k = prev.clientWidth / 1024; d.style.transform = `scale(${k})`; prev.style.height = `${Math.ceil(d.offsetHeight * k)}px`; };
+  try { new ResizeObserver(escala).observe(prev); } catch {}
+  const bBaixar = el('button', { class: 'btn btn--primary btn--lg grow', type: 'button' }, icon('file'), 'Baixar PNG');
+  const bCopiar = el('button', { class: 'btn btn--lg grow', type: 'button' }, icon('image'), 'Copiar imagem');
+  const podeCompartilhar = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'a.png', { type: 'image/png' })] })); } catch { return false; } })();
+  const bComp = podeCompartilhar && !ePC() ? el('button', { class: 'btn btn--lg btn--block', type: 'button' }, icon('wa'), 'Compartilhar (WhatsApp)') : null;
+  const gerar = async () => { const k = chave(); if (cache && cache.k === k) return cache.blob; const blob = await protoPNG(e); cache = { k, blob }; return blob; };
+  const ocupado = (b, on, txt) => { b.disabled = on; if (on) { b.dataset.txt = b.lastChild.textContent; b.lastChild.textContent = txt; } else if (b.dataset.txt) b.lastChild.textContent = b.dataset.txt; };
+  const falhou = err => { console.error(err); toast('Não foi possível gerar a imagem. Confira a internet e tente de novo.', true); };
+  bBaixar.addEventListener('click', async () => {
+    ocupado(bBaixar, true, 'Gerando…');
+    try {
+      const blob = await gerar(), url = URL.createObjectURL(blob);
+      const a = el('a', { href: url, download: protoArquivo(e) }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30e3);
+      protoGuardarRecente(e); desenharRecentes(); toast(`Baixado: ${protoArquivo(e)}`);
+    } catch (err) { falhou(err); } finally { ocupado(bBaixar, false); }
+  });
+  bCopiar.addEventListener('click', async () => {
+    if (!navigator.clipboard || !window.ClipboardItem) { toast('Este navegador não copia imagens. Use Baixar PNG.', true); return; }
+    ocupado(bCopiar, true, 'Gerando…');
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': gerar() })]); protoGuardarRecente(e); desenharRecentes(); toast('Imagem copiada. É só colar no WhatsApp.'); }
+    catch (err) { falhou(err); } finally { ocupado(bCopiar, false); }
+  });
+  if (bComp) bComp.addEventListener('click', async () => {
+    ocupado(bComp, true, 'Gerando…');
+    try {
+      const pronto = cache && cache.k === chave();
+      const blob = await gerar();
+      const file = new File([blob], protoArquivo(e), { type: 'image/png' });
+      try { await navigator.share({ files: [file] }); protoGuardarRecente(e); desenharRecentes(); }
+      catch (err) { if (err && err.name === 'NotAllowedError' && !pronto) toast('Imagem pronta. Toque em Compartilhar de novo.'); else if (!err || err.name !== 'AbortError') throw err; }
+    } catch (err) { falhou(err); } finally { ocupado(bComp, false); }
+  });
+
+  function atualizar() {
+    const c = protoCalc(e);
+    preencher(prev, protoDoc(e)); escala();
+    prev.querySelectorAll('img').forEach(i => i.addEventListener('load', escala, { once: true }));
+    if (document.fonts) document.fonts.ready.then(escala);
+    // Datas por extenso, para conferir o dia da semana.
+    if (e.tipo !== 'os') hintDatas.textContent = e.datas.semData ? 'O cronograma sai "A definir".'
+      : e.datas.ent && e.datas.sai && e.datas.sai >= e.datas.ent ? `${DIAS_SEMANA[dataDe(e.datas.ent).getDay()]}, ${brData(e.datas.ent)} até ${DIAS_SEMANA[dataDe(e.datas.sai).getDay()].toLowerCase()}, ${brData(e.datas.sai)} · ${c.execTxt}`
+        : 'Sem data o protocolo não é gerado.';
+    if (legInput.el) legInput.el.placeholder = c.legAuto || 'Opcional (ex.: Pagamento via Pix)';
+    preencher(resumo, el('span', {}, 'Total ', el('b', { text: fmtBRL(c.total) })),
+      c.entrada != null ? el('span', {}, 'Entrada ', el('b', { text: fmtBRL(c.entrada) })) : null,
+      c.saldo != null ? el('span', {}, c.os ? 'A receber ' : 'Saldo ', el('b', { text: fmtBRL(c.saldo) })) : null);
+    preencher(info,
+      c.bloqueio ? el('p', { class: 'proto-bloqueio', text: c.bloqueio }) : null,
+      c.avisos.length ? el('ul', { class: 'proto-avisos' }, c.avisos.map(t => el('li', { text: t }))) : null,
+      el('p', { class: 'hint', text: `Arquivo: ${protoArquivo(e)}` }));
+    [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; });
+  }
+
+  // Últimos gerados neste aparelho: tocar abre para editar (ex.: acrescentar um carpete) e gerar de novo.
+  const recentes = el('div', {});
+  function desenharRecentes() {
+    const lista = lsLer(PROTO_REC, []);
+    preencher(recentes, lista.length ? el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'label', text: 'Últimos gerados neste aparelho' }),
+      el('div', { class: 'proto-rec' }, lista.map(r => el('button', { type: 'button', 'aria-current': r.id === e.id ? 'true' : null, onclick: () => { e = JSON.parse(JSON.stringify(r.estado)); S.proto = e; salvar(); cache = null; desenhar(); atualizar(); desenharRecentes(); window.scrollTo(0, 0); toast(`Aberto: ${protoNome(e.cliente.nome) || 'protocolo'}`); } },
+        el('b', { text: protoNome(r.estado.cliente.nome) || 'Sem nome' }),
+        el('span', { text: `${r.estado.tipo === 'os' ? 'OS' : 'Agend.'} · ${r.estado.tipo === 'os' ? brData(r.estado.os.data).slice(0, 5) : r.estado.datas.ent ? brData(r.estado.datas.ent).slice(0, 5) : 'sem data'} · ${fmtData(r.em)}` }))))) : null);
+  }
+
+  // "Novo" com dois toques, para não apagar sem querer.
+  const bNovo = el('button', { class: 'btn btn--sm', type: 'button' }, icon('plus'), 'Novo');
+  let confirmaNovo = 0;
+  bNovo.addEventListener('click', () => {
+    if (Date.now() - confirmaNovo > 3000 && e.cliente.nome.trim()) { confirmaNovo = Date.now(); bNovo.lastChild.textContent = 'Limpar tudo?'; setTimeout(() => { bNovo.lastChild.textContent = 'Novo'; }, 3000); return; }
+    e = protoNovo(); S.proto = e; salvar(); cache = null; desenhar(); atualizar(); desenharRecentes(); bNovo.lastChild.textContent = 'Novo'; window.scrollTo(0, 0);
+  });
+
+  desenhar(); desenharRecentes();
+  shell(el('div', { class: 'stack', style: `max-width:${ePC() ? 1180 : 720}px` },
+    backLink('#/mais', 'Mais'),
+    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Protocolo' }), bNovo),
+    recentes,
+    el('div', { class: 'proto-cols' }, form,
+      el('div', { class: 'proto-lado' }, el('span', { class: 'label', text: 'Prévia' }), prev, info,
+        el('div', { class: 'actions' }, bBaixar, bCopiar), bComp))), { current: 'relatorios' });
+  atualizar();
+  protoFontes().then(escala).catch(() => {});
 }
 
 // Zerar o estoque (Controle): descarta todos os movimentos (entradas, retiradas e contagens), sem apagar do banco.

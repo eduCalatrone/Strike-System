@@ -13,6 +13,7 @@ Controle interno dos veículos em serviço: leitura de placa, etapas, fotos de e
 | `api/limpeza.js` | Limpeza diária das fotos de serviços concluídos há mais de 30 a 40 dias |
 | `vercel.json` | Região das funções, agenda da limpeza e página do cliente |
 | `dev-server.js` | Servidor para rodar no computador. A Vercel ignora este arquivo |
+| `modelo-protocolo/` | Faixas e fontes do Gerador de protocolo (Mais > Protocolo), tiradas do modelo em branco |
 | `protocolos/` | Galeria de protocolos (`/protocolos/`): app à parte que lê a pasta `protocolos` do computador. Não usa o banco |
 | `.env.exemplo` | Modelo das chaves para rodar localmente |
 
