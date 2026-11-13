@@ -3,7 +3,7 @@
 //   POST /api/dados  { ops: [...], por: {id, nome} } grava as mudanças, uma por uma, na ordem.
 //
 // Cada op: { col, acao: 'salvar' | 'remover', item?, id?, versao? }
-//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | eventos | opcionais | chamados | convites | confirmacoes
+//   col: funcionarios | tipos | veiculos | itens | movimentos | atendimentos | fotos | agenda | eventos | opcionais | chamados | convites | confirmacoes | protocolos
 //   Só do Controle: ajustes, senha, opcionais (lista de Ajustes), agenda (o Funcionário só vê a agenda, com valores,
 //   e pode usar 'agenda:entrada', que só marca o agendamento como "em serviço" ao dar entrada no veículo;
 //   quando esse serviço é concluído, o agendamento vira "concluído" aqui mesmo)
@@ -28,7 +28,7 @@ async function carregar(c, eu) {
     : `excluido_em=is.null&or=(concluido.eq.false,concluido_em.gte.${encodeURIComponent(`"${limiteRecentes}"`)})`;
   const fotosQ = 'sd_fotos?select=id,atendimento_id,rotulo,caminho,miniatura,etapa,opcional,criado_em,apagada_em&removida_em=is.null&order=criado_em,id';
   const desde7 = encodeURIComponent(`"${new Date(Date.now() - 7 * 864e5).toISOString()}"`);
-  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos, eventos, convites, confirmacoes] = await Promise.all([
+  const [funcionarios, tipos, veiculos, todosAts, fotosCtrl, itens, movimentos, ajustes, agenda, opcionais, chamados, avisos, eventos, convites, confirmacoes, protocolos] = await Promise.all([
     restAll(c, 'sd_funcionarios?select=id,nome,nivel,usuario,senha_hash&ativo=eq.true&order=nome,id'),
     restAll(c, 'sd_tipos_servico?select=id,nome,etapas,etapas_livres,etapas_sem_foto&ativo=eq.true&order=criado_em,id'),
     restAll(c, 'sd_veiculos?select=placa,descricao,criado_em&order=placa'),
@@ -53,6 +53,8 @@ async function carregar(c, eu) {
     ctrl ? restAll(c, 'cv_convites?select=slug,convidados,papel,resposta,pessoas,respondido_em,aberto_em,aberturas,criado_em,teste,meta,meta_servidor&excluido_em=is.null&order=criado_em,slug') : Promise.resolve(null),
     // Confirmações do link único dos convidados (com os dados do aparelho de quem confirmou). Só o Controle.
     ctrl ? restAll(c, 'cv_confirmacoes?select=id,convite_slug,pessoas,meta,meta_servidor,edicoes,criado_em,atualizado_em&tipo=eq.convidados&excluido_em=is.null&order=criado_em.desc') : Promise.resolve(null),
+    // Protocolos gerados no sistema (13/11/2026): só o Controle (têm valores). Os 400 mais recentes.
+    ctrl ? rest(c, 'sd_protocolos?select=id,dados,atendimento_id,criado_em,criado_por,atualizado_em&excluido_em=is.null&order=criado_em.desc&limit=400') : Promise.resolve(null),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -101,6 +103,8 @@ async function carregar(c, eu) {
       feitas: a.feitas || {}, concluido: a.concluido, concluidoEm: ms(a.concluido_em), criadoEm: ms(a.criado_em),
       criadoPorNome: a.criado_por_nome || '', clienteNome: a.cliente_nome || '', agendaId: a.agenda_id || null, livres: livresDe(a.etapas || [], a.etapas_livres), danos: a.danos || '', objetos: a.objetos || '',
       opcionais: listaOpcionais(a.opcionais), opcionaisFeitos: opcFeitos(a.opcionais_feitos, a.opcionais),
+      // Conferência do Controle (13/11/2026): protocolo vinculado e quando foi conferido (sem valores, vai para todos).
+      protocoloId: a.protocolo_id || null, conferidoEm: ms(a.conferido_em), conferidoPor: a.conferido_por || '',
       ...(ctrl ? { valor: a.valor == null ? null : Number(a.valor), entrada: a.valor_entrada == null ? null : Number(a.valor_entrada),
         ...(a.entrada_mes ? { entradaMes: a.entrada_mes } : {}),
         pagamento: a.pago_em ? { em: ms(a.pago_em), porNome: a.pago_por || '', forma: a.pago_forma || '', obs: a.pago_obs || '' } : null } : {}),
@@ -128,6 +132,9 @@ async function carregar(c, eu) {
       respondidoEm: ms(v.respondido_em), abertoEm: ms(v.aberto_em), aberturas: v.aberturas || 0, criadoEm: ms(v.criado_em),
       teste: !!v.teste, meta: v.meta || null, metaServidor: v.meta_servidor || null,
     })) } : {}),
+    ...(protocolos ? { protocolos: protocolos.map(x => ({
+      id: x.id, estado: x.dados || {}, atendimentoId: x.atendimento_id || null, criadoEm: ms(x.criado_em), criadoPor: x.criado_por || '', atualizadoEm: ms(x.atualizado_em),
+    })) } : {}),
     ...(confirmacoes ? { confirmacoes: confirmacoes.map(x => ({
       id: x.id, padrinhos: x.convite_slug || null, pessoas: Array.isArray(x.pessoas) ? x.pessoas : [], meta: x.meta || null, metaServidor: x.meta_servidor || null,
       edicoes: x.edicoes || 0, criadoEm: ms(x.criado_em), atualizadoEm: ms(x.atualizado_em),
@@ -144,7 +151,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir', 'convites:salvar', 'convites:excluir', 'confirmacoes:excluir']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir', 'convites:salvar', 'convites:excluir', 'confirmacoes:excluir', 'protocolos:salvar', 'protocolos:remover']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -192,6 +199,26 @@ function feitas(v) {
   const out = {};
   if (v && typeof v === 'object') for (const [k, t] of Object.entries(v)) if (/^\d{1,3}$/.test(k) && Number.isFinite(Number(t))) out[k] = Number(t);
   return out;
+}
+
+/* ---------- Protocolo e conferência (13/11/2026) ---------- */
+// Veículo que entra no sistema depois disto fica com "Conferência pendente" até o Controle conferir; enquanto isso,
+// a etapa de montagem não libera (o carro foi montado sem o carpete: o opcional não tinha sido lançado).
+const CONFERENCIA_DESDE = Date.parse('2026-11-13T22:00:00Z');
+const RE_MONTAGEM = /montagem/i;
+const semAcento = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const placaDe = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const nomeProprio = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase().split(' ')
+  .map((w, i) => (i && /^(de|da|do|das|dos|e)$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
+// Itens extras do protocolo (com valor ou brinde) que batem com os opcionais de Ajustes (ex.: "Carpete" e "Carpete novo").
+function opcionaisDoProtocolo(dados, ativos) {
+  const extras = (dados && Array.isArray(dados.extras) ? dados.extras : []).filter(x => x && (x.tipo === 'valor' || x.tipo === 'brinde')).map(x => semAcento(x.n)).filter(Boolean);
+  return ativos.filter(n => { const k = semAcento(n); return k && extras.some(x => x.includes(k) || k.includes(x)); });
+}
+// Protocolo ainda sem veículo com a mesma placa ou do mesmo agendamento.
+async function acharProtocolo(c, placa, agendaId) {
+  const lista = await rest(c, 'sd_protocolos?select=id,dados,placa&excluido_em=is.null&atendimento_id=is.null&order=criado_em.desc&limit=80') || [];
+  return lista.find(p => p.placa && p.placa === placa) || (agendaId && lista.find(p => p.dados && p.dados.agId === agendaId)) || null;
 }
 
 /* ---------- Gravação ---------- */
@@ -346,16 +373,47 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       if (op.versao == null) {
         // Site antigo (sem o campo do mês): entrada lançada agora conta no mês de agora.
         if (ctrl && linha.entrada_mes === undefined && Number(linha.valor_entrada) > 0) linha.entrada_mes = diaLoja().slice(0, 7);
+        // Protocolo (13/11/2026): na entrada feita pelo Funcionário (que não vê os protocolos) o servidor acha o protocolo
+        // pela placa ou pelo agendamento e já traz o nome do cliente e os opcionais (ex.: carpete) para as etapas.
+        // Na entrada do Controle quem faz isso é o site (ele tem os protocolos); aqui só grava o vínculo e a conferência.
+        const agendaId = idOuNulo(it.agendaId, 'agendaId'), extra = {};
+        if (ctrl) {
+          if (it.protocoloId) extra.protocolo_id = id(it.protocoloId, 'protocoloId');
+          if (it.conferidoEm) Object.assign(extra, { conferido_em: agora(), conferido_por: eu.nome });
+        }
+        const prot = ctrl ? null : await acharProtocolo(c, placa, agendaId);
+        let novosOpc = [];
+        if (prot) {
+          extra.protocolo_id = prot.id;
+          const nome = nomeProprio(prot.dados && prot.dados.cliente && prot.dados.cliente.nome).slice(0, 80);
+          if (!linha.cliente_nome && nome) linha.cliente_nome = nome;
+          const ativos = (await restAll(c, 'sd_opcionais?select=nome&ativo=eq.true')).map(o => o.nome);
+          const atuais = listaOpcionais(linha.opcionais || []);
+          novosOpc = opcionaisDoProtocolo(prot.dados, ativos).filter(n => !atuais.includes(n));
+          if (novosOpc.length) linha.opcionais = listaOpcionais([...atuais, ...novosOpc]);
+          linha.historico = historico([...linha.historico, { texto: `Protocolo vinculado: ${nome || 'sem nome'}${novosOpc.length ? ` (opcionais: ${novosOpc.join(', ')})` : ''}`, em: Date.now(), porNome: 'Sistema' }]);
+        }
         await rest(c, 'sd_atendimentos', {
           method: 'POST', prefer: 'return=minimal',
           body: { id: atId, placa, criado_em: quando(it.criadoEm, 'criadoEm') || agora(), criado_por_nome: txt(it.criadoPorNome, 80), versao: 1,
-          agenda_id: idOuNulo(it.agendaId, 'agendaId'), ...linha },
+          agenda_id: agendaId, ...linha, ...extra },
         }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
         versoes[atId] = 1;
+        if (prot) await marcar(c, 'sd_protocolos', `id=eq.${q(prot.id)}&atendimento_id=is.null`, { atendimento_id: atId, atualizado_em: agora() });
+        // Entrada feita pelo Funcionário: o Controle recebe o aviso para conferir.
+        if (!ctrl) depois.push(async (origem, cfg) => {
+          const [veic] = await rest(c, `sd_veiculos?select=descricao&placa=eq.${q(placa)}`) || [];
+          const modelo = String((veic && veic.descricao) || '').trim().split(/\s+/).slice(0, 2).join(' ').toUpperCase();
+          const placaFmt = /^[A-Z]{3}[0-9]{4}$/.test(placa) ? `${placa.slice(0, 3)}-${placa.slice(3)}` : placa;
+          await push.enviar(c, { para: 'controle', tipo: 'conferencia', por: eu, origem, aparelhos: cfg.ativo, exceto: eu.id, mensagem: {
+            titulo: `Conferência pendente: ${modelo ? `${modelo} · ` : ''}${placaFmt}`,
+            texto: [prot ? `Protocolo de ${linha.cliente_nome || 'cliente'} achado` : 'Sem protocolo vinculado', novosOpc.length ? `opcionais: ${novosOpc.join(', ')}` : '', `entrada por ${quem}`].filter(Boolean).join(' · '),
+            url: `/#/veiculo/${atId}`, tag: `conferencia-${atId}` } });
+        });
         return;
       }
       const v = Number(op.versao); if (!Number.isInteger(v)) throw invalido('versao');
-      const [atual] = await rest(c, `sd_atendimentos?select=historico,concluido,concluido_em,cliente_nome,danos,objetos,tipo_id,tipo_nome,etapas,opcionais,opcionais_feitos,feitas,pago_em,pago_por&id=eq.${q(atId)}&versao=eq.${v}`) || [];
+      const [atual] = await rest(c, `sd_atendimentos?select=historico,concluido,concluido_em,cliente_nome,danos,objetos,tipo_id,tipo_nome,etapas,etapa_index,opcionais,opcionais_feitos,feitas,pago_em,pago_por,criado_em,conferido_em,conferido_por,protocolo_id&id=eq.${q(atId)}&versao=eq.${v}`) || [];
       if (!atual) throw erro(409, 'conflito', atId);
       if (pag && atual.pago_em) Object.assign(linha, { pago_em: diaPag && diaPag !== diaLoja(atual.pago_em) ? pagoNoDia(diaPag) : atual.pago_em, pago_por: atual.pago_por });
       // Data de conclusão pelo relógio do servidor (celular com data errada não adianta a limpeza das fotos
@@ -388,7 +446,19 @@ async function aplicar(c, op, eu, versoes, depois = []) {
         if (it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos({ ...it.opcionaisFeitos, ...(atual.opcionais_feitos || {}) }, opcFinal);
         // Concluído continua concluído (reabrir é do Controle).
         if (atual.concluido) { linha.concluido = true; linha.concluido_em = atual.concluido_em || agora(); }
+        // Conferência pendente: a montagem só libera depois que o Controle conferir (13/11/2026).
+        if (!atual.conferido_em && ms(atual.criado_em) >= CONFERENCIA_DESDE && Array.isArray(atual.etapas)) {
+          const mi = atual.etapas.findIndex(n => RE_MONTAGEM.test(n));
+          const jaFeita = mi >= 0 && (feitas(atual.feitas)[mi] != null || atual.etapa_index > mi);
+          if (mi >= 0 && !jaFeita && (linha.feitas[mi] != null || linha.etapa_index > mi || linha.concluido)) throw erro(409, 'conferencia_pendente', atId);
+        }
       }
+      // Conferência e protocolo: só o Controle muda (só quando veio; site antigo não manda e não apaga).
+      if (ctrl && it.conferidoEm !== undefined) {
+        if (it.conferidoEm) Object.assign(linha, { conferido_em: atual.conferido_em || agora(), conferido_por: atual.conferido_em ? atual.conferido_por : eu.nome });
+        else Object.assign(linha, { conferido_em: null, conferido_por: null });
+      }
+      if (ctrl && it.protocoloId !== undefined) linha.protocolo_id = idOuNulo(it.protocoloId, 'protocoloId');
       // Correção de placa: só o Controle (o veículo novo é gravado antes, na mesma lista de operações).
       if (ctrl) linha.placa = placa;
       const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&versao=eq.${v}&excluido_em=is.null&select=versao,agenda_id,concluido,placa,cliente_nome,tipo_nome`, {
@@ -543,6 +613,22 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       return marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
     case 'chamados:reabrir':
       return marcar(c, 'sd_chamados', `id=eq.${q(id(op.id))}`, { resolvido_em: null, resolvido_por: null, resposta: null, atualizado_em: agora() });
+
+    // Protocolo gerado no sistema (Controle): só os dados, a imagem é refeita na hora. Excluir só marca.
+    case 'protocolos:salvar': {
+      const pid = id(it.id), dados = it.estado;
+      if (!dados || typeof dados !== 'object' || Array.isArray(dados) || JSON.stringify(dados).length > 40000) throw invalido('estado');
+      const tipo = dados.tipo === 'os' ? 'os' : 'agendamento';
+      const dia = String((tipo === 'os' ? dados.os && dados.os.data : dados.datas && dados.datas.ent) || '');
+      const linha = { dados, tipo, cliente: nomeProprio(dados.cliente && dados.cliente.nome).slice(0, 80), placa: placaDe(dados.veiculo && dados.veiculo.placa),
+        data: RE_DATA.test(dia) && !isNaN(Date.parse(dia)) ? dia : null, atualizado_em: agora(), atualizado_por: quem };
+      if (it.atendimentoId !== undefined) linha.atendimento_id = idOuNulo(it.atendimentoId, 'atendimentoId');
+      const r = await rest(c, `sd_protocolos?id=eq.${q(pid)}&select=id`, { method: 'PATCH', body: linha, prefer: 'return=representation' });
+      if (r && r.length) return;
+      return inserirSeNovo(c, 'sd_protocolos', { id: pid, ...linha, criado_em: agora(), criado_por: quem });
+    }
+    case 'protocolos:remover':
+      return marcar(c, 'sd_protocolos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
 
     default:
       throw invalido('op');
