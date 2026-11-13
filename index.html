@@ -771,6 +771,7 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 /* ---------- Mais (13/11/2026) e Gerador de protocolo ---------- */
 /* Mais: o botão Relatórios do menu virou "Mais", com os atalhos que ficavam no topo de Relatórios. */
 .mais-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } /* 2 colunas (pedido de 13/11/2026) */
+.mais-grade .mais-largo { grid-column: 1 / -1; }
 /* Fontes do protocolo (as mesmas do modelo; só baixam quando o protocolo aparece na tela) */
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-700.woff2') format('woff2'); font-weight: 700; font-display: block; }
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-400.woff2') format('woff2'); font-weight: 400; font-display: block; }
@@ -784,6 +785,46 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .proto-prev { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
 .proto-prev .pdoc { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .proto-captura { position: fixed; left: -12000px; top: 0; pointer-events: none; }
+/* Lista de escolha própria do sistema (pedido de 13/11/2026: o menu de seleção do Android ficava feio). */
+.escolha-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); text-align: left; font-size: 16px; color: var(--ink); }
+.escolha-btn.vazio { color: #9A9A98; }
+.escolha-btn > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.escolha-btn svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.escolha-lista { display: grid; max-height: min(62dvh, 520px); overflow-y: auto; margin: 0 -16px; border-top: 1px solid var(--line); }
+.escolha-op { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; font-size: 15px; color: var(--ink); }
+.escolha-op b { flex: 1; min-width: 0; font-weight: 600; }
+.escolha-op small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.escolha-op .v { font: 700 15px var(--cond); color: var(--ink-2); white-space: nowrap; }
+.escolha-op .ok { width: 20px; height: 20px; flex: none; color: var(--ink); }
+.escolha-op .ok svg { width: 20px; height: 20px; }
+.escolha-op[aria-checked="true"] { background: var(--soft); }
+/* Galeria de protocolos e cartão da conferência (13/11/2026) */
+.proto-mes { font-size: 15px; margin: 4px 0 0; color: var(--ink-2); }
+.proto-lista { padding: 0; gap: 0; overflow: hidden; }
+.proto-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.proto-item:last-child { border-bottom: 0; }
+.proto-item-ico { width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); display: grid; place-items: center; }
+.proto-item-ico svg { width: 18px; height: 18px; }
+.proto-item-txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.proto-item-txt b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proto-item-txt span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proto-item-dir { display: grid; justify-items: end; gap: 3px; flex: none; }
+.proto-item-data { font: 700 14px var(--cond); }
+.proto-item-valor { font-size: 12px; color: var(--muted); }
+.proto-topo-acoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.conf-card { border-color: #E9C46A; background: #FFFBF0; }
+.conf-card.is-ok { border-color: var(--line); background: var(--surface); }
+.conf-linha { display: flex; align-items: center; gap: 12px; }
+.conf-ico { width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--soft); display: grid; place-items: center; }
+.conf-ico svg { width: 18px; height: 18px; }
+.conf-txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.conf-txt span { font-size: 12.5px; color: var(--muted); }
+.conf-extras { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.conf-extras li { display: grid; gap: 1px; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.conf-extras li span { font-size: 12.5px; color: var(--muted); }
+.conf-extras li.is-aviso { border-color: #EBC4BF; }
+.conf-extras li.is-aviso span { color: var(--danger); }
+.car-conf { justify-self: start; }
 .proto-check { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 479px) { .proto-check { grid-template-columns: 1fr; } }
 .proto-form input[type="date"], .proto-form input[type="time"] { min-width: 0; max-width: 100%; }
@@ -1715,7 +1756,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [], protocolos: d.protocolos || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -1744,6 +1785,7 @@ function diffOps(a, b) {
   lista('eventos', a.eventos || [], b.eventos || []);
   lista('opcionais', a.opcionais || [], b.opcionais || []);
   lista('atendimentos', semFotos(a.atendimentos), semFotos(b.atendimentos));
+  lista('protocolos', a.protocolos || [], b.protocolos || []); // só o Controle recebe (e muda) os protocolos
   // Foto de atendimento excluído continua marcada como ativa (o atendimento inteiro fica guardado).
   const fa = new Map(fotos(a.atendimentos).map(f => [f.id, f]));
   const fotosDepois = fotos(b.atendimentos);
@@ -2133,6 +2175,22 @@ function fotoObrigatoria(at, i) {
   if (!t) return true;
   const k = t.etapas.findIndex(n => nomeEtapa(n) === nomeEtapa(at.etapas[i]));
   return k < 0 || !semFotoDe(t)[k];
+}
+/* Conferência do Controle (13/11/2026; o carro foi montado sem o carpete porque o opcional não estava no sistema).
+   Veículo que entra depois disso fica "Conferência pendente" até o Controle conferir com o protocolo. É só aviso:
+   não trava nenhuma etapa (pedido de 13/11/2026; os serviços levam uns 5 dias e o Controle confere no meio). */
+const CONFERENCIA_DESDE = Date.parse('2026-11-13T22:00:00Z');
+const conferenciaPendente = at => !!at && !at.concluido && !at.conferidoEm && (at.criadoEm || 0) >= CONFERENCIA_DESDE;
+const protocoloDe = at => (at && at.protocoloId ? (DB.protocolos || []).find(p => p.id === at.protocoloId) || null : null);
+// Itens extras do protocolo (com valor ou brinde) que batem com os opcionais de Ajustes (ex.: "Carpete").
+function opcionaisDoProtocolo(estado) {
+  const extras = (estado && Array.isArray(estado.extras) ? estado.extras : []).filter(x => x.tipo === 'valor' || x.tipo === 'brinde').map(x => semAcento(x.n).trim()).filter(Boolean);
+  return (DB.opcionais || []).map(o => o.nome).filter(n => { const k = semAcento(n).trim(); return k && extras.some(x => x.includes(k) || k.includes(x)); });
+}
+// Protocolo ainda sem veículo com a mesma placa ou do mesmo agendamento (mesma regra do servidor).
+function protocoloParaEntrada(placa, agId) {
+  const livres = (DB.protocolos || []).filter(p => !p.atendimentoId);
+  return livres.find(p => protoPlaca(p.estado.veiculo && p.estado.veiculo.placa) === placa) || (agId && livres.find(p => p.estado.agId === agId)) || null;
 }
 function etapaLiberada(at, i) {
   if (at.concluido || etapaFeita(at, i)) return false;
@@ -2782,7 +2840,7 @@ function renderProblema() {
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Enviar para' }), segDestino),
       enviarBtn),
     meus.length ? el('div', { class: 'card' }, el('h2', { text: 'Seus problemas relatados' }),
-      el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: 'problema' });
+      el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: isCtrl() ? 'relatorios' : 'problema' });
 }
 
 /* =====================================================================
@@ -2796,6 +2854,7 @@ const TIPO_AVISO = {
   conclusao: { rot: 'Concluído', ico: 'carroOk', cls: 'ok' },
   chamado: { rot: 'Chamado', ico: 'warn', cls: 'danger' },
   estoque: { rot: 'Estoque', ico: 'box', cls: 'warn' },
+  conferencia: { rot: 'Conferência', ico: 'protocolo', cls: 'warn' },
   personalizado: { rot: 'Aviso', ico: 'bell', cls: '' },
 };
 const chaveLido = () => `sd:avisos:lido:${(me() || {}).id}`;
@@ -3097,7 +3156,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', dia: 'Resumo do dia', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites', mais: 'Mais', protocolo: 'Protocolo' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', dia: 'Resumo do dia', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites', mais: 'Mais', protocolo: 'Protocolo', protocolos: 'Protocolos' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -3381,7 +3440,8 @@ function route(opts) {
     case 'chamados': return isCtrl() ? renderChamados() : go('#/notificacoes'); // aviso de chamado no celular do Funcionário
     case 'convites': return isCtrl() ? renderConvites() : go('#/inicio');
     case 'mais': if (isCtrl()) avisarPresenca({ forcar: true }); return isCtrl() ? renderMais() : go('#/inicio');
-    case 'protocolo': return isCtrl() ? renderProtocolo() : go('#/inicio');
+    case 'protocolos': return isCtrl() ? renderProtocolos() : go('#/inicio');
+    case 'protocolo': return isCtrl() ? renderProtocolo(a) : go('#/inicio');
     case 'notificacoes': return renderAvisos();
     default: return renderHome();
   }
@@ -3519,7 +3579,7 @@ const ePC = () => MQ_PC.matches;
 try { MQ_PC.addEventListener('change', () => { if (!MODO_CLIENTE && DB && me() && podeRedesenhar()) redesenhar(); }); } catch {}
 function barraLateral() {
   const u = me(), ctrl = u.tipo === 'controle', [r] = parts();
-  const ativo = { veiculo: 'inicio', novo: 'placa', convites: 'relatorios', mais: 'relatorios' }[r] || r || 'inicio';
+  const ativo = { veiculo: 'inicio', novo: 'placa', convites: 'relatorios', mais: 'relatorios', protocolo: 'protocolos' }[r] || r || 'inicio';
   const item = (href, key, label, ico, { n = 0, tom = '', cls = '', aria = null } = {}) => el('a', {
     class: 'lat-item' + (cls ? ` ${cls}` : ''), href, 'aria-current': ativo === key ? 'page' : null, 'aria-label': aria },
     el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON[ico] }), el('span', { class: 'lat-txt', text: label }),
@@ -3541,9 +3601,9 @@ function barraLateral() {
     el('div', { class: 'lat-sec', text: 'Ferramentas' }),
     item('#/notificacoes', 'notificacoes', 'Notificações', 'bell', { n: nAvisos, tom: 'alerta', aria: nAvisos ? `Notificações, ${nAvisos} ${nAvisos === 1 ? 'nova' : 'novas'}` : null }),
     ctrl ? item('#/equipe', 'equipe', 'Status da equipe', 'users') : null,
-    ctrl ? item('#/protocolo', 'protocolo', 'Gerar protocolo', 'protocolo') : null,
+    ctrl ? item('#/protocolos', 'protocolos', 'Protocolos', 'protocolo') : null,
     ctrl ? item('#/chamados', 'chamados', 'Chamados', 'warn', { n: nCham, tom: 'alerta', aria: nCham ? `Chamados, ${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : null }) : null,
-    ctrl ? null : item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }),
+    item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }), // Controle também (13/11/2026)
     ctrl ? item('#/ajustes', 'ajustes', 'Ajustes', 'gear') : null,
     appInstalado() ? el('button', { class: 'lat-item', type: 'button', onclick: recarregar }, el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON.reload }), el('span', { class: 'lat-txt', text: 'Recarregar' })) : null,
     el('div', { class: 'lat-espaco' }),
@@ -3726,6 +3786,7 @@ function carCard(at) {
         at.clienteNome ? el('span', { class: 'car-cliente', text: at.clienteNome }) : el('span', { class: 'car-cliente is-pendente', text: `(${NOME_PENDENTE})` })),
       at.tipoNome ? el('span', { class: 'car-desc', text: at.tipoNome }) : null,
       opcionaisDe(at).length ? el('span', { class: 'car-opc', text: `+ ${opcionaisDe(at).join(', ')}` }) : null,
+      isCtrl() && conferenciaPendente(at) ? el('span', { class: 'tag tag--warn car-conf', text: 'Conferência pendente' }) : null,
       at.concluido && isCtrl() && (at.pagamento || pagPendente(at))
         ? el('span', { class: 'car-stage car-stage--pag' }, `Concluído ${ago(at.concluidoEm)}`,
           at.pagamento ? el('span', { class: 'tag tag--ok', text: 'Pago' }) : el('span', { class: 'tag tag--warn', text: 'Pendente' }))
@@ -3843,6 +3904,8 @@ function atencaoPC() {
   const add = (tom, ico, tit, sub, href) => itens.push({ tom, ico, tit, sub, href });
   const nomeAt = a => { const v = DB.veiculos[a.placa] || {}; return `${v.descricao ? `${modeloCurto(v.descricao)} · ` : ''}${fmtPlaca(a.placa)}`; };
   if (ctrl) {
+    for (const a of ativos().filter(conferenciaPendente))
+      add('warn', 'protocolo', `Conferência pendente: ${nomeAt(a)}`, protocoloDe(a) ? `Protocolo de ${protoNome(protocoloDe(a).estado.cliente.nome)} · conferir opcionais` : 'Sem protocolo vinculado', `#/veiculo/${esc(a.id)}`);
     for (const a of concluidosRecentes().filter(pagPendente))
       add('warn', 'dinheiro', `Pagamento pendente: ${nomeAt(a)}`, `${a.clienteNome || `(${NOME_PENDENTE})`} · concluído ${ago(a.concluidoEm)}${a.valor != null ? ` · falta receber ${fmtBRL(aReceberDe(a))}` : ''}`, `#/veiculo/${esc(a.id)}`);
     for (const it of itensEmAlerta()) { const sit = situacao(it);
@@ -3895,7 +3958,8 @@ function cartaoQuadro(at) {
     el('span', { class: 'car-cliente' + (at.clienteNome ? '' : ' is-pendente'), text: at.clienteNome || `(${NOME_PENDENTE})` }),
     el('div', { class: 'q-pe' },
       el('span', { class: 'q-etapa', text: at.concluido ? `Concluído ${ago(at.concluidoEm)}` : textoEtapa(at) }),
-      pag ? el('span', { class: 'tag ' + (at.pagamento ? 'tag--ok' : 'tag--warn'), text: at.pagamento ? 'Pago' : 'Pendente' }) : null),
+      pag ? el('span', { class: 'tag ' + (at.pagamento ? 'tag--ok' : 'tag--warn'), text: at.pagamento ? 'Pago' : 'Pendente' }) : null,
+      isCtrl() && conferenciaPendente(at) ? el('span', { class: 'tag tag--warn', text: 'Conferir' }) : null),
     el('span', { class: 'q-tipo', text: [at.tipoNome, ...opcionaisDe(at).map(n => `+ ${n}`)].filter(Boolean).join(' ') }),
     el('div', { class: 'bar' + (at.concluido ? ' is-ok' : '') }, el('i', { style: `width:${pct}%` }))));
 }
@@ -4468,9 +4532,22 @@ function renderNew(placaRaw) {
     };
     registrar(at, ag ? `Entrada do veículo (agendamento de ${brData(ag.data)})` : 'Entrada do veículo');
     if (opcSel.length) registrar(at, `Opcionais na entrada: ${opcSel.join(', ')}`);
+    // Protocolo (13/11/2026): o Controle acha o protocolo aqui (pela placa ou pelo agendamento), traz o nome e os
+    // opcionais e a entrada já fica conferida. Na entrada do Funcionário quem faz isso é o servidor.
+    at.protocoloId = null; at.conferidoEm = null;
+    const prot = isCtrl() ? protocoloParaEntrada(placa, at.agendaId) : null;
+    if (prot) {
+      const nome = protoNome(prot.estado.cliente && prot.estado.cliente.nome);
+      if (!at.clienteNome && nome) at.clienteNome = nome;
+      const novos = opcionaisDoProtocolo(prot.estado).filter(n => !at.opcionais.includes(n));
+      at.opcionais = [...at.opcionais, ...novos];
+      at.protocoloId = prot.id; at.conferidoEm = Date.now(); at.conferidoPor = me().nome;
+      registrar(at, `Protocolo vinculado: ${nome || 'sem nome'}${novos.length ? ` (opcionais: ${novos.join(', ')})` : ''}`);
+    }
     const ok = await commitAgora(() => {
       DB.veiculos[placa] = { ...(DB.veiculos[placa] || { criadoEm: Date.now() }), placa, descricao: fDesc.value.trim() };
       DB.atendimentos.push(at);
+      if (prot) prot.atendimentoId = at.id;
     });
     if (!ok) {
       voltar();
@@ -5053,9 +5130,9 @@ function renderVehicle(id) {
   const hist = isCtrl() ? historicoVeiculo(at) : null;
   // Computador: duas colunas (etapas, valor e opções à esquerda; fotos, estado e histórico à direita).
   const body = ePC()
-    ? el('div', { class: 'stack', style: 'max-width:1180px' }, voltar, topoVeiculo(at, v),
+    ? el('div', { class: 'stack', style: 'max-width:1180px' }, voltar, topoVeiculo(at, v), cardConferencia(at, redraw),
       el('div', { class: 'pc-colunas' }, el('div', { class: 'stack' }, cardEtapas, valorCard, ctrlCard), el('div', { class: 'stack' }, cardFotos, entrada, hist)))
-    : el('div', { class: 'stack', style: 'max-width:720px' }, voltar, topoVeiculo(at, v), cardEtapas, valorCard, cardFotos, entrada, ctrlCard, hist);
+    : el('div', { class: 'stack', style: 'max-width:720px' }, voltar, topoVeiculo(at, v), cardConferencia(at, redraw), cardEtapas, valorCard, cardFotos, entrada, ctrlCard, hist);
   shell(body, { current: at.concluido && ctrl && !recente ? 'relatorios' : 'inicio' });
 }
 
@@ -5762,7 +5839,7 @@ function renderSettings() {
 
 /* Ajustes > aba Notificações (Controle, #/ajustes/notificacoes): ligar/desligar tudo, aviso automático de estoque baixo, aviso personalizado,
    quem tem notificação ativa e os últimos avisos. Dados de api/notificacoes (S.notif, busca de novo a cada minuto). */
-const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque', chamado: 'Chamado', conclusao: 'Concluído' };
+const TIPO_ENVIO = { personalizado: 'Aviso', estoque: 'Estoque', chamado: 'Chamado', conclusao: 'Concluído', conferencia: 'Conferência' };
 // Por que a pessoa não recebe: situação do último aparelho que ela usou (vem do aviso de presença).
 function motivoSemAparelho(p) {
   const ap = p.ultimoAparelho ? ` (${p.ultimoAparelho})` : '';
@@ -6476,7 +6553,8 @@ function renderMais() {
       tile('#/dia', 'diaOk', 'Dia', 'Resumo do dia', { claro: true, aria: 'Resumo do dia: tudo o que aconteceu num dia' }),
       (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
       tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
-      tile('#/protocolo', 'protocolo', 'Protocolo', 'Gerar e baixar', { aria: 'Gerar protocolo de agendamento ou ordem de serviço' })),
+      tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' }),
+      (() => { const t = tile('#/problema', 'warn', 'Relatar problema', 'Enviar ao suporte ou à equipe', { claro: true, aria: 'Relatar problema' }); t.classList.add('mais-largo'); return t; })()),
     botaoConvites()), { current: 'relatorios' });
 }
 
@@ -6808,16 +6886,115 @@ async function protoPNG(e) {
   ctx.drawImage(img, 0, 0, cv.width, cv.height);
   return new Promise((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('png'))), 'image/png'));
 }
-function protoGuardarRecente(e) {
-  const lista = lsLer(PROTO_REC, []).filter(x => x.id !== e.id);
-  lista.unshift({ id: e.id, em: Date.now(), estado: JSON.parse(JSON.stringify(e)) });
-  lsGravar(PROTO_REC, lista.slice(0, 20));
+/* Protocolos salvos no sistema (13/11/2026): tabela sd_protocolos, só os dados (a imagem é refeita na hora).
+   Salva ao baixar, copiar, compartilhar ou no botão Salvar. Só o Controle recebe e muda. */
+const dataDoProtocolo = est => (est.tipo === 'os' ? est.os && est.os.data : est.datas && est.datas.ent) || '';
+function protoSituacao(e) {
+  const x = (DB.protocolos || []).find(p => p.id === e.id);
+  return !x ? 'novo' : JSON.stringify(x.estado) === JSON.stringify(e) ? 'salvo' : 'alterado';
+}
+function protoSalvar(e) {
+  if (!DB.protocolos) DB.protocolos = [];
+  const x = DB.protocolos.find(p => p.id === e.id), estado = JSON.parse(JSON.stringify(e));
+  if (x && JSON.stringify(x.estado) === JSON.stringify(estado)) return true;
+  commit(() => {
+    if (x) { x.estado = estado; x.atualizadoEm = Date.now(); }
+    else DB.protocolos.unshift({ id: e.id, estado, atendimentoId: null, criadoEm: Date.now(), criadoPor: me().nome, atualizadoEm: Date.now() });
+  });
+  if (parts()[0] === 'protocolo' && parts()[1] !== e.id) history.replaceState(null, '', `#/protocolo/${e.id}`);
+  return true;
+}
+// Os gerados antes neste aparelho (lista local "Últimos gerados") sobem uma vez para o banco.
+function protoMigrarLocais() {
+  const locais = lsLer(PROTO_REC, []);
+  if (!locais.length) return;
+  const novos = locais.filter(r => r && r.estado && r.estado.v === 1 && !(DB.protocolos || []).some(p => p.id === r.id));
+  if (novos.length) {
+    if (!DB.protocolos) DB.protocolos = [];
+    commit(() => { for (const r of novos) DB.protocolos.push({ id: r.id, estado: r.estado, atendimentoId: null, criadoEm: r.em || Date.now(), criadoPor: me().nome, atualizadoEm: r.em || Date.now() }); });
+  }
+  lsGravar(PROTO_REC, null);
 }
 
-function renderProtocolo() {
-  // Estado: vindo da Agenda ("Gerar protocolo"), o rascunho deste aparelho ou um novo.
-  let e = S.proto || lsLer(PROTO_RASC, null);
-  if (!e || e.v !== 1) e = protoNovo();
+// Galeria de protocolos (Mais > Protocolos): por mês da entrada (ou da execução, na OS), com busca. Tocar abre para ver,
+// baixar, copiar ou editar e gerar de novo.
+function renderProtocolos() {
+  protoMigrarLocais();
+  const busca = el('input', { type: 'search', placeholder: 'Buscar por cliente, placa ou serviço', 'aria-label': 'Buscar protocolo', value: S.protoBusca || '' });
+  const lista = el('div', { class: 'stack' });
+  const desenharLista = () => {
+    const termo = semAcento(S.protoBusca || '').trim();
+    const todos = (DB.protocolos || []).map(p => ({ p, est: p.estado || {} })).filter(({ est }) => est.cliente);
+    const filtrados = todos.filter(({ est }) => !termo || semAcento([est.cliente.nome, protoPlaca(est.veiculo && est.veiculo.placa), est.veiculo && est.veiculo.modelo, est.serv && est.serv.titulo].join(' ')).includes(termo))
+      .sort((a, b) => (dataDoProtocolo(b.est) || '0').localeCompare(dataDoProtocolo(a.est) || '0') || (b.p.criadoEm || 0) - (a.p.criadoEm || 0));
+    if (!filtrados.length) { preencher(lista, el('div', { class: 'card' }, el('p', { class: 'hint', text: todos.length ? 'Nenhum protocolo com essa busca.' : 'Nenhum protocolo salvo ainda. Toque em "Novo protocolo".' }))); return; }
+    const grupos = new Map();
+    for (const x of filtrados) {
+      const d = dataDoProtocolo(x.est), k = d ? d.slice(0, 7) : 'sem';
+      if (!grupos.has(k)) grupos.set(k, []);
+      grupos.get(k).push(x);
+    }
+    preencher(lista, [...grupos].map(([k, xs]) => el('section', { class: 'stack', style: 'gap:8px' },
+      el('h2', { class: 'proto-mes', text: k === 'sem' ? 'Sem data' : `${MESES[Number(k.slice(5)) - 1]} de ${k.slice(0, 4)}` }),
+      el('div', { class: 'card proto-lista' }, xs.map(({ p, est }) => {
+        const at = p.atendimentoId ? DB.atendimentos.find(a => a.id === p.atendimentoId) : null;
+        const tag = est.tipo === 'os' ? ['OS', ''] : at ? (at.concluido ? ['Concluído', 'tag--ok'] : ['Em serviço', 'tag--ok']) : p.atendimentoId ? ['Entrou', ''] : ['Aguardando entrada', 'tag--warn'];
+        const d = dataDoProtocolo(est);
+        let total = null; try { total = protoCalc(est).total; } catch {}
+        return el('a', { class: 'proto-item', href: `#/protocolo/${esc(p.id)}` },
+          el('span', { class: 'proto-item-ico', 'aria-hidden': 'true', html: ICON.protocolo }),
+          el('span', { class: 'proto-item-txt' },
+            el('b', { text: protoNome(est.cliente.nome) || 'Sem nome' }),
+            el('span', { text: [protoCurto(est.serv && est.serv.titulo), est.veiculo && est.veiculo.modelo, protoPlaca(est.veiculo && est.veiculo.placa)].filter(Boolean).join(' · ') || '---' })),
+          el('span', { class: 'proto-item-dir' },
+            el('span', { class: 'proto-item-data', text: d ? `${DIA_CURTO[dataDe(d).getDay()].slice(0, 3)} ${brData(d).slice(0, 5)}` : '' }),
+            total != null ? el('span', { class: 'proto-item-valor', text: fmtBRL(total) }) : null,
+            el('span', { class: `tag ${tag[1]}`, text: tag[0] })));
+      })))));
+  };
+  busca.addEventListener('input', () => { S.protoBusca = busca.value; desenharLista(); });
+  desenharLista();
+  shell(el('div', { class: 'stack', style: 'max-width:820px' },
+    backLink('#/mais', 'Mais'),
+    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Protocolos' }),
+      el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => { S.proto = protoNovo(); lsGravar(PROTO_RASC, S.proto); go('#/protocolo'); } }, icon('plus'), 'Novo protocolo')),
+    busca, lista), { current: 'relatorios' });
+}
+
+// Botão com cara de campo que abre uma lista própria do sistema (janela de baixo), no lugar do <select> do aparelho.
+// opcoes: [{ v, t, sub, dir }] (sub = linha de baixo, dir = texto à direita, como o valor).
+function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo = null, aoEscolher }) {
+  const atual = opcoes.find(o => o.v === valor);
+  const b = el('button', { class: 'escolha-btn' + (atual && !fixo ? '' : ' vazio'), type: 'button', 'aria-haspopup': 'dialog', 'aria-label': titulo },
+    el('span', { text: fixo || (atual ? atual.t : vazio) }), icon('down'));
+  b.addEventListener('click', () => {
+    const d = el('dialog', { class: 'sheet', 'aria-label': titulo });
+    const fechar = () => { d.close(); d.remove(); };
+    d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+    d.addEventListener('click', e => { if (e.target === d) fechar(); });
+    d.append(el('div', { class: 'sheet-in' },
+      el('div', { class: 'card-head' }, el('h2', { text: titulo }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
+      el('div', { class: 'escolha-lista', role: 'radiogroup' }, opcoes.map(o => el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
+        onclick: () => { fechar(); aoEscolher(o.v); } },
+        el('b', {}, o.t, o.sub ? el('small', { text: o.sub }) : null),
+        o.dir ? el('span', { class: 'v', text: o.dir }) : null,
+        el('span', { class: 'ok', 'aria-hidden': 'true', html: o.v === valor ? ICON.check : '' }))))));
+    document.body.append(d);
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  });
+  return b;
+}
+
+function renderProtocolo(pid) {
+  // Estado: um protocolo salvo (#/protocolo/ID), vindo da Agenda ("Gerar protocolo"), o rascunho deste aparelho ou um novo.
+  const salvoBanco = pid ? (DB.protocolos || []).find(p => p.id === pid) : null;
+  if (pid && !salvoBanco) { toast('Protocolo não encontrado.', true); return go('#/protocolos'); }
+  let e;
+  if (salvoBanco) e = S.proto && S.proto.id === pid ? S.proto : { ...JSON.parse(JSON.stringify(salvoBanco.estado)), id: pid };
+  else {
+    e = S.proto || lsLer(PROTO_RASC, null);
+    if (!e || e.v !== 1 || (DB.protocolos || []).some(p => p.id === e.id)) e = protoNovo(); // o rascunho já virou protocolo salvo
+  }
   if (S.protoAg) { const a = agendaAtiva().find(x => x.id === S.protoAg); S.protoAg = null; if (a) { e = protoNovo(); protoDeAgenda(e, a); } }
   S.proto = e;
   let cache = null, timer = null; // PNG já gerado para este estado (chave = JSON)
@@ -6854,17 +7031,15 @@ function renderProtocolo() {
     // Agendamentos para puxar os dados (agendados de 7 dias atrás em diante, do mais perto ao mais longe).
     const desde = somaDias(hojeISO(), -7);
     const ags = agendaAtiva().filter(a => a.status === 'agendado' && a.data >= desde).sort((a, b) => a.data.localeCompare(b.data));
-    const fAg = ags.length ? el('select', { 'aria-label': 'Puxar os dados de um agendamento' },
-      el('option', { value: '', text: e.agId && ags.some(a => a.id === e.agId) ? 'Puxar de outro agendamento…' : 'Puxar os dados de um agendamento…' }),
-      ags.map(a => el('option', { value: a.id, text: `${brData(a.data).slice(0, 5)} · ${a.cliente}${a.servico ? ` · ${a.servico}` : ''}` }))) : null;
-    if (fAg) fAg.addEventListener('change', () => { const a = ags.find(x => x.id === fAg.value); if (a) { protoDeAgenda(e, a); desenhar(); mudou(); toast(`Dados de ${protoNome(a.cliente)} preenchidos.`); } });
+    const fAg = ags.length ? campoEscolha({ titulo: 'Puxar de um agendamento', valor: '',
+      fixo: e.agId && ags.some(a => a.id === e.agId) ? 'Puxar de outro agendamento…' : 'Puxar os dados de um agendamento…',
+      opcoes: ags.map(a => ({ v: a.id, t: protoNome(a.cliente), sub: [a.servico, a.marca].filter(Boolean).join(' · '), dir: `${DIA_CURTO[dataDe(a.data).getDay()].slice(0, 3)} ${brData(a.data).slice(0, 5)}` })),
+      aoEscolher: id => { const a = ags.find(x => x.id === id); if (a) { protoDeAgenda(e, a); desenhar(); mudou(); toast(`Dados de ${protoNome(a.cliente)} preenchidos.`); } } }) : null;
 
     // Serviço: catálogo (valores mudam: o valor fica editável).
-    const fPreset = el('select', { 'aria-label': 'Serviço do catálogo' },
-      PROTO_CATALOGO.map(p => el('option', { value: p.k, text: `${p.nome}${p.valor != null ? ` · ${fmtBRL(p.valor)}` : ''}` })),
-      el('option', { value: 'livre', text: 'Outro (escrever)' }));
-    fPreset.value = e.serv.k || 'livre';
-    fPreset.addEventListener('change', () => { protoPreset(e, fPreset.value); desenhar(); mudou(); });
+    const fPreset = campoEscolha({ titulo: 'Serviço', valor: e.serv.k || 'livre',
+      opcoes: [...PROTO_CATALOGO.map(p => ({ v: p.k, t: p.nome, dir: p.valor != null ? fmtBRL(p.valor) : '' })), { v: 'livre', t: 'Outro (escrever)' }],
+      aoEscolher: k => { protoPreset(e, k); desenhar(); mudou(); } });
 
     const checks = e.serv.checkOn ? el('div', { class: 'proto-check' }, e.serv.check.map((t, i) => inp(e.serv.check, i, { maxlength: '40', placeholder: `Item ${i + 1}`, 'aria-label': `Item ${i + 1} do checklist` }))) : null;
 
@@ -6876,19 +7051,17 @@ function renderProtocolo() {
         el('button', { class: 'proto-x', type: 'button', 'aria-label': 'Tirar item', onclick: () => { e.extras.splice(i, 1); desenhar(); mudou(); } }, '×')),
       x.tipo === 'desconto' ? null : inp(x, 'd', { maxlength: '120', placeholder: 'Descrição curta (opcional)', 'aria-label': 'Descrição do item' }),
       seg([['valor', 'Valor'], ['brinde', 'Brinde'], ['desconto', 'Desconto']], x.tipo, k => { x.tipo = k; if (k === 'desconto' && !x.n) x.n = 'Desconto'; }, 'Tipo do item')));
-    const fAdd = el('select', { 'aria-label': 'Adicionar item extra' },
-      el('option', { value: '', text: '+ Adicionar item extra…' }),
-      PROTO_CATALOGO.filter(p => p.extra).map(p => el('option', { value: p.k, text: `${p.nome}${p.valor != null ? ` · ${fmtBRL(p.valor)}` : ''}` })),
-      el('option', { value: 'outro', text: 'Outro item' }), el('option', { value: 'brinde', text: 'Brinde' }), el('option', { value: 'desconto', text: 'Desconto' }));
-    fAdd.addEventListener('change', () => {
-      const k = fAdd.value; if (!k) return;
-      const p = PROTO_CATALOGO.find(x => x.k === k);
-      e.extras.push(p ? { n: p.nome, d: p.desc, v: p.valor != null ? fmtQ(p.valor) : '', tipo: 'valor' }
-        : { n: k === 'desconto' ? 'Desconto' : '', d: '', v: '', tipo: k === 'outro' ? 'valor' : k });
-      desenhar(); mudou();
-      const novos = form.querySelectorAll('.proto-extra'); const ult = novos[novos.length - 1];
-      if (ult) { const alvo = p && p.valor == null ? ult.querySelector('.proto-v') : !p ? ult.querySelector('input') : null; if (alvo) alvo.focus(); }
-    });
+    const fAdd = campoEscolha({ titulo: 'Adicionar item extra', valor: '', fixo: '+ Adicionar item extra…',
+      opcoes: [...PROTO_CATALOGO.filter(p => p.extra).map(p => ({ v: p.k, t: p.nome, dir: p.valor != null ? fmtBRL(p.valor) : '' })),
+        { v: 'outro', t: 'Outro item', sub: 'Nome, descrição e valor escritos na hora' }, { v: 'brinde', t: 'Brinde', sub: 'Sai em verde, não soma no total' }, { v: 'desconto', t: 'Desconto', sub: 'Tira do total' }],
+      aoEscolher: k => {
+        const p = PROTO_CATALOGO.find(x => x.k === k);
+        e.extras.push(p ? { n: p.nome, d: p.desc, v: p.valor != null ? fmtQ(p.valor) : '', tipo: 'valor' }
+          : { n: k === 'desconto' ? 'Desconto' : '', d: '', v: '', tipo: k === 'outro' ? 'valor' : k });
+        desenhar(); mudou();
+        const novos = form.querySelectorAll('.proto-extra'); const ult = novos[novos.length - 1];
+        if (ult) { const alvo = p && p.valor == null ? ult.querySelector('.proto-v') : !p ? ult.querySelector('input') : null; if (alvo) alvo.focus(); }
+      } });
 
     const datas = os
       ? [fld('Data de execução', inp(e.os, 'data', { type: 'date' })),
@@ -6929,7 +7102,7 @@ function renderProtocolo() {
         modoAtual === 'valor' ? fld('Entrada paga (R$)', inp(e.pag, 'ent', { inputmode: 'decimal', placeholder: '0,00' })) : null,
         fld('Legenda do total', fLeg),
         resumo),
-      secao('Observação extra', el('p', { class: 'hint', text: 'Entra como mais um item nas observações, só neste protocolo.' }), inp(e, 'obs', { tag: 'textarea', rows: '2', maxlength: '300' })));
+      secao('Observação extra', inp(e, 'obs', { tag: 'textarea', rows: '2', maxlength: '300' })));
   }
 
   // Prévia (o mesmo documento, reduzido para caber) + conferências + botões.
@@ -6948,13 +7121,13 @@ function renderProtocolo() {
       const blob = await gerar(), url = URL.createObjectURL(blob);
       const a = el('a', { href: url, download: protoArquivo(e) }); document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30e3);
-      protoGuardarRecente(e); desenharRecentes(); toast(`Baixado: ${protoArquivo(e)}`);
+      protoSalvar(e); atualizar(); toast(`Baixado e salvo: ${protoArquivo(e)}`);
     } catch (err) { falhou(err); } finally { ocupado(bBaixar, false); }
   });
   bCopiar.addEventListener('click', async () => {
     if (!navigator.clipboard || !window.ClipboardItem) { toast('Este navegador não copia imagens. Use Baixar PNG.', true); return; }
     ocupado(bCopiar, true, 'Gerando…');
-    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': gerar() })]); protoGuardarRecente(e); desenharRecentes(); toast('Imagem copiada. É só colar no WhatsApp.'); }
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': gerar() })]); protoSalvar(e); atualizar(); toast('Imagem copiada e protocolo salvo. É só colar no WhatsApp.'); }
     catch (err) { falhou(err); } finally { ocupado(bCopiar, false); }
   });
   if (bComp) bComp.addEventListener('click', async () => {
@@ -6963,7 +7136,7 @@ function renderProtocolo() {
       const pronto = cache && cache.k === chave();
       const blob = await gerar();
       const file = new File([blob], protoArquivo(e), { type: 'image/png' });
-      try { await navigator.share({ files: [file] }); protoGuardarRecente(e); desenharRecentes(); }
+      try { await navigator.share({ files: [file] }); protoSalvar(e); atualizar(); }
       catch (err) { if (err && err.name === 'NotAllowedError' && !pronto) toast('Imagem pronta. Toque em Compartilhar de novo.'); else if (!err || err.name !== 'AbortError') throw err; }
     } catch (err) { falhou(err); } finally { ocupado(bComp, false); }
   });
@@ -6984,38 +7157,102 @@ function renderProtocolo() {
     preencher(info,
       c.bloqueio ? el('p', { class: 'proto-bloqueio', text: c.bloqueio }) : null,
       c.avisos.length ? el('ul', { class: 'proto-avisos' }, c.avisos.map(t => el('li', { text: t }))) : null,
-      el('p', { class: 'hint', text: `Arquivo: ${protoArquivo(e)}` }));
+      el('p', { class: 'hint' }, `Arquivo: ${protoArquivo(e)} · `, el('b', { text: { novo: 'Ainda não salvo', salvo: 'Salvo no sistema', alterado: 'Alterações não salvas' }[protoSituacao(e)] }),
+        protoSituacao(e) === 'salvo' ? null : ' (salva ao baixar, copiar, compartilhar ou em Salvar)'),
+      (() => { const x = (DB.protocolos || []).find(p => p.id === e.id), at = x && x.atendimentoId ? DB.atendimentos.find(a => a.id === x.atendimentoId) : null;
+        return at ? el('a', { class: 'link-btn', href: `#/veiculo/${esc(at.id)}` }, `Veículo ${at.concluido ? 'concluído' : 'em serviço'}: ${fmtPlaca(at.placa)} (abrir)`) : null; })());
     [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; });
-  }
-
-  // Últimos gerados neste aparelho: tocar abre para editar (ex.: acrescentar um carpete) e gerar de novo.
-  const recentes = el('div', {});
-  function desenharRecentes() {
-    const lista = lsLer(PROTO_REC, []);
-    preencher(recentes, lista.length ? el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'label', text: 'Últimos gerados neste aparelho' }),
-      el('div', { class: 'proto-rec' }, lista.map(r => el('button', { type: 'button', 'aria-current': r.id === e.id ? 'true' : null, onclick: () => { e = JSON.parse(JSON.stringify(r.estado)); S.proto = e; salvar(); cache = null; desenhar(); atualizar(); desenharRecentes(); window.scrollTo(0, 0); toast(`Aberto: ${protoNome(e.cliente.nome) || 'protocolo'}`); } },
-        el('b', { text: protoNome(r.estado.cliente.nome) || 'Sem nome' }),
-        el('span', { text: `${r.estado.tipo === 'os' ? 'OS' : 'Agend.'} · ${r.estado.tipo === 'os' ? brData(r.estado.os.data).slice(0, 5) : r.estado.datas.ent ? brData(r.estado.datas.ent).slice(0, 5) : 'sem data'} · ${fmtData(r.em)}` }))))) : null);
   }
 
   // "Novo" com dois toques, para não apagar sem querer.
   const bNovo = el('button', { class: 'btn btn--sm', type: 'button' }, icon('plus'), 'Novo');
   let confirmaNovo = 0;
   bNovo.addEventListener('click', () => {
-    if (Date.now() - confirmaNovo > 3000 && e.cliente.nome.trim()) { confirmaNovo = Date.now(); bNovo.lastChild.textContent = 'Limpar tudo?'; setTimeout(() => { bNovo.lastChild.textContent = 'Novo'; }, 3000); return; }
-    e = protoNovo(); S.proto = e; salvar(); cache = null; desenhar(); atualizar(); desenharRecentes(); bNovo.lastChild.textContent = 'Novo'; window.scrollTo(0, 0);
+    if (Date.now() - confirmaNovo > 3000 && e.cliente.nome.trim() && protoSituacao(e) !== 'salvo') { confirmaNovo = Date.now(); bNovo.lastChild.textContent = 'Descartar?'; setTimeout(() => { bNovo.lastChild.textContent = 'Novo'; }, 3000); return; }
+    S.proto = protoNovo(); lsGravar(PROTO_RASC, S.proto); go('#/protocolo'); window.scrollTo(0, 0);
   });
+  const bSalvar = el('button', { class: 'btn btn--sm', type: 'button', onclick: () => {
+    if (!e.cliente.nome.trim()) { toast('Coloque o nome do cliente.', true); return; }
+    protoSalvar(e); atualizar(); toast('Protocolo salvo.');
+  } }, icon('check'), 'Salvar');
+  // Excluir (só marca no banco), com dois toques.
+  let confirmaExcluir = 0;
+  const bExcluir = salvoBanco ? el('button', { class: 'btn btn--sm btn--danger', type: 'button', onclick: () => {
+    if (Date.now() - confirmaExcluir > 3000) { confirmaExcluir = Date.now(); bExcluir.textContent = 'Excluir mesmo?'; setTimeout(() => { bExcluir.textContent = 'Excluir'; }, 3000); return; }
+    commit(() => { DB.protocolos = (DB.protocolos || []).filter(p => p.id !== e.id); });
+    S.proto = null; lsGravar(PROTO_RASC, null); toast('Protocolo excluído.'); go('#/protocolos');
+  } }, 'Excluir') : null;
 
-  desenhar(); desenharRecentes();
+  desenhar();
   shell(el('div', { class: 'stack proto-tela' },
-    backLink('#/mais', 'Mais'),
-    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Protocolo' }), bNovo),
-    recentes,
+    backLink('#/protocolos', 'Protocolos'),
+    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: salvoBanco ? 'Protocolo' : 'Novo protocolo' }),
+      el('div', { class: 'proto-topo-acoes' }, bExcluir, bSalvar, bNovo)),
     el('div', { class: 'proto-cols' }, form,
       el('div', { class: 'proto-lado' }, el('span', { class: 'label', text: 'Prévia' }), prev, info,
         el('div', { class: 'actions' }, bBaixar, bCopiar), bComp))), { current: 'relatorios' });
   atualizar();
   protoFontes().then(escala).catch(() => {});
+}
+
+/* Cartão da conferência no veículo (Controle; 13/11/2026). Pendente: escolhe o protocolo (já vem o achado pela placa
+   ou pelo agendamento), mostra os itens extras e quais viram opcional (etapa) e "Confirmar conferência" libera a
+   montagem. Conferido: uma linha com o protocolo e quem conferiu. */
+function cardConferencia(at, redraw) {
+  if (!isCtrl()) return null;
+  const pend = conferenciaPendente(at), prot = protocoloDe(at);
+  if (!pend && !at.protocoloId) return null;
+  if (!pend) return el('div', { class: 'card conf-card is-ok' },
+    el('div', { class: 'conf-linha' }, el('span', { class: 'conf-ico', 'aria-hidden': 'true', html: ICON.protocolo }),
+      el('span', { class: 'conf-txt' }, el('b', { text: prot ? `Protocolo de ${protoNome(prot.estado.cliente.nome)}` : 'Protocolo vinculado (excluído da galeria)' }),
+        el('span', { text: at.conferidoEm ? `Conferido${at.conferidoPor ? ` por ${at.conferidoPor}` : ''} em ${fmtDataHora(at.conferidoEm)}` : 'Conferência anterior à regra nova' })),
+      prot ? el('a', { class: 'btn btn--sm', href: `#/protocolo/${esc(prot.id)}` }, 'Ver') : null));
+  S.confEscolha = S.confEscolha || {};
+  const sugerido = at.protocoloId || (protocoloParaEntrada(at.placa, at.agendaId) || {}).id || '';
+  const escolhidoId = S.confEscolha[at.id] !== undefined ? S.confEscolha[at.id] : sugerido;
+  const escolhido = escolhidoId ? (DB.protocolos || []).find(p => p.id === escolhidoId) || null : null;
+  const dataP = p => { const d = dataDoProtocolo(p.estado); return d ? brData(d).slice(0, 5) : ''; };
+  const perto = p => Math.abs((dataDoProtocolo(p.estado) ? dataDe(dataDoProtocolo(p.estado)).getTime() : 0) - (at.criadoEm || 0));
+  const candidatos = (DB.protocolos || []).filter(p => !p.atendimentoId || p.id === at.protocoloId)
+    .sort((a, b) => (protoPlaca(b.estado.veiculo && b.estado.veiculo.placa) === at.placa) - (protoPlaca(a.estado.veiculo && a.estado.veiculo.placa) === at.placa) || perto(a) - perto(b)).slice(0, 40);
+  const escolha = campoEscolha({ titulo: 'Protocolo deste veículo', valor: escolhidoId, vazio: 'Escolher o protocolo…',
+    opcoes: [...candidatos.map(p => ({ v: p.id, t: protoNome(p.estado.cliente.nome) || 'Sem nome',
+      sub: [protoCurto(p.estado.serv && p.estado.serv.titulo), p.estado.veiculo && p.estado.veiculo.modelo, protoPlaca(p.estado.veiculo && p.estado.veiculo.placa)].filter(Boolean).join(' · '), dir: dataP(p) })),
+    { v: '', t: 'Sem protocolo', sub: 'Conferir só os opcionais do veículo' }],
+    aoEscolher: v => { S.confEscolha[at.id] = v; redraw(); } });
+  const opcProt = escolhido ? opcionaisDoProtocolo(escolhido.estado) : [];
+  const extras = escolhido ? (escolhido.estado.extras || []).filter(x => x.tipo === 'valor' || x.tipo === 'brinde') : [];
+  const jaTem = opcionaisDe(at);
+  const linhas = extras.map(x => {
+    const k = semAcento(x.n).trim(), op = opcProt.find(o => { const ko = semAcento(o).trim(); return k && (k.includes(ko) || ko.includes(k)); });
+    return el('li', { class: op ? '' : 'is-aviso' }, el('b', { text: x.n || 'Item' }),
+      el('span', { text: !op ? 'não está em Ajustes > Opcionais: não vira etapa, avise a equipe' : jaTem.includes(op) ? 'já está no veículo' : `entra como opcional (etapa): ${op}` }));
+  });
+  const confirmar = el('button', { class: 'btn btn--primary btn--block', type: 'button' }, icon('check'), escolhido ? 'Confirmar conferência' : 'Confirmar sem protocolo');
+  confirmar.addEventListener('click', () => {
+    const atual = DB.atendimentos.find(a => a.id === at.id); if (!atual) return;
+    commit(() => {
+      const antigo = protocoloDe(atual);
+      if (antigo && (!escolhido || antigo.id !== escolhido.id)) antigo.atendimentoId = null;
+      const novos = escolhido ? opcionaisDoProtocolo(escolhido.estado).filter(n => !opcionaisDe(atual).includes(n)) : [];
+      if (novos.length) atual.opcionais = [...opcionaisDe(atual), ...novos];
+      if (escolhido) { escolhido.atendimentoId = atual.id; if (!atual.clienteNome) atual.clienteNome = protoNome(escolhido.estado.cliente.nome); }
+      atual.protocoloId = escolhido ? escolhido.id : null;
+      atual.conferidoEm = Date.now(); atual.conferidoPor = me().nome;
+      registrar(atual, escolhido ? `Conferência feita: protocolo de ${protoNome(escolhido.estado.cliente.nome)}${novos.length ? ` (opcionais: ${novos.join(', ')})` : ''}` : 'Conferência feita sem protocolo');
+    });
+    delete S.confEscolha[at.id]; toast('Conferência feita.'); redraw();
+  });
+  const est = escolhido && escolhido.estado;
+  return el('div', { class: 'card conf-card' },
+    el('div', { class: 'card-head' }, el('h2', { text: 'Conferência pendente' })),
+    escolha,
+    est ? el('dl', { class: 'kv' },
+      el('div', {}, el('dt', { text: 'Serviço' }), el('dd', { text: protoCurto(est.serv && est.serv.titulo) || '---' })),
+      el('div', {}, el('dt', { text: 'Veículo' }), el('dd', { text: [est.veiculo && est.veiculo.modelo, protoPlaca(est.veiculo && est.veiculo.placa)].filter(Boolean).join(' · ') || '---' })),
+      dataDoProtocolo(est) ? el('div', {}, el('dt', { text: est.tipo === 'os' ? 'Execução' : 'Entrada' }), el('dd', { text: brData(dataDoProtocolo(est)) })) : null) : null,
+    est ? (linhas.length ? el('ul', { class: 'conf-extras' }, linhas) : el('p', { class: 'hint', text: 'O protocolo não tem itens extras.' })) : null,
+    el('div', { class: 'actions' }, escolhido ? el('a', { class: 'btn', href: `#/protocolo/${esc(escolhido.id)}` }, 'Ver protocolo') : null, confirmar));
 }
 
 // Zerar o estoque (Controle): descarta todos os movimentos (entradas, retiradas e contagens), sem apagar do banco.
