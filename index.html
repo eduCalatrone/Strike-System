@@ -784,6 +784,19 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .proto-prev { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
 .proto-prev .pdoc { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .proto-captura { position: fixed; left: -12000px; top: 0; pointer-events: none; }
+/* Lista de escolha própria do sistema (pedido de 13/11/2026: o menu de seleção do Android ficava feio). */
+.escolha-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); text-align: left; font-size: 16px; color: var(--ink); }
+.escolha-btn.vazio { color: #9A9A98; }
+.escolha-btn > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.escolha-btn svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.escolha-lista { display: grid; max-height: min(62dvh, 520px); overflow-y: auto; margin: 0 -16px; border-top: 1px solid var(--line); }
+.escolha-op { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; font-size: 15px; color: var(--ink); }
+.escolha-op b { flex: 1; min-width: 0; font-weight: 600; }
+.escolha-op small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.escolha-op .v { font: 700 15px var(--cond); color: var(--ink-2); white-space: nowrap; }
+.escolha-op .ok { width: 20px; height: 20px; flex: none; color: var(--ink); }
+.escolha-op .ok svg { width: 20px; height: 20px; }
+.escolha-op[aria-checked="true"] { background: var(--soft); }
 .proto-check { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 479px) { .proto-check { grid-template-columns: 1fr; } }
 .proto-form input[type="date"], .proto-form input[type="time"] { min-width: 0; max-width: 100%; }
@@ -6814,6 +6827,30 @@ function protoGuardarRecente(e) {
   lsGravar(PROTO_REC, lista.slice(0, 20));
 }
 
+// Botão com cara de campo que abre uma lista própria do sistema (janela de baixo), no lugar do <select> do aparelho.
+// opcoes: [{ v, t, sub, dir }] (sub = linha de baixo, dir = texto à direita, como o valor).
+function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo = null, aoEscolher }) {
+  const atual = opcoes.find(o => o.v === valor);
+  const b = el('button', { class: 'escolha-btn' + (atual && !fixo ? '' : ' vazio'), type: 'button', 'aria-haspopup': 'dialog', 'aria-label': titulo },
+    el('span', { text: fixo || (atual ? atual.t : vazio) }), icon('down'));
+  b.addEventListener('click', () => {
+    const d = el('dialog', { class: 'sheet', 'aria-label': titulo });
+    const fechar = () => { d.close(); d.remove(); };
+    d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+    d.addEventListener('click', e => { if (e.target === d) fechar(); });
+    d.append(el('div', { class: 'sheet-in' },
+      el('div', { class: 'card-head' }, el('h2', { text: titulo }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
+      el('div', { class: 'escolha-lista', role: 'radiogroup' }, opcoes.map(o => el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
+        onclick: () => { fechar(); aoEscolher(o.v); } },
+        el('b', {}, o.t, o.sub ? el('small', { text: o.sub }) : null),
+        o.dir ? el('span', { class: 'v', text: o.dir }) : null,
+        el('span', { class: 'ok', 'aria-hidden': 'true', html: o.v === valor ? ICON.check : '' }))))));
+    document.body.append(d);
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  });
+  return b;
+}
+
 function renderProtocolo() {
   // Estado: vindo da Agenda ("Gerar protocolo"), o rascunho deste aparelho ou um novo.
   let e = S.proto || lsLer(PROTO_RASC, null);
@@ -6854,17 +6891,15 @@ function renderProtocolo() {
     // Agendamentos para puxar os dados (agendados de 7 dias atrás em diante, do mais perto ao mais longe).
     const desde = somaDias(hojeISO(), -7);
     const ags = agendaAtiva().filter(a => a.status === 'agendado' && a.data >= desde).sort((a, b) => a.data.localeCompare(b.data));
-    const fAg = ags.length ? el('select', { 'aria-label': 'Puxar os dados de um agendamento' },
-      el('option', { value: '', text: e.agId && ags.some(a => a.id === e.agId) ? 'Puxar de outro agendamento…' : 'Puxar os dados de um agendamento…' }),
-      ags.map(a => el('option', { value: a.id, text: `${brData(a.data).slice(0, 5)} · ${a.cliente}${a.servico ? ` · ${a.servico}` : ''}` }))) : null;
-    if (fAg) fAg.addEventListener('change', () => { const a = ags.find(x => x.id === fAg.value); if (a) { protoDeAgenda(e, a); desenhar(); mudou(); toast(`Dados de ${protoNome(a.cliente)} preenchidos.`); } });
+    const fAg = ags.length ? campoEscolha({ titulo: 'Puxar de um agendamento', valor: '',
+      fixo: e.agId && ags.some(a => a.id === e.agId) ? 'Puxar de outro agendamento…' : 'Puxar os dados de um agendamento…',
+      opcoes: ags.map(a => ({ v: a.id, t: protoNome(a.cliente), sub: [a.servico, a.marca].filter(Boolean).join(' · '), dir: `${DIA_CURTO[dataDe(a.data).getDay()].slice(0, 3)} ${brData(a.data).slice(0, 5)}` })),
+      aoEscolher: id => { const a = ags.find(x => x.id === id); if (a) { protoDeAgenda(e, a); desenhar(); mudou(); toast(`Dados de ${protoNome(a.cliente)} preenchidos.`); } } }) : null;
 
     // Serviço: catálogo (valores mudam: o valor fica editável).
-    const fPreset = el('select', { 'aria-label': 'Serviço do catálogo' },
-      PROTO_CATALOGO.map(p => el('option', { value: p.k, text: `${p.nome}${p.valor != null ? ` · ${fmtBRL(p.valor)}` : ''}` })),
-      el('option', { value: 'livre', text: 'Outro (escrever)' }));
-    fPreset.value = e.serv.k || 'livre';
-    fPreset.addEventListener('change', () => { protoPreset(e, fPreset.value); desenhar(); mudou(); });
+    const fPreset = campoEscolha({ titulo: 'Serviço', valor: e.serv.k || 'livre',
+      opcoes: [...PROTO_CATALOGO.map(p => ({ v: p.k, t: p.nome, dir: p.valor != null ? fmtBRL(p.valor) : '' })), { v: 'livre', t: 'Outro (escrever)' }],
+      aoEscolher: k => { protoPreset(e, k); desenhar(); mudou(); } });
 
     const checks = e.serv.checkOn ? el('div', { class: 'proto-check' }, e.serv.check.map((t, i) => inp(e.serv.check, i, { maxlength: '40', placeholder: `Item ${i + 1}`, 'aria-label': `Item ${i + 1} do checklist` }))) : null;
 
@@ -6876,19 +6911,17 @@ function renderProtocolo() {
         el('button', { class: 'proto-x', type: 'button', 'aria-label': 'Tirar item', onclick: () => { e.extras.splice(i, 1); desenhar(); mudou(); } }, '×')),
       x.tipo === 'desconto' ? null : inp(x, 'd', { maxlength: '120', placeholder: 'Descrição curta (opcional)', 'aria-label': 'Descrição do item' }),
       seg([['valor', 'Valor'], ['brinde', 'Brinde'], ['desconto', 'Desconto']], x.tipo, k => { x.tipo = k; if (k === 'desconto' && !x.n) x.n = 'Desconto'; }, 'Tipo do item')));
-    const fAdd = el('select', { 'aria-label': 'Adicionar item extra' },
-      el('option', { value: '', text: '+ Adicionar item extra…' }),
-      PROTO_CATALOGO.filter(p => p.extra).map(p => el('option', { value: p.k, text: `${p.nome}${p.valor != null ? ` · ${fmtBRL(p.valor)}` : ''}` })),
-      el('option', { value: 'outro', text: 'Outro item' }), el('option', { value: 'brinde', text: 'Brinde' }), el('option', { value: 'desconto', text: 'Desconto' }));
-    fAdd.addEventListener('change', () => {
-      const k = fAdd.value; if (!k) return;
-      const p = PROTO_CATALOGO.find(x => x.k === k);
-      e.extras.push(p ? { n: p.nome, d: p.desc, v: p.valor != null ? fmtQ(p.valor) : '', tipo: 'valor' }
-        : { n: k === 'desconto' ? 'Desconto' : '', d: '', v: '', tipo: k === 'outro' ? 'valor' : k });
-      desenhar(); mudou();
-      const novos = form.querySelectorAll('.proto-extra'); const ult = novos[novos.length - 1];
-      if (ult) { const alvo = p && p.valor == null ? ult.querySelector('.proto-v') : !p ? ult.querySelector('input') : null; if (alvo) alvo.focus(); }
-    });
+    const fAdd = campoEscolha({ titulo: 'Adicionar item extra', valor: '', fixo: '+ Adicionar item extra…',
+      opcoes: [...PROTO_CATALOGO.filter(p => p.extra).map(p => ({ v: p.k, t: p.nome, dir: p.valor != null ? fmtBRL(p.valor) : '' })),
+        { v: 'outro', t: 'Outro item', sub: 'Nome, descrição e valor escritos na hora' }, { v: 'brinde', t: 'Brinde', sub: 'Sai em verde, não soma no total' }, { v: 'desconto', t: 'Desconto', sub: 'Tira do total' }],
+      aoEscolher: k => {
+        const p = PROTO_CATALOGO.find(x => x.k === k);
+        e.extras.push(p ? { n: p.nome, d: p.desc, v: p.valor != null ? fmtQ(p.valor) : '', tipo: 'valor' }
+          : { n: k === 'desconto' ? 'Desconto' : '', d: '', v: '', tipo: k === 'outro' ? 'valor' : k });
+        desenhar(); mudou();
+        const novos = form.querySelectorAll('.proto-extra'); const ult = novos[novos.length - 1];
+        if (ult) { const alvo = p && p.valor == null ? ult.querySelector('.proto-v') : !p ? ult.querySelector('input') : null; if (alvo) alvo.focus(); }
+      } });
 
     const datas = os
       ? [fld('Data de execução', inp(e.os, 'data', { type: 'date' })),
