@@ -803,9 +803,16 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .proto-marcar { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .proto-marcar input { width: 18px; height: 18px; accent-color: var(--ink); }
 input[type="time"] { width: 100%; border: 1px solid var(--line-2); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-size: 16px; min-height: 46px; }
+/* Largura pela tela (CSS), não pelo tamanho da janela na hora em que a tela foi desenhada: a prévia ficava pequena no PC. */
+.proto-tela { max-width: 720px; }
 @media (min-width: 1024px) {
-  .proto-cols { grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); }
-  .proto-lado { position: sticky; top: 16px; }
+  .proto-tela { max-width: 1280px; }
+  .proto-comp { display: none; }
+  .proto-cols { grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); gap: 24px; }
+  /* A prévia grande passa da altura da tela: os botões e os avisos sobem para cima dela e a coluna rola sozinha. */
+  .proto-lado { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
+  .proto-lado > .actions { order: -2; }
+  .proto-lado > .proto-info { order: -1; }
 }
 /* Resumo do dia (Relatórios > Dia, pedido de 09/11/2026; layout do celular revisto no mesmo dia): cabeçalho
    centralizado, números em 2 colunas, linha do tempo separada por hora, seções em lista (sem cartão dentro de cartão). */
@@ -6817,7 +6824,7 @@ function renderProtocolo() {
   const chave = () => JSON.stringify(e);
   const form = el('div', { class: 'proto-form' });
   const prev = el('div', { class: 'proto-prev' });
-  const info = el('div', { class: 'stack', style: 'gap:10px' });
+  const info = el('div', { class: 'stack proto-info', style: 'gap:10px' });
   const resumo = el('div', { class: 'proto-resumo' });
   const hintDatas = el('p', { class: 'hint' });
   const legInput = { el: null };
@@ -6931,7 +6938,7 @@ function renderProtocolo() {
   const bBaixar = el('button', { class: 'btn btn--primary btn--lg grow', type: 'button' }, icon('file'), 'Baixar PNG');
   const bCopiar = el('button', { class: 'btn btn--lg grow', type: 'button' }, icon('image'), 'Copiar imagem');
   const podeCompartilhar = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'a.png', { type: 'image/png' })] })); } catch { return false; } })();
-  const bComp = podeCompartilhar && !ePC() ? el('button', { class: 'btn btn--lg btn--block', type: 'button' }, icon('wa'), 'Compartilhar (WhatsApp)') : null;
+  const bComp = podeCompartilhar ? el('button', { class: 'btn btn--lg btn--block proto-comp', type: 'button' }, icon('wa'), 'Compartilhar (WhatsApp)') : null;
   const gerar = async () => { const k = chave(); if (cache && cache.k === k) return cache.blob; const blob = await protoPNG(e); cache = { k, blob }; return blob; };
   const ocupado = (b, on, txt) => { b.disabled = on; if (on) { b.dataset.txt = b.lastChild.textContent; b.lastChild.textContent = txt; } else if (b.dataset.txt) b.lastChild.textContent = b.dataset.txt; };
   const falhou = err => { console.error(err); toast('Não foi possível gerar a imagem. Confira a internet e tente de novo.', true); };
@@ -7000,7 +7007,7 @@ function renderProtocolo() {
   });
 
   desenhar(); desenharRecentes();
-  shell(el('div', { class: 'stack', style: `max-width:${ePC() ? 1180 : 720}px` },
+  shell(el('div', { class: 'stack proto-tela' },
     backLink('#/mais', 'Mais'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Protocolo' }), bNovo),
     recentes,
