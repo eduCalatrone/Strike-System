@@ -202,10 +202,8 @@ function feitas(v) {
 }
 
 /* ---------- Protocolo e conferência (13/11/2026) ---------- */
-// Veículo que entra no sistema depois disto fica com "Conferência pendente" até o Controle conferir; enquanto isso,
-// a etapa de montagem não libera (o carro foi montado sem o carpete: o opcional não tinha sido lançado).
-const CONFERENCIA_DESDE = Date.parse('2026-11-13T22:00:00Z');
-const RE_MONTAGEM = /montagem/i;
+// Veículo que entra pelo Funcionário fica com "Conferência pendente" (aviso ao Controle, sem travar etapa) até o Controle
+// conferir (o carro foi montado sem o carpete: o opcional não tinha sido lançado).
 const semAcento = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const placaDe = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
 const nomeProprio = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase().split(' ')
@@ -446,12 +444,6 @@ async function aplicar(c, op, eu, versoes, depois = []) {
         if (it.opcionaisFeitos && typeof it.opcionaisFeitos === 'object') linha.opcionais_feitos = opcFeitos({ ...it.opcionaisFeitos, ...(atual.opcionais_feitos || {}) }, opcFinal);
         // Concluído continua concluído (reabrir é do Controle).
         if (atual.concluido) { linha.concluido = true; linha.concluido_em = atual.concluido_em || agora(); }
-        // Conferência pendente: a montagem só libera depois que o Controle conferir (13/11/2026).
-        if (!atual.conferido_em && ms(atual.criado_em) >= CONFERENCIA_DESDE && Array.isArray(atual.etapas)) {
-          const mi = atual.etapas.findIndex(n => RE_MONTAGEM.test(n));
-          const jaFeita = mi >= 0 && (feitas(atual.feitas)[mi] != null || atual.etapa_index > mi);
-          if (mi >= 0 && !jaFeita && (linha.feitas[mi] != null || linha.etapa_index > mi || linha.concluido)) throw erro(409, 'conferencia_pendente', atId);
-        }
       }
       // Conferência e protocolo: só o Controle muda (só quando veio; site antigo não manda e não apaga).
       if (ctrl && it.conferidoEm !== undefined) {

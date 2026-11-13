@@ -771,6 +771,7 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 /* ---------- Mais (13/11/2026) e Gerador de protocolo ---------- */
 /* Mais: o botão Relatórios do menu virou "Mais", com os atalhos que ficavam no topo de Relatórios. */
 .mais-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } /* 2 colunas (pedido de 13/11/2026) */
+.mais-grade .mais-largo { grid-column: 1 / -1; }
 /* Fontes do protocolo (as mesmas do modelo; só baixam quando o protocolo aparece na tela) */
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-700.woff2') format('woff2'); font-weight: 700; font-display: block; }
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-400.woff2') format('woff2'); font-weight: 400; font-display: block; }
@@ -1807,7 +1808,6 @@ const ERROS_SALVAR = {
   proibido: 'Só o Controle pode fazer isso.',
   usuario_em_uso: 'Esse usuário já existe. Escolha outro.',
   lixeira_vencida: 'Passou de 48 horas na lixeira. Não dá mais para restaurar.',
-  conferencia_pendente: 'A montagem só libera depois da conferência do Controle.',
 };
 // Envia as operações na ordem. Se falhar: avisa, descarta a fila e recarrega do banco.
 function enviar(ops, { redesenhar: redraw = true } = {}) {
@@ -2177,12 +2177,10 @@ function fotoObrigatoria(at, i) {
   return k < 0 || !semFotoDe(t)[k];
 }
 /* Conferência do Controle (13/11/2026; o carro foi montado sem o carpete porque o opcional não estava no sistema).
-   Veículo que entra depois disso fica "Conferência pendente" até o Controle conferir com o protocolo; enquanto isso,
-   a etapa de montagem não libera (o servidor confere também). */
+   Veículo que entra depois disso fica "Conferência pendente" até o Controle conferir com o protocolo. É só aviso:
+   não trava nenhuma etapa (pedido de 13/11/2026; os serviços levam uns 5 dias e o Controle confere no meio). */
 const CONFERENCIA_DESDE = Date.parse('2026-11-13T22:00:00Z');
-const RE_MONTAGEM = /montagem/i;
 const conferenciaPendente = at => !!at && !at.concluido && !at.conferidoEm && (at.criadoEm || 0) >= CONFERENCIA_DESDE;
-const travadaPelaConferencia = (at, i) => RE_MONTAGEM.test(at.etapas[i] || '') && conferenciaPendente(at);
 const protocoloDe = at => (at && at.protocoloId ? (DB.protocolos || []).find(p => p.id === at.protocoloId) || null : null);
 // Itens extras do protocolo (com valor ou brinde) que batem com os opcionais de Ajustes (ex.: "Carpete").
 function opcionaisDoProtocolo(estado) {
@@ -2196,7 +2194,6 @@ function protocoloParaEntrada(placa, agId) {
 }
 function etapaLiberada(at, i) {
   if (at.concluido || etapaFeita(at, i)) return false;
-  if (travadaPelaConferencia(at, i)) return false;
   const k = at.etapaIndex; if (i === k) return true;
   if (i < k) return false;
   for (let j = k; j <= i; j++) if (!(at.livres || [])[j]) return false;
@@ -2843,7 +2840,7 @@ function renderProblema() {
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Enviar para' }), segDestino),
       enviarBtn),
     meus.length ? el('div', { class: 'card' }, el('h2', { text: 'Seus problemas relatados' }),
-      el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: 'problema' });
+      el('ul', { class: 'chamados' }, meus.slice(0, 10).map(x => cartaoChamado(x)))) : null), { current: isCtrl() ? 'relatorios' : 'problema' });
 }
 
 /* =====================================================================
@@ -3606,7 +3603,7 @@ function barraLateral() {
     ctrl ? item('#/equipe', 'equipe', 'Status da equipe', 'users') : null,
     ctrl ? item('#/protocolos', 'protocolos', 'Protocolos', 'protocolo') : null,
     ctrl ? item('#/chamados', 'chamados', 'Chamados', 'warn', { n: nCham, tom: 'alerta', aria: nCham ? `Chamados, ${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : null }) : null,
-    ctrl ? null : item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }),
+    item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }), // Controle também (13/11/2026)
     ctrl ? item('#/ajustes', 'ajustes', 'Ajustes', 'gear') : null,
     appInstalado() ? el('button', { class: 'lat-item', type: 'button', onclick: recarregar }, el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON.reload }), el('span', { class: 'lat-txt', text: 'Recarregar' })) : null,
     el('div', { class: 'lat-espaco' }),
@@ -4894,9 +4891,6 @@ function renderVehicle(id) {
     : etapasCompletas(at) && opcPendentes(at).length ? { opc: opcPendentes(at)[0] } : null;
   const concluirBtn = alvoGrande == null ? null : el('button', { class: 'btn btn--primary btn--lg btn--block' + (typeof alvoGrande === 'object' ? ' btn--opc' : ''), type: 'button' }, icon(typeof alvoGrande === 'number' && !fotoObrigatoria(at, alvoGrande) ? 'check' : 'camera'), `Concluir: ${nomeAlvo(alvoGrande)}`);
   if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(alvoGrande, concluirBtn));
-  // Montagem travada pela conferência pendente: avisa no lugar do botão.
-  const travaMontagem = !at.concluido && !bloco && travadaPelaConferencia(at, at.etapaIndex)
-    ? el('p', { class: 'proto-bloqueio', text: ctrl ? 'Montagem bloqueada até a conferência (cartão "Conferência pendente" acima).' : 'Montagem bloqueada: aguardando a conferência do Controle (protocolo e opcionais).' }) : null;
 
   const fotosBox = el('div');
   fotosBox.append(photoGrid({
@@ -5128,7 +5122,7 @@ function renderVehicle(id) {
     el('div', { class: 'card-head' }, el('h2', { text: at.concluido ? 'Serviço concluído' : textoEtapa(at) }),
       el('span', { class: 'tag' + (at.concluido ? ' tag--ok' : ' tag--dark'), text: `${pct}%` })),
     el('div', { class: 'bar' }, el('i', { style: `width:${pct}%` })),
-    steps, concluirBtn, travaMontagem, botaoAddOpcional(at, redraw));
+    steps, concluirBtn, botaoAddOpcional(at, redraw));
   const cardFotos = el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'Fotos da entrada' }), el('span', { class: 'count', text: `${at.fotos.filter(f => !eFotoDeServico(f)).length}` })),
     at.fotosApagadas ? el('p', { class: 'hint', text: `${at.fotosApagadas} ${at.fotosApagadas === 1 ? 'foto foi apagada' : 'fotos foram apagadas'} pela limpeza automática (serviço concluído há mais de ${DB.ajustes.limpezaDias} dias).` }) : null,
     fotosBox);
@@ -6559,7 +6553,8 @@ function renderMais() {
       tile('#/dia', 'diaOk', 'Dia', 'Resumo do dia', { claro: true, aria: 'Resumo do dia: tudo o que aconteceu num dia' }),
       (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
       tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
-      tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' })),
+      tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' }),
+      (() => { const t = tile('#/problema', 'warn', 'Relatar problema', 'Enviar ao suporte ou à equipe', { claro: true, aria: 'Relatar problema' }); t.classList.add('mais-largo'); return t; })()),
     botaoConvites()), { current: 'relatorios' });
 }
 
@@ -6959,12 +6954,10 @@ function renderProtocolos() {
   };
   busca.addEventListener('input', () => { S.protoBusca = busca.value; desenharLista(); });
   desenharLista();
-  const n = (DB.protocolos || []).length;
   shell(el('div', { class: 'stack', style: 'max-width:820px' },
     backLink('#/mais', 'Mais'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Protocolos' }),
       el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => { S.proto = protoNovo(); lsGravar(PROTO_RASC, S.proto); go('#/protocolo'); } }, icon('plus'), 'Novo protocolo')),
-    el('p', { class: 'hint', text: `${n} ${n === 1 ? 'protocolo salvo' : 'protocolos salvos'}. Ao dar entrada no veículo, o sistema acha o protocolo pela placa ou pelo agendamento.` }),
     busca, lista), { current: 'relatorios' });
 }
 
@@ -7109,7 +7102,7 @@ function renderProtocolo(pid) {
         modoAtual === 'valor' ? fld('Entrada paga (R$)', inp(e.pag, 'ent', { inputmode: 'decimal', placeholder: '0,00' })) : null,
         fld('Legenda do total', fLeg),
         resumo),
-      secao('Observação extra', el('p', { class: 'hint', text: 'Entra como mais um item nas observações, só neste protocolo.' }), inp(e, 'obs', { tag: 'textarea', rows: '2', maxlength: '300' })));
+      secao('Observação extra', inp(e, 'obs', { tag: 'textarea', rows: '2', maxlength: '300' })));
   }
 
   // Prévia (o mesmo documento, reduzido para caber) + conferências + botões.
@@ -7248,12 +7241,11 @@ function cardConferencia(at, redraw) {
       atual.conferidoEm = Date.now(); atual.conferidoPor = me().nome;
       registrar(atual, escolhido ? `Conferência feita: protocolo de ${protoNome(escolhido.estado.cliente.nome)}${novos.length ? ` (opcionais: ${novos.join(', ')})` : ''}` : 'Conferência feita sem protocolo');
     });
-    delete S.confEscolha[at.id]; toast('Conferência feita. Montagem liberada.'); redraw();
+    delete S.confEscolha[at.id]; toast('Conferência feita.'); redraw();
   });
   const est = escolhido && escolhido.estado;
   return el('div', { class: 'card conf-card' },
-    el('div', { class: 'card-head' }, el('h2', { text: 'Conferência pendente' }), el('span', { class: 'tag tag--warn', text: 'Montagem bloqueada' })),
-    el('p', { class: 'hint', text: 'Confira o protocolo e os opcionais. Os itens do protocolo que existem em Ajustes > Opcionais viram etapas do veículo.' }),
+    el('div', { class: 'card-head' }, el('h2', { text: 'Conferência pendente' })),
     escolha,
     est ? el('dl', { class: 'kv' },
       el('div', {}, el('dt', { text: 'Serviço' }), el('dd', { text: protoCurto(est.serv && est.serv.titulo) || '---' })),
