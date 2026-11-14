@@ -1464,6 +1464,7 @@ const ICON = {
   camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  lixeira: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
@@ -1763,7 +1764,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [], protocolos: d.protocolos || [], protocolosEntrada: d.protocolosEntrada || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [], protocolos: d.protocolos || [], protocolosEntrada: d.protocolosEntrada || [], lixeiraProtocolos: d.lixeiraProtocolos || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -3164,7 +3165,7 @@ let presUltimoToque = Date.now(), presEnviadoEm = 0, presTela = '', presOffset =
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { presUltimoToque = Date.now(); }, { passive: true, capture: true }));
 function telaDePresenca() {
   const [r, a] = parts();
-  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', dia: 'Resumo do dia', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites', mais: 'Mais', protocolo: 'Protocolo', protocolos: 'Protocolos' };
+  const nomes = { equipe: parts()[1] ? 'Histórico da equipe' : 'Status da equipe', inicio: 'Início', placa: 'Adicionar veículo', estoque: 'Estoque', agenda: 'Agenda', relatorios: 'Relatórios', ajustes: 'Ajustes', historico: 'Histórico', dia: 'Resumo do dia', problema: 'Relatar problema', chamados: 'Chamados', notificacoes: 'Notificações', convites: 'Convites', mais: 'Mais', protocolo: 'Protocolo', protocolos: 'Protocolos', lixeira: 'Lixeira' };
   if (r === 'veiculo') { const at = DB && DB.atendimentos.find(x => x.id === a); return at ? `Veículo ${fmtPlaca(at.placa)}` : 'Veículo'; }
   if (r === 'novo') return `Entrada ${a ? fmtPlaca(norm(a)) : ''}`.trim();
   return nomes[r] || 'Início';
@@ -3448,6 +3449,7 @@ function route(opts) {
     case 'chamados': return isCtrl() ? renderChamados() : go('#/notificacoes'); // aviso de chamado no celular do Funcionário
     case 'convites': return isCtrl() ? renderConvites() : go('#/inicio');
     case 'mais': if (isCtrl()) avisarPresenca({ forcar: true }); return isCtrl() ? renderMais() : go('#/inicio');
+    case 'lixeira': return isCtrl() ? renderLixeira() : go('#/inicio');
     case 'protocolos': return isCtrl() ? renderProtocolos() : go('#/inicio');
     case 'protocolo': return isCtrl() ? renderProtocolo(a) : go('#/inicio');
     case 'notificacoes': return renderAvisos();
@@ -3611,6 +3613,7 @@ function barraLateral() {
     ctrl ? item('#/equipe', 'equipe', 'Status da equipe', 'users') : null,
     ctrl ? item('#/protocolos', 'protocolos', 'Protocolos', 'protocolo') : null,
     ctrl ? item('#/chamados', 'chamados', 'Chamados', 'warn', { n: nCham, tom: 'alerta', aria: nCham ? `Chamados, ${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : null }) : null,
+    ctrl ? item('#/lixeira', 'lixeira', 'Lixeira', 'lixeira', { n: nLixeira() }) : null,
     item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }), // Controle também (13/11/2026)
     ctrl ? item('#/ajustes', 'ajustes', 'Ajustes', 'gear') : null,
     appInstalado() ? el('button', { class: 'lat-item', type: 'button', onclick: recarregar }, el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON.reload }), el('span', { class: 'lat-txt', text: 'Recarregar' })) : null,
@@ -5020,7 +5023,7 @@ function renderVehicle(id) {
         opcionaisDe(at).map((nome, k) => el('label', { class: 'etapa-check is-opc' }, marcasOpc[k], el('span', { class: 'step-opc-tag', text: 'Opcional' }), el('span', { text: nome })))),
       salvarEt);
     const excluir = el('button', { class: 'btn btn--danger', type: 'button', onclick: () => {
-      if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele fica 48 horas na lixeira (Ajustes > Lixeira) e pode ser restaurado nesse tempo.`)) return;
+      if (!window.confirm(`Excluir o atendimento da placa ${fmtPlaca(at.placa)}? Ele fica 48 horas na lixeira (Mais > Lixeira) e pode ser restaurado nesse tempo.`)) return;
       if (commit(() => { DB.atendimentos = DB.atendimentos.filter(a => a.id !== at.id); })) {
         const u = me();
         DB.lixeira = [{ id: at.id, placa: at.placa, tipoNome: at.tipoNome, clienteNome: at.clienteNome, concluido: at.concluido, etapa: etapaAtual(at), criadoEm: at.criadoEm, excluidoEm: Date.now(), excluidoPor: u ? u.nome : '', fotos: at.fotos }, ...(DB.lixeira || [])];
@@ -5848,7 +5851,6 @@ function renderSettings() {
         el('div', { class: 'row' }, nUsuario, nSenha),
         el('div', {}, addPessoa)) : null,
       equipe),
-    cartaoLixeira(redraw),
     el('section', { class: 'stack' },
       secHead('Dados'),
       el('ul', { class: 'rows dados-rows' },
@@ -5962,11 +5964,46 @@ function secaoNotificacoes(redraw) {
     el('div', { class: 'card' }, el('h3', { text: 'Este aparelho' }), blocoEsteAparelho(recarregar)));
 }
 
-// Lixeira (Controle): atendimentos excluídos ficam 48 h aqui e podem voltar. Depois somem da lista
-// (o registro continua guardado no banco, como sempre).
+// Lixeira (Controle; tela própria em Mais desde 14/11/2026, antes ficava em Ajustes): veículos e protocolos excluídos
+// ficam 48 h aqui e podem voltar. Depois somem da lista (o registro continua guardado no banco, como sempre).
 const LIXEIRA_H = 48;
+const naLixeira = lista => (lista || []).filter(x => Date.now() - x.excluidoEm < LIXEIRA_H * 3600e3);
+const nLixeira = () => naLixeira(DB.lixeira).length + naLixeira(DB.lixeiraProtocolos).length;
+function renderLixeira() {
+  const redraw = () => renderLixeira();
+  const veic = cartaoLixeira(redraw), prot = cartaoLixeiraProtocolos(redraw);
+  shell(el('div', { class: 'stack', style: 'max-width:720px' },
+    backLink('#/mais', 'Mais'),
+    el('div', { class: 'page-head' }, el('h1', { text: 'Lixeira' }), el('span', { class: 'count', text: `volta em até ${LIXEIRA_H} h` })),
+    veic, prot, !veic && !prot ? el('div', { class: 'card' }, el('p', { class: 'hint', text: 'A lixeira está vazia.' })) : null), { current: 'relatorios' });
+}
+function cartaoLixeiraProtocolos(redraw) {
+  const itens = naLixeira(DB.lixeiraProtocolos);
+  if (!itens.length) return null;
+  const restam = x => `Restam ${Math.max(1, Math.ceil((x.excluidoEm + LIXEIRA_H * 3600e3 - Date.now()) / 3600e3))} h`;
+  const restaurar = async (x, btn) => {
+    btn.disabled = true; S.ocupado = true;
+    const ok = await enviar([{ col: 'protocolos', acao: 'restaurar', id: x.id }], { redesenhar: false });
+    S.ocupado = false;
+    if (ok) { try { await buscarDados({ forcar: true }); } catch {} toast(`Protocolo de ${protoNome(x.estado.cliente && x.estado.cliente.nome)} restaurado.`); }
+    redraw();
+  };
+  return el('section', { class: 'stack' },
+    el('div', { class: 'sec-head' }, el('h2', { text: 'Protocolos' }), el('span', { class: 'count', text: String(itens.length) })),
+    el('ul', { class: 'rows' }, itens.map(x => {
+      const est = x.estado || {}, d = dataDoProtocolo(est);
+      const btn = el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none' }, 'Restaurar');
+      btn.addEventListener('click', () => restaurar(x, btn));
+      return el('li', {}, el('div', { class: 'r' },
+        el('span', { class: 'r-main' },
+          el('span', { class: 'r-title', text: protoNome(est.cliente && est.cliente.nome) || 'Sem nome' }),
+          el('span', { class: 'r-sub', style: 'white-space:normal', text: [protoCurto(est.serv && est.serv.titulo), est.veiculo && est.veiculo.modelo, protoPlaca(est.veiculo && est.veiculo.placa), d ? brData(d) : ''].filter(Boolean).join(' · ') }),
+          el('span', { class: 'r-sub', style: 'white-space:normal', text: [restam(x), x.excluidoPor && `excluído por ${x.excluidoPor}`].filter(Boolean).join(' · ') })),
+        btn));
+    })));
+}
 function cartaoLixeira(redraw) {
-  const itens = (DB.lixeira || []).filter(x => Date.now() - x.excluidoEm < LIXEIRA_H * 3600e3);
+  const itens = naLixeira(DB.lixeira);
   const restam = x => `Restam ${Math.max(1, Math.ceil((x.excluidoEm + LIXEIRA_H * 3600e3 - Date.now()) / 3600e3))} h`;
   const restaurar = async (x, btn) => {
     if (ativoDaPlaca(x.placa) && !x.concluido) { toast(`A placa ${fmtPlaca(x.placa)} já tem um serviço em andamento.`, true); return; }
@@ -5976,11 +6013,10 @@ function cartaoLixeira(redraw) {
     if (ok) { try { await buscarDados({ forcar: true }); } catch {} toast(`Atendimento da placa ${fmtPlaca(x.placa)} restaurado.`); }
     redraw();
   };
-  if (!itens.length) return null; // vazia: não ocupa espaço em Ajustes
+  if (!itens.length) return null;
   return el('section', { class: 'stack' },
-    el('div', { class: 'sec-head' }, el('h2', { text: 'Lixeira' }), el('span', { class: 'count', text: `volta em até ${LIXEIRA_H} h` })),
-    el('div', { class: 'card' },
-            itens.length ? el('ul', { class: 'rows' }, itens.map(x => {
+    el('div', { class: 'sec-head' }, el('h2', { text: 'Veículos' }), el('span', { class: 'count', text: String(itens.length) })),
+    el('ul', { class: 'rows' }, itens.map(x => {
         const capa = x.fotos.find(f => f.rotulo === 'Frente') || x.fotos[0];
         const btn = el('button', { class: 'btn btn--sm', type: 'button', style: 'flex:none' }, 'Restaurar');
         btn.addEventListener('click', () => restaurar(x, btn));
@@ -5991,7 +6027,7 @@ function cartaoLixeira(redraw) {
             el('span', { class: 'r-sub', style: 'white-space:normal', text: [x.clienteNome || NOME_PENDENTE, x.tipoNome, x.etapa].filter(Boolean).join(' · ') }),
             el('span', { class: 'r-sub', style: 'white-space:normal', text: [restam(x), x.excluidoPor && `excluído por ${x.excluidoPor}`].filter(Boolean).join(' · ') })),
           btn));
-      })) : el('p', { class: 'hint', text: 'A lixeira está vazia.' })));
+      })));
 }
 
 /* =====================================================================
@@ -6579,6 +6615,8 @@ function renderMais() {
       (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
       tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
       tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' }),
+      (() => { const n = avisosNovos().length; return tile('#/notificacoes', 'bell', 'Notificações', n ? `${n} ${n === 1 ? 'nova' : 'novas'}` : 'Nenhuma nova', { claro: true, badge: n, aria: n ? `Notificações, ${n} ${n === 1 ? 'nova' : 'novas'}` : 'Notificações' }); })(),
+      (() => { const n = nLixeira(); return tile('#/lixeira', 'lixeira', 'Lixeira', n ? `${n} ${n === 1 ? 'item' : 'itens'}` : 'Vazia', { claro: true, aria: `Lixeira: ${n ? `${n} ${n === 1 ? 'item' : 'itens'}` : 'vazia'}` }); })(),
       (() => { const t = tile('#/problema', 'warn', 'Problema', 'Relatar ao suporte', { claro: true, aria: 'Relatar problema' }); t.classList.add('is-problema'); return t; })()),
     botaoConvites()), { current: 'relatorios' });
 }
@@ -7231,7 +7269,8 @@ function renderProtocolo(pid) {
   const bExcluir = salvoBanco ? el('button', { class: 'btn btn--sm btn--danger', type: 'button', onclick: () => {
     if (Date.now() - confirmaExcluir > 3000) { confirmaExcluir = Date.now(); bExcluir.textContent = 'Excluir mesmo?'; setTimeout(() => { bExcluir.textContent = 'Excluir'; }, 3000); return; }
     commit(() => { DB.protocolos = (DB.protocolos || []).filter(p => p.id !== e.id); });
-    S.proto = null; lsGravar(PROTO_RASC, null); toast('Protocolo excluído.'); go('#/protocolos');
+    DB.lixeiraProtocolos = [{ id: e.id, estado: salvoBanco.estado, excluidoEm: Date.now(), excluidoPor: me().nome }, ...(DB.lixeiraProtocolos || []).filter(x => x.id !== e.id)];
+    S.proto = null; lsGravar(PROTO_RASC, null); toast('Protocolo na lixeira por 48 horas.'); go('#/protocolos');
   } }, 'Excluir') : null;
 
   if (!editando) {

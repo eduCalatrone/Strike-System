@@ -55,7 +55,8 @@ async function carregar(c, eu) {
     ctrl ? restAll(c, 'cv_confirmacoes?select=id,convite_slug,pessoas,meta,meta_servidor,edicoes,criado_em,atualizado_em&tipo=eq.convidados&excluido_em=is.null&order=criado_em.desc') : Promise.resolve(null),
     // Protocolos gerados no sistema (13/11/2026): só o Controle (têm valores). Os 400 mais recentes.
     // Funcionário (14/11/2026): só os ainda sem veículo, para a entrada já vir preenchida (vira um resumo sem valores abaixo).
-    ctrl ? rest(c, 'sd_protocolos?select=id,dados,atendimento_id,criado_em,criado_por,atualizado_em&excluido_em=is.null&order=criado_em.desc&limit=400')
+    // Controle: também os excluídos nas últimas 48 h, para a Lixeira (14/11/2026).
+    ctrl ? rest(c, `sd_protocolos?select=id,dados,atendimento_id,criado_em,criado_por,atualizado_em,excluido_em,excluido_por&or=(excluido_em.is.null,excluido_em.gte.${desde})&order=criado_em.desc&limit=400`)
       : rest(c, 'sd_protocolos?select=id,dados,criado_em&excluido_em=is.null&atendimento_id=is.null&order=criado_em.desc&limit=150'),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
@@ -140,7 +141,9 @@ async function carregar(c, eu) {
       veiculo: { modelo: String((d.veiculo && d.veiculo.modelo) || ''), placa: String((d.veiculo && d.veiculo.placa) || '') },
       extras: (Array.isArray(d.extras) ? d.extras : []).filter(e => e && (e.tipo === 'valor' || e.tipo === 'brinde')).map(e => ({ n: String(e.n || ''), tipo: e.tipo })),
     } }; }) } : {}),
-    ...(ctrl && protocolos ? { protocolos: protocolos.map(x => ({
+    ...(ctrl && protocolos ? { lixeiraProtocolos: protocolos.filter(x => x.excluido_em).map(x => ({
+      id: x.id, estado: x.dados || {}, excluidoEm: ms(x.excluido_em), excluidoPor: x.excluido_por || '' })).sort((a, b) => b.excluidoEm - a.excluidoEm) } : {}),
+    ...(ctrl && protocolos ? { protocolos: protocolos.filter(x => !x.excluido_em).map(x => ({
       id: x.id, estado: x.dados || {}, atendimentoId: x.atendimento_id || null, criadoEm: ms(x.criado_em), criadoPor: x.criado_por || '', atualizadoEm: ms(x.atualizado_em),
     })) } : {}),
     ...(confirmacoes ? { confirmacoes: confirmacoes.map(x => ({
@@ -159,7 +162,7 @@ const RE_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 const RE_CAMINHO = /^(fotos|miniaturas)\/[a-z0-9]{8,64}\.jpg$/;
 const RE_USUARIO = /^[a-z0-9._-]{2,40}$/;
 const SO_CONTROLE = new Set(['opcionais:salvar', 'opcionais:remover', 'funcionarios:salvar', 'funcionarios:remover', 'tipos:salvar', 'tipos:remover', 'itens:salvar', 'itens:remover',
-  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir', 'convites:salvar', 'convites:excluir', 'confirmacoes:excluir', 'protocolos:salvar', 'protocolos:remover']);
+  'atendimentos:remover', 'atendimentos:restaurar', 'fotos:remover', 'fotos:etapa', 'fotos:rotulo', 'fotos:opcional', 'ajustes:salvar', 'senha:salvar', 'agenda:salvar', 'agenda:remover', 'eventos:salvar', 'eventos:remover', 'movimentos:zerar', 'chamados:resolver', 'chamados:reabrir', 'chamados:excluir', 'convites:salvar', 'convites:excluir', 'confirmacoes:excluir', 'protocolos:salvar', 'protocolos:remover', 'protocolos:restaurar']);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const invalido = campo => erro(400, 'invalido', campo);
 const txt = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -629,6 +632,14 @@ async function aplicar(c, op, eu, versoes, depois = []) {
     }
     case 'protocolos:remover':
       return marcar(c, 'sd_protocolos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
+    // Lixeira (14/11/2026): volta o protocolo excluído há menos de 48 h.
+    case 'protocolos:restaurar': {
+      const pid = id(op.id), desde = new Date(Date.now() - LIXEIRA_MS).toISOString();
+      const r = await rest(c, `sd_protocolos?id=eq.${q(pid)}&excluido_em=gte.${q(desde)}&select=id`, {
+        method: 'PATCH', body: { excluido_em: null, excluido_por: null, atualizado_em: agora(), atualizado_por: quem }, prefer: 'return=representation' });
+      if (!r || !r.length) throw erro(409, 'lixeira_vencida', pid);
+      return;
+    }
 
     default:
       throw invalido('op');
