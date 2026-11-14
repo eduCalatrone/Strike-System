@@ -1194,6 +1194,8 @@ main.no-nav { padding-bottom: 48px; }
   body.com-lateral main { margin-left: var(--lat-w); max-width: none; padding: 30px clamp(24px, 3vw, 44px) 56px; }
   body.com-lateral .toast { bottom: 24px; left: calc(50% + var(--lat-w) / 2); }
   body.com-lateral h1 { font-size: 34px; }
+  /* No computador tudo do Mais está na barra lateral: o "voltar para Mais" some (14/11/2026). */
+  body.com-lateral main a.back[href="#/mais"] { display: none; }
 }
 .lateral {
   position: fixed; z-index: 30; top: 0; bottom: 0; left: 0; width: var(--lat-w); flex-direction: column; gap: 4px;
@@ -1210,6 +1212,23 @@ main.no-nav { padding-bottom: 48px; }
 .lat-item { display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 10px 0 8px; border-radius: 12px; border: 0; background: none;
   color: var(--ink-2); font: 500 14px/1.2 var(--body); text-decoration: none; text-align: left; width: 100%; transition: background-color .15s; }
 .lat-item:hover { background: rgba(18, 18, 18, .05); }
+/* Tela baixa (notebook): a barra ganhou itens do Mais (14/11/2026), então fica mais compacta para caber sem rolar. */
+@media (max-height: 920px) {
+  .lateral { gap: 1px; padding-top: 16px; }
+  .lat-marca { padding-bottom: 12px; }
+  .lat-novo { margin-bottom: 8px; min-height: 40px; }
+  .lat-sec { padding: 10px 12px 4px; }
+  .lat-item { min-height: 35px; }
+  .lat-ico { width: 26px; height: 26px; }
+}
+@media (max-height: 800px) {
+  .lateral { padding-top: 12px; padding-bottom: 8px; }
+  .lat-marca { padding-bottom: 8px; }
+  .lat-novo { margin-bottom: 4px; min-height: 36px; }
+  .lat-sec { padding: 8px 12px 3px; }
+  .lat-item { min-height: 30px; font-size: 13.5px; }
+  .lat-ico { width: 24px; height: 24px; }
+}
 .lat-ico { flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: rgba(18, 18, 18, .05); color: var(--ink-2); }
 .lat-ico svg { width: 17px; height: 17px; }
 .lat-txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3589,10 +3608,12 @@ const ePC = () => MQ_PC.matches;
 try { MQ_PC.addEventListener('change', () => { if (!MODO_CLIENTE && DB && me() && podeRedesenhar()) redesenhar(); }); } catch {}
 function barraLateral() {
   const u = me(), ctrl = u.tipo === 'controle', [r] = parts();
-  const ativo = { veiculo: 'inicio', novo: 'placa', convites: 'relatorios', mais: 'relatorios', protocolo: 'protocolos' }[r] || r || 'inicio';
+  // Computador (14/11/2026): tudo o que está em Mais também fica aqui (Configurar notificações, Lixeira, Convites).
+  const ativo = r === 'ajustes' && parts()[1] === 'notificacoes' ? 'notifcfg'
+    : { veiculo: 'inicio', novo: 'placa', mais: 'relatorios', protocolo: 'protocolos' }[r] || r || 'inicio';
   const item = (href, key, label, ico, { n = 0, tom = '', cls = '', aria = null } = {}) => el('a', {
     class: 'lat-item' + (cls ? ` ${cls}` : ''), href, 'aria-current': ativo === key ? 'page' : null, 'aria-label': aria },
-    el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON[ico] }), el('span', { class: 'lat-txt', text: label }),
+    el('span', { class: 'lat-ico', 'aria-hidden': 'true', html: ICON[ico] || ico }), el('span', { class: 'lat-txt', text: label }),
     n ? el('span', { class: 'lat-n' + (tom ? ` is-${tom}` : ''), 'aria-hidden': 'true', text: n > 99 ? '99+' : String(n) }) : null);
   const emServico = ativos().length;
   const hoje = hojeISO(), entradasHoje = agendaAtiva().filter(a => a.data === hoje && a.status === 'agendado').length;
@@ -3610,9 +3631,11 @@ function barraLateral() {
     ctrl ? item('#/dia', 'dia', 'Resumo do dia', 'diaOk') : null,
     el('div', { class: 'lat-sec', text: 'Ferramentas' }),
     item('#/notificacoes', 'notificacoes', 'Notificações', 'bell', { n: nAvisos, tom: 'alerta', aria: nAvisos ? `Notificações, ${nAvisos} ${nAvisos === 1 ? 'nova' : 'novas'}` : null }),
+    ctrl ? item('#/ajustes/notificacoes', 'notifcfg', 'Configurar notificações', 'gear') : null,
     ctrl ? item('#/equipe', 'equipe', 'Status da equipe', 'users') : null,
     ctrl ? item('#/protocolos', 'protocolos', 'Protocolos', 'protocolo') : null,
     ctrl ? item('#/chamados', 'chamados', 'Chamados', 'warn', { n: nCham, tom: 'alerta', aria: nCham ? `Chamados, ${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : null }) : null,
+    ctrl ? item('#/convites', 'convites', 'Convites do casamento', ICONE_ALIANCAS) : null,
     ctrl ? item('#/lixeira', 'lixeira', 'Lixeira', 'lixeira', { n: nLixeira() }) : null,
     item('#/problema', 'problema', 'Relatar problema', 'warn', { cls: 'is-problema' }), // Controle também (13/11/2026)
     ctrl ? item('#/ajustes', 'ajustes', 'Ajustes', 'gear') : null,
