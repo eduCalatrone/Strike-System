@@ -188,6 +188,7 @@ Ferramenta pessoal do Eduardo para organizar as imagens dos protocolos que ele g
 ## Como trabalhar neste repositório
 
 - Mudanças pontuais, sem reestruturar o que já funciona. Respostas curtas e diretas.
+- **Publicação autorizada** (Eduardo, 14/11/2026): depois de testar, publicar direto no `main` todas as alterações do sistema, sem pedir de novo. Só parar se ele pedir o bloqueio.
 - Testar antes de publicar: rodar `node dev-server.js` e conferir os fluxos (login, adicionar veículo, etapas, fotos, estoque, cliente) no tamanho de celular.
 - Nunca rodar DELETE, TRUNCATE ou DROP no banco (a limpeza das fotos é a única exceção, e só no Storage). Mudança de estrutura só com migração nova, sem apagar dados. Nunca mexer em `leads`, `historico`, `autorizados` nem no Auth do Supabase.
 - Não commitar `.env` nem chaves.
