@@ -54,7 +54,9 @@ async function carregar(c, eu) {
     // Confirmações do link único dos convidados (com os dados do aparelho de quem confirmou). Só o Controle.
     ctrl ? restAll(c, 'cv_confirmacoes?select=id,convite_slug,pessoas,meta,meta_servidor,edicoes,criado_em,atualizado_em&tipo=eq.convidados&excluido_em=is.null&order=criado_em.desc') : Promise.resolve(null),
     // Protocolos gerados no sistema (13/11/2026): só o Controle (têm valores). Os 400 mais recentes.
-    ctrl ? rest(c, 'sd_protocolos?select=id,dados,atendimento_id,criado_em,criado_por,atualizado_em&excluido_em=is.null&order=criado_em.desc&limit=400') : Promise.resolve(null),
+    // Funcionário (14/11/2026): só os ainda sem veículo, para a entrada já vir preenchida (vira um resumo sem valores abaixo).
+    ctrl ? rest(c, 'sd_protocolos?select=id,dados,atendimento_id,criado_em,criado_por,atualizado_em&excluido_em=is.null&order=criado_em.desc&limit=400')
+      : rest(c, 'sd_protocolos?select=id,dados,criado_em&excluido_em=is.null&atendimento_id=is.null&order=criado_em.desc&limit=150'),
   ]);
   // Funcionário: fotos só dos atendimentos que ele recebe, e um resumo das passagens antigas de cada placa
   // (quantas vezes veio, quando foi a última e o nome do cliente), para a entrada do veículo.
@@ -132,7 +134,13 @@ async function carregar(c, eu) {
       respondidoEm: ms(v.respondido_em), abertoEm: ms(v.aberto_em), aberturas: v.aberturas || 0, criadoEm: ms(v.criado_em),
       teste: !!v.teste, meta: v.meta || null, metaServidor: v.meta_servidor || null,
     })) } : {}),
-    ...(protocolos ? { protocolos: protocolos.map(x => ({
+    // Resumo do protocolo para a entrada do Funcionário: cliente, veículo, serviço, agendamento e nomes dos itens extras. Sem valores.
+    ...(!ctrl ? { protocolosEntrada: (protocolos || []).map(x => { const d = x.dados || {}; return { id: x.id, atendimentoId: null, criadoEm: ms(x.criado_em), estado: {
+      agId: d.agId || null, cliente: { nome: String((d.cliente && d.cliente.nome) || '') }, serv: { titulo: String((d.serv && d.serv.titulo) || '') },
+      veiculo: { modelo: String((d.veiculo && d.veiculo.modelo) || ''), placa: String((d.veiculo && d.veiculo.placa) || '') },
+      extras: (Array.isArray(d.extras) ? d.extras : []).filter(e => e && (e.tipo === 'valor' || e.tipo === 'brinde')).map(e => ({ n: String(e.n || ''), tipo: e.tipo })),
+    } }; }) } : {}),
+    ...(ctrl && protocolos ? { protocolos: protocolos.map(x => ({
       id: x.id, estado: x.dados || {}, atendimentoId: x.atendimento_id || null, criadoEm: ms(x.criado_em), criadoPor: x.criado_por || '', atualizadoEm: ms(x.atualizado_em),
     })) } : {}),
     ...(confirmacoes ? { confirmacoes: confirmacoes.map(x => ({

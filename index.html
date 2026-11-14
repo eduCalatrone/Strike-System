@@ -814,6 +814,7 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .proto-item-dir { display: grid; justify-items: end; gap: 3px; flex: none; }
 .proto-item-data { font: 700 14px var(--cond); }
 .proto-item-valor { font-size: 12px; color: var(--muted); }
+.proto-botoes { display: grid; gap: 8px; }
 .proto-topo-acoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .conf-card { border-color: #E9C46A; background: #FFFBF0; }
 .conf-card.is-ok { border-color: var(--line); background: var(--surface); }
@@ -855,7 +856,7 @@ input[type="time"] { width: 100%; border: 1px solid var(--line-2); background: v
   .proto-cols { grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); gap: 24px; }
   /* A prévia grande passa da altura da tela: os botões e os avisos sobem para cima dela e a coluna rola sozinha. */
   .proto-lado { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
-  .proto-lado > .actions { order: -2; }
+  .proto-lado > .actions, .proto-lado > .proto-botoes { order: -2; }
   .proto-lado > .proto-info { order: -1; }
   .proto-tela.proto-ver { max-width: 860px; }
 }
@@ -1760,7 +1761,7 @@ async function buscarDados({ forcar = false } = {}) {
   if (d.versaoDados) versaoCarregada = d.versaoDados;
   const vers = new Map();
   const atendimentos = d.atendimentos.map(({ versao, ...a }) => { vers.set(a.id, versao); return { ...a, opcionais: a.opcionais || [], opcionaisFeitos: a.opcionaisFeitos || {} }; });
-  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [], protocolos: d.protocolos || [] };
+  const novo = { funcionarios: d.funcionarios, tipos: d.tipos, opcionais: d.opcionais || [], veiculos: d.veiculos, atendimentos, estoque: d.estoque, ajustes: d.ajustes || { limpezaDias: 30 }, agenda: d.agenda || [], eventos: d.eventos || [], lixeira: d.lixeira || [], anteriores: d.anteriores || [], chamados: d.chamados || [], avisos: d.avisos || [], convites: d.convites || [], confirmacoes: d.confirmacoes || [], protocolos: d.protocolos || [], protocolosEntrada: d.protocolosEntrada || [] };
   carregadoEm = Date.now();
   VERS.clear(); for (const [k, v] of vers) VERS.set(k, v);
   if (DB && JSON.stringify(novo) === JSON.stringify(DB)) return false; // nada mudou: mantém os mesmos objetos da tela
@@ -2191,9 +2192,10 @@ function opcionaisDoProtocolo(estado) {
   const extras = (estado && Array.isArray(estado.extras) ? estado.extras : []).filter(x => x.tipo === 'valor' || x.tipo === 'brinde').map(x => semAcento(x.n).trim()).filter(Boolean);
   return (DB.opcionais || []).map(o => o.nome).filter(n => { const k = semAcento(n).trim(); return k && extras.some(x => x.includes(k) || k.includes(x)); });
 }
-// Protocolo ainda sem veículo com a mesma placa ou do mesmo agendamento (mesma regra do servidor).
+// Protocolo ainda sem veículo com a mesma placa ou do mesmo agendamento (mesma regra do servidor). O Controle tem os
+// protocolos inteiros; o Funcionário recebe só um resumo sem valores (protocolosEntrada), para a entrada do veículo.
 function protocoloParaEntrada(placa, agId) {
-  const livres = (DB.protocolos || []).filter(p => !p.atendimentoId);
+  const livres = ((isCtrl() ? DB.protocolos : DB.protocolosEntrada) || []).filter(p => !p.atendimentoId && p.estado);
   return livres.find(p => protoPlaca(p.estado.veiculo && p.estado.veiculo.placa) === placa) || (agId && livres.find(p => p.estado.agId === agId)) || null;
 }
 function etapaLiberada(at, i) {
@@ -4406,15 +4408,23 @@ function renderNew(placaRaw) {
   const fotos = []; // {id, rotulo, blob, url, meta?}
   const pendente = S.pending && S.pending.placa === placa && S.pending.blob ? S.pending.blob : null;
   S.pending = null;
+  // Protocolo desta placa (14/11/2026: antes só era ligado depois de iniciar o serviço): cliente, veículo, serviço,
+  // opcionais e valor já vêm no formulário. Protocolo de um agendamento, sem agendamento escolhido: usa esse agendamento.
+  const prot0 = protocoloParaEntrada(placa, S.entradaAg), pe = prot0 ? prot0.estado : null;
+  if (pe && !S.entradaAg && pe.agId && agendaAtiva().some(a => a.id === pe.agId && a.status === 'agendado')) S.entradaAg = pe.agId;
   // Entrada vinda da agenda: cliente, serviço, veículo e valor já vêm do agendamento.
   const agAberto = agendaEmEntrada(), ag0 = agAberto;
+  const protNome = pe ? protoNome(pe.cliente && pe.cliente.nome) : '';
+  const protModelo = pe && pe.veiculo && pe.veiculo.modelo ? protoVeiculo(pe.veiculo.modelo) : '';
+  const protCalc = pe && isCtrl() ? protoCalc(pe) : null;
+  const protValor = protCalc && protCalc.total > 0 ? { entrada: protCalc.entrada || 0, receber: protCalc.saldo != null ? protCalc.saldo : protCalc.total } : null;
 
-  // Nome do cliente: do agendamento ou do último serviço desta placa.
-  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: ag0 ? ag0.cliente : anteriores.clienteNome });
-  const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Fiat Strada branca 2022', value: v.descricao || (ag0 ? ag0.marca : '') });
+  // Nome do cliente: do protocolo, do agendamento ou do último serviço desta placa.
+  const fCliente = el('input', { id: 'f-cliente', type: 'text', maxlength: '80', placeholder: 'Ex.: João da Silva', autocomplete: 'off', autocapitalize: 'words', value: protNome || (ag0 ? ag0.cliente : anteriores.clienteNome) });
+  const fDesc = el('input', { id: 'f-desc', type: 'text', maxlength: '80', placeholder: 'Ex.: Fiat Strada branca 2022', value: v.descricao || protModelo || (ag0 ? ag0.marca : '') });
   const tiposOk = DB.tipos.filter(t => t.etapas.length);
-  const servAg = ag0 ? ag0.servico.toLowerCase() : '';
-  const tipoAg = servAg ? tiposOk.find(t => servAg.includes(t.nome.toLowerCase())) : null;
+  const tipoPorTexto = txt => { const k = semAcento(txt || '').trim(); return k ? tiposOk.find(t => k.includes(semAcento(t.nome).trim())) || null : null; };
+  const tipoAg = (pe && pe.serv ? tipoPorTexto(protoCurto(pe.serv.titulo)) : null) || (ag0 ? tipoPorTexto(ag0.servico) : null);
   // Sem escolha automática: o tipo define as etapas, então precisa ser escolhido (só vem pronto se o agendamento bater).
   const fTipo = el('select', { id: 'f-tipo', required: true },
     el('option', { value: '', disabled: true, selected: !tipoAg }, 'Escolha o tipo de serviço'),
@@ -4422,11 +4432,15 @@ function renderNew(placaRaw) {
   const fDanos = el('textarea', { id: 'f-danos', rows: '3', maxlength: '1000', placeholder: 'Riscos, amassados, peças soltas, problemas já existentes' });
   const fObj = el('textarea', { id: 'f-obj', rows: '2', maxlength: '600', placeholder: 'Objetos deixados no veículo' });
   // Valor (só Controle): Entrada paga e A receber. Do agendamento vêm a entrada e o que falta pagar.
-  const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null && entradaDe(ag0) ? fmtQ(entradaDe(ag0)) : '' });
-  const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', value: ag0 && ag0.valor != null ? fmtQ(aReceberDe(ag0)) : '' });
-  const opcSel = rasc ? (rasc.opcionais || []).filter(n => (DB.opcionais || []).some(o => o.nome === n)) : []; // opcionais marcados na entrada
+  const fEntrada = el('input', { id: 'f-entrada', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off',
+    value: protValor ? (protValor.entrada ? fmtQ(protValor.entrada) : '') : ag0 && ag0.valor != null && entradaDe(ag0) ? fmtQ(entradaDe(ag0)) : '' });
+  const fReceber = el('input', { id: 'f-receber', type: 'text', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off',
+    value: protValor ? fmtQ(protValor.receber) : ag0 && ag0.valor != null ? fmtQ(aReceberDe(ag0)) : '' });
+  const opcSel = rasc ? (rasc.opcionais || []).filter(n => (DB.opcionais || []).some(o => o.nome === n)) // opcionais marcados na entrada
+    : pe ? opcionaisDoProtocolo(pe) : [];
   // Mês da entrada (06/11/2026): do agendamento vem o mês em que ele foi feito (a entrada é paga no agendamento).
-  const campoMes = campoMesEntrada(rasc && rasc.entradaMes ? rasc.entradaMes : ag0 && entradaDe(ag0) > 0 && ag0.criadoEm ? mesDe(ag0.criadoEm) : mesDe(Date.now()), () => guardar());
+  const campoMes = campoMesEntrada(rasc && rasc.entradaMes ? rasc.entradaMes : ag0 && ag0.criadoEm ? mesDe(ag0.criadoEm)
+    : prot0 && prot0.criadoEm ? mesDe(prot0.criadoEm) : mesDe(Date.now()), () => guardar());
   const mostrarMes = () => { campoMes.el.hidden = !(parseNum(fEntrada.value.trim() || '0') > 0); };
   fEntrada.addEventListener('input', mostrarMes);
   // Rascunho: volta com o que já tinha sido preenchido.
@@ -4578,6 +4592,11 @@ function renderNew(placaRaw) {
   const body = el('div', { class: 'stack', style: 'max-width:640px' },
     backLink('#/placa', 'Ler outra placa'),
     avisoAg,
+    pe ? el('div', { class: 'card conf-card is-ok' }, el('div', { class: 'conf-linha' },
+      el('span', { class: 'conf-ico', 'aria-hidden': 'true', html: ICON.protocolo }),
+      el('span', { class: 'conf-txt' }, el('b', { text: `Protocolo de ${protNome || 'cliente sem nome'}` }),
+        el('span', { text: [protoCurto(pe.serv && pe.serv.titulo), protModelo, ...opcionaisDoProtocolo(pe).map(n => `+ ${n}`)].filter(Boolean).join(' · ') })),
+      isCtrl() ? el('a', { class: 'btn btn--sm', href: `#/protocolo/${esc(prot0.id)}` }, 'Ver') : null)) : null,
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(placa) }),
       el('span', { class: 'veh-sub', text: anteriores.n ? `Veículo já atendido ${anteriores.n} ${anteriores.n === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores.ultimoEm)}.` : 'Novo veículo. Registre a entrada.' })),
@@ -7129,7 +7148,7 @@ function renderProtocolo(pid) {
   // Prévia (o mesmo documento, reduzido para caber) + conferências + botões.
   const escala = () => { const d = prev.firstChild; if (!d) return; const k = prev.clientWidth / 1024; d.style.transform = `scale(${k})`; prev.style.height = `${Math.ceil(d.offsetHeight * k)}px`; };
   try { new ResizeObserver(escala).observe(prev); } catch {}
-  const bBaixar = el('button', { class: 'btn btn--primary btn--lg grow', type: 'button' }, icon('file'), 'Baixar PNG');
+  const bBaixar = el('button', { class: `btn${editando ? '' : ' btn--primary'} btn--lg grow`, type: 'button' }, icon('file'), 'Baixar PNG');
   const bCopiar = el('button', { class: 'btn btn--lg grow', type: 'button' }, icon('image'), 'Copiar imagem');
   const podeCompartilhar = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'a.png', { type: 'image/png' })] })); } catch { return false; } })();
   const bComp = podeCompartilhar ? el('button', { class: 'btn btn--lg btn--block proto-comp', type: 'button' }, icon('wa'), 'Compartilhar (WhatsApp)') : null;
@@ -7194,11 +7213,15 @@ function renderProtocolo(pid) {
     if (Date.now() - confirmaNovo > 3000 && e.cliente.nome.trim() && protoSituacao(e) !== 'salvo') { confirmaNovo = Date.now(); bNovo.lastChild.textContent = 'Descartar?'; setTimeout(() => { bNovo.lastChild.textContent = 'Novo'; }, 3000); return; }
     S.proto = protoNovo(); lsGravar(PROTO_RASC, S.proto); go('#/protocolo'); window.scrollTo(0, 0);
   });
-  const bSalvar = el('button', { class: 'btn btn--sm' + (salvoBanco ? ' btn--primary' : ''), type: 'button', onclick: () => {
+  // Salvar fica junto de Baixar e Copiar (14/11/2026: separado no topo, dava para sair achando que já estava salvo)
+  // e, salvo, volta para a visualização do protocolo.
+  const bSalvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button', onclick: () => {
     if (!e.cliente.nome.trim()) { toast('Coloque o nome do cliente.', true); return; }
     protoSalvar(e); toast('Protocolo salvo.');
-    if (salvoBanco) { S.protoEditar = null; S.proto = null; route(); } else atualizar();
-  } }, icon('check'), 'Salvar');
+    if (!salvoBanco) lsGravar(PROTO_RASC, null);
+    S.protoEditar = null; S.proto = null;
+    if (parts()[0] === 'protocolo' && parts()[1] === e.id) route(); else go(`#/protocolo/${esc(e.id)}`);
+  } }, icon('check'), 'Salvar protocolo');
   const bEditar = el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.protoEditar = pid; S.proto = e; route(); } }, icon('edit'), 'Editar');
   const bCancelar = el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.protoEditar = null; S.proto = null; route(); } }, 'Cancelar');
   // Excluir (só marca no banco), com dois toques.
@@ -7223,10 +7246,10 @@ function renderProtocolo(pid) {
   shell(el('div', { class: 'stack proto-tela' },
     backLink('#/protocolos', 'Protocolos'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: salvoBanco ? 'Editar protocolo' : 'Novo protocolo' }),
-      el('div', { class: 'proto-topo-acoes' }, ...(salvoBanco ? [bCancelar, bSalvar] : [bSalvar, bNovo]))),
+      el('div', { class: 'proto-topo-acoes' }, salvoBanco ? bCancelar : bNovo)),
     el('div', { class: 'proto-cols' }, form,
       el('div', { class: 'proto-lado' }, el('span', { class: 'label', text: 'Prévia' }), prev, info,
-        el('div', { class: 'actions' }, bBaixar, bCopiar), bComp))), { current: 'relatorios' });
+        el('div', { class: 'proto-botoes' }, bSalvar, el('div', { class: 'actions' }, bBaixar, bCopiar), bComp)))), { current: 'relatorios' });
   atualizar();
   protoFontes().then(escala).catch(() => {});
 }
