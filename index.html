@@ -776,6 +776,11 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .mais-grade .is-problema { border-color: #F3C9C4; }
 .mais-grade .is-problema .rt-ico { background: var(--danger-bg); border-color: #F3C9C4; color: var(--danger); }
 .mais-grade .is-problema .rt-tit { color: var(--danger); }
+/* Separações do Mais e dos Concluídos do Início (14/11/2026) */
+.grupo-tit { display: flex; align-items: center; gap: 8px; margin: 6px 0 -2px; font: 700 13px/1.2 var(--cond); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.grupo-tit .count { font: 600 12px/1 var(--body); letter-spacing: 0; }
+.grupo-tit.is-warn { color: #9A5B00; }
+.q-sub { margin: 4px 2px 2px; font: 700 12px/1.2 var(--cond); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 /* Fontes do protocolo (as mesmas do modelo; só baixam quando o protocolo aparece na tela) */
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-700.woff2') format('woff2'); font-weight: 700; font-display: block; }
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-400.woff2') format('woff2'); font-weight: 400; font-display: block; }
@@ -3845,10 +3850,19 @@ function renderHome() {
     const items = !q ? all : all.filter(bate), itemsFeitos = !q ? feitos : feitos.filter(bate);
     if (quadro) { desenharQuadro(quadro, items, itemsFeitos); return; }
     preencher(grid, ...items.map(carCard));
-    preencher(gridFeitos, ...itemsFeitos.map(carCard));
     const semBaixa = itemsFeitos.filter(pagPendente).length;
-    preencher(secFeitos, el('div', { class: 'page-head' }, el('h2', { text: isCtrl() ? 'Concluídos' : 'Concluídos nas últimas 24 h' }),
-      semBaixa ? el('span', { class: 'tag tag--warn', text: `${semBaixa} ${semBaixa === 1 ? 'pendente' : 'pendentes'}` }) : el('span', { class: 'count', text: String(itemsFeitos.length) })), gridFeitos);
+    const cabFeitos = el('div', { class: 'page-head' }, el('h2', { text: isCtrl() ? 'Concluídos' : 'Concluídos nas últimas 24 h' }),
+      semBaixa ? el('span', { class: 'tag tag--warn', text: `${semBaixa} ${semBaixa === 1 ? 'pendente' : 'pendentes'}` }) : el('span', { class: 'count', text: String(itemsFeitos.length) }));
+    if (isCtrl()) {
+      // Controle: Concluídos separados em Pagamento pendente e Pagos (pedido de 14/11/2026).
+      const pend = itemsFeitos.filter(pagPendente), pagos = itemsFeitos.filter(a => !pagPendente(a));
+      const sub = (tit, lista, warn) => lista.length ? [el('h3', { class: 'grupo-tit' + (warn ? ' is-warn' : '') }, tit, el('span', { class: 'count', text: String(lista.length) })),
+        el('ul', { class: 'gallery' }, ...lista.map(carCard))] : [];
+      preencher(secFeitos, cabFeitos, ...sub('Pagamento pendente', pend, true), ...sub('Pagos', pagos));
+    } else {
+      preencher(gridFeitos, ...itemsFeitos.map(carCard));
+      preencher(secFeitos, cabFeitos, gridFeitos);
+    }
     secFeitos.hidden = !itemsFeitos.length;
     empty.hidden = items.length > 0;
     empty.textContent = all.length ? 'Nada encontrado.' : 'Nenhum veículo em serviço. Toque em Adicionar para registrar a entrada de um veículo.';
@@ -3977,7 +3991,10 @@ function desenharQuadro(box, items, feitos) {
     const lista = k === 'feito' ? feitos : items.filter(a => faseDe(a) === k);
     return el('section', { class: `q-col is-${k}`, 'aria-label': tit },
       el('div', { class: 'q-head' }, el('span', { class: 'q-tit', text: tit }), el('span', { class: 'q-n', text: String(lista.length) })),
-      lista.length ? el('ul', { class: 'q-lista' }, lista.map(cartaoQuadro)) : el('p', { class: 'q-vazio', text: 'Nenhum veículo aqui' }));
+      !lista.length ? el('p', { class: 'q-vazio', text: 'Nenhum veículo aqui' })
+        : k === 'feito' && isCtrl() ? el('div', {}, ...[['Pagamento pendente', lista.filter(pagPendente)], ['Pagos', lista.filter(a => !pagPendente(a))]]
+          .filter(([, l]) => l.length).flatMap(([t, l]) => [el('p', { class: 'q-sub', text: `${t} (${l.length})` }), el('ul', { class: 'q-lista' }, l.map(cartaoQuadro))]))
+        : el('ul', { class: 'q-lista' }, lista.map(cartaoQuadro)));
   }));
 }
 function cartaoQuadro(at) {
@@ -6623,17 +6640,21 @@ function renderMais() {
     badge ? el('span', { class: 'rt-badge', 'aria-hidden': 'true', text: String(badge) }) : null,
     el('span', { class: 'rt-tit', text: tit }),
     el('span', { class: 'rt-sub', text: sub }));
+  // Grupos (pedido de 14/11/2026): Relatórios, Serviços e Sistema.
+  const grupo = (tit, ...tiles) => [el('h2', { class: 'grupo-tit', text: tit }), el('div', { class: 'mais-grade' }, ...tiles)];
   shell(el('div', { class: 'stack', style: 'max-width:720px' },
     el('div', { class: 'page-head' }, el('h1', { text: 'Mais' })),
-    el('div', { class: 'mais-grade' },
+    ...grupo('Relatórios',
       tile('#/relatorios', 'chart', 'Relatórios', fat != null ? `${fmtBRL(fat)} no mês` : 'Faturado e estoque', { claro: true, aria: 'Relatórios: faturado, serviços e estoque' }),
+      tile('#/dia', 'diaOk', 'Dia', 'Resumo do dia', { claro: true, aria: 'Resumo do dia: tudo o que aconteceu num dia' })),
+    ...grupo('Serviços',
       tile('#/historico', 'clock', 'Histórico', `${nConc} ${nConc === 1 ? 'concluído' : 'concluídos'}`, { claro: true, aria: `Histórico de serviços, ${nConc} concluídos` }),
-      tile('#/dia', 'diaOk', 'Dia', 'Resumo do dia', { claro: true, aria: 'Resumo do dia: tudo o que aconteceu num dia' }),
       (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
-      tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
-      tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' }),
+      tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' })),
+    ...grupo('Sistema',
       tile('#/ajustes/notificacoes', 'bell', 'Notificações', 'Configurações', { claro: true, aria: 'Configurações de notificação' }), // Ajustes > Notificações (14/11/2026)
       (() => { const n = nLixeira(); return tile('#/lixeira', 'lixeira', 'Lixeira', n ? `${n} ${n === 1 ? 'item' : 'itens'}` : 'Vazia', { claro: true, aria: `Lixeira: ${n ? `${n} ${n === 1 ? 'item' : 'itens'}` : 'vazia'}` }); })(),
+      tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
       (() => { const t = tile('#/problema', 'warn', 'Problema', 'Relatar ao suporte', { claro: true, aria: 'Relatar problema' }); t.classList.add('is-problema'); return t; })()),
     botaoConvites()), { current: 'relatorios' });
 }
