@@ -4315,7 +4315,7 @@ async function runRead(frame, crop, mode) {
    Fotos: grade com espaços por lado do veículo
    ===================================================================== */
 // items: [{id?, rotulo, url?}] ; onAdd(rotulo, origem) ; onRemove(item) ; openable
-// carro: false usa a lista simples de tipos (cadastro do veículo), sem o carro visto de cima.
+// carro: false usa a lista simples de tipos, sem o carro visto de cima (hoje ninguém usa).
 function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto', carro = true }) {
   const ul = el('ul', { class: 'photos' });
   const tiles = [], qtd = {};
@@ -4560,7 +4560,7 @@ function renderNew(placaRaw) {
   const fotosBox = el('div');
   const novaFoto = (rotulo, blob, extra) => ({ id: uid(), rotulo, blob, url: URL.createObjectURL(blob), ...extra });
   const drawFotos = () => preencher(fotosBox, photoGrid({
-    items: fotos, slots: ROTULOS, carro: false, // cadastro: lista simples de tipos, sem o carro visto de cima
+    items: fotos, slots: ROTULOS, // carro visto de cima também no cadastro (voltou a pedido em 14/11/2026)
     onAdd: async (rotulo, origem) => {
       const file = await pickPhoto(origem); if (!file) return;
       try {
