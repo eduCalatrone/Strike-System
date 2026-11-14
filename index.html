@@ -807,6 +807,12 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .escolha-op .ok { width: 20px; height: 20px; flex: none; color: var(--ink); }
 .escolha-op .ok svg { width: 20px; height: 20px; }
 .escolha-op[aria-checked="true"] { background: var(--soft); }
+/* Fotinha do veículo antes do nome (Relatar problema, 14/11/2026) */
+.veic-mini { flex: none; width: 44px; height: 32px; border-radius: 6px; overflow: hidden; display: grid; place-items: center; background: var(--soft); border: 1px solid var(--line); color: var(--muted); }
+.veic-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.veic-mini svg { width: 18px; height: 18px; }
+.escolha-btn > .veic-mini { width: 36px; height: 26px; }
+.escolha-btn > .veic-mini + span { flex: 1; }
 .escolha-cab { padding: 12px 16px 6px; font: 700 12px var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--bg, #F4F4F3); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1; }
 /* Galeria de protocolos e cartão da conferência (13/11/2026) */
 .proto-mes { font-size: 15px; margin: 4px 0 0; color: var(--ink-2); }
@@ -2570,10 +2576,12 @@ function quandoCurto(ts) {
 // Cartão do chamado (reorganizado em 22/10/2026, "muito bagunçado"): quem e quando no topo (com a tela onde estava),
 // texto e fotos, os dados técnicos do aparelho recolhidos numa linha só e as ações do Controle numa linha embaixo.
 // Veículo escolhido no Relatar problema (14/11/2026): mini placa e modelo; abre o veículo se ele ainda está no sistema.
+const fotinhaVeic = at => { const capa = at && capaDe(at);
+  return el('span', { class: 'veic-mini', 'aria-hidden': 'true' }, capa ? photoImg(capa, '') : icon('car')); };
 function veiculoDoChamado(x) {
   const v = (x.contexto || {}).veiculo; if (!v || !v.placa) return null;
   const at = DB.atendimentos.find(a => a.id === v.id);
-  const kids = [miniPlaca(v.placa), v.modelo ? el('span', { class: 'cv-mod', text: v.modelo }) : null, at && at.clienteNome ? el('span', { class: 'cv-cli', text: at.clienteNome }) : null];
+  const kids = [fotinhaVeic(at), miniPlaca(v.placa), v.modelo ? el('span', { class: 'cv-mod', text: v.modelo }) : null, at && at.clienteNome ? el('span', { class: 'cv-cli', text: at.clienteNome }) : null];
   return at ? el('a', { class: 'chamado-veic', href: `#/veiculo/${esc(at.id)}`, onclick: () => document.querySelectorAll('dialog.sheet').forEach(d => { if (d.open) d.close(); d.remove(); }) }, ...kids, icon('chev'))
     : el('div', { class: 'chamado-veic' }, ...kids);
 }
@@ -2855,7 +2863,7 @@ function renderProblema() {
   if (f.veiculo && !veics.some(a => a.id === f.veiculo)) f.veiculo = '';
   const rotuloEnviar = () => f.destino === 'todos' ? 'Enviar para todos' : 'Enviar para o suporte';
   const opVeic = a => { const v = DB.veiculos[a.placa] || {};
-    return { v: a.id, t: `${v.descricao ? modeloCurto(v.descricao) + ' · ' : ''}${fmtPlaca(a.placa)}`, sub: [a.clienteNome, a.tipoNome].filter(Boolean).join(' · ') }; };
+    return { v: a.id, t: `${v.descricao ? modeloCurto(v.descricao) + ' · ' : ''}${fmtPlaca(a.placa)}`, sub: [a.clienteNome, a.tipoNome].filter(Boolean).join(' · '), ico: () => fotinhaVeic(a) }; };
   const emServ = ativos(), conc = concluidosRecentes();
   const fVeic = veics.length ? campoEscolha({ titulo: 'Veículo', valor: f.veiculo, vazio: 'Nenhum',
     opcoes: [{ v: '', t: 'Nenhum' }, ...(emServ.length ? [{ cab: 'Em serviço' }, ...emServ.map(opVeic)] : []), ...(conc.length ? [{ cab: 'Concluídos' }, ...conc.map(opVeic)] : [])],
@@ -7098,7 +7106,7 @@ function renderProtocolos() {
 function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo = null, aoEscolher }) {
   const atual = opcoes.find(o => !o.cab && o.v === valor);
   const b = el('button', { class: 'escolha-btn' + (atual && !fixo ? '' : ' vazio'), type: 'button', 'aria-haspopup': 'dialog', 'aria-label': titulo },
-    el('span', { text: fixo || (atual ? atual.t : vazio) }), icon('down'));
+    atual && atual.ico && !fixo ? atual.ico() : null, el('span', { text: fixo || (atual ? atual.t : vazio) }), icon('down'));
   b.addEventListener('click', () => {
     const d = el('dialog', { class: 'sheet', 'aria-label': titulo });
     const fechar = () => { window.removeEventListener('hashchange', fechar); if (d.open) d.close(); d.remove(); };
@@ -7109,6 +7117,7 @@ function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo 
       el('div', { class: 'card-head' }, el('h2', { text: titulo }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
       el('div', { class: 'escolha-lista', role: 'radiogroup' }, opcoes.map(o => o.cab ? el('div', { class: 'escolha-cab', text: o.cab }) : el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
         onclick: () => { fechar(); aoEscolher(o.v); } },
+        o.ico ? o.ico() : null,
         el('b', {}, o.t, o.sub ? el('small', { text: o.sub }) : null),
         o.dir ? el('span', { class: 'v', text: o.dir }) : null,
         el('span', { class: 'ok', 'aria-hidden': 'true', html: o.v === valor ? ICON.check : '' }))))));
