@@ -6615,7 +6615,7 @@ function renderMais() {
       (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
       tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
       tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' }),
-      (() => { const n = avisosNovos().length; return tile('#/notificacoes', 'bell', 'Notificações', n ? `${n} ${n === 1 ? 'nova' : 'novas'}` : 'Nenhuma nova', { claro: true, badge: n, aria: n ? `Notificações, ${n} ${n === 1 ? 'nova' : 'novas'}` : 'Notificações' }); })(),
+      tile('#/ajustes/notificacoes', 'bell', 'Notificações', 'Configurações', { claro: true, aria: 'Configurações de notificação' }), // Ajustes > Notificações (14/11/2026)
       (() => { const n = nLixeira(); return tile('#/lixeira', 'lixeira', 'Lixeira', n ? `${n} ${n === 1 ? 'item' : 'itens'}` : 'Vazia', { claro: true, aria: `Lixeira: ${n ? `${n} ${n === 1 ? 'item' : 'itens'}` : 'vazia'}` }); })(),
       (() => { const t = tile('#/problema', 'warn', 'Problema', 'Relatar ao suporte', { claro: true, aria: 'Relatar problema' }); t.classList.add('is-problema'); return t; })()),
     botaoConvites()), { current: 'relatorios' });
