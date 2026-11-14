@@ -4335,7 +4335,7 @@ function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Ad
   return ul;
 }
 // Janela de adicionar foto: escolhe o tipo (tag) e depois "Tirar foto" ou "Galeria".
-// Espaço fixo (Frente, Traseira...) já vem com o tipo marcado; "Adicionar foto" obriga a escolher.
+// Espaço fixo (Frente, Traseira...) abre só Tirar foto e Galeria; "Adicionar foto" mostra o carro e obriga a escolher.
 // aoEscolher(tipo, origem) roda no mesmo toque, para a galeria abrir no iPhone.
 // Carro visto de cima: cada lado é um botão no lugar dele (Frente em cima, Traseira embaixo, laterais dos lados,
 // Interior no teto). Placa e o resto ficam em "Outras fotos". Lado que já tem foto ganha o check.
@@ -4400,6 +4400,15 @@ function janelaFoto(tipoInicial, aoEscolher, feitos = new Set(), comCarro = true
   tirar.onclick = () => ir('camera');
   galeria.onclick = () => ir('galeria');
   desenhar();
+  // Espaço com o tipo já escolhido (ex.: tocou em "Frente"): só Tirar foto e Galeria, sem perguntar o lado de novo
+  // (14/11/2026). O carro e a lista de tipos ficam para o "+ Adicionar foto".
+  if (tipoInicial) {
+    preencher(d, el('div', { class: 'sheet-in' },
+      el('div', { class: 'card-head' }, el('h2', { text: tipoInicial }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Cancelar')),
+      el('div', { class: 'actions' }, tirar, galeria)));
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    return;
+  }
   preencher(d, el('div', { class: 'sheet-in' },
     el('div', { class: 'card-head' }, el('h2', { text: 'Adicionar foto' }), el('button', { class: 'link-btn', type: 'button', onclick: () => d.close() }, 'Cancelar')),
     comCarro ? el('span', { class: 'label', text: 'Toque no lado do veículo' }) : null,
