@@ -1155,6 +1155,11 @@ body::before {
 .chamado-tags { flex: none; display: flex; align-items: center; gap: 6px; }
 .chamado-sit { font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 999px; background: #EDEDEB; color: var(--ink-2); }
 .chamado.aberto .chamado-sit { background: rgba(180, 35, 27, .1); color: #B4231B; }
+.chamado-veic { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); color: inherit; text-decoration: none; font: 700 14px/1.2 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
+.chamado-veic > span:not(.car-placa) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chamado-veic .car-placa, .chamado-veic .cv-mod { flex: none; }
+.chamado-veic .cv-cli { font: 400 13px/1.2 var(--body); text-transform: none; letter-spacing: 0; color: var(--muted); }
+.chamado-veic svg { width: 16px; height: 16px; flex: none; margin-left: auto; color: var(--muted); }
 .chamado-txt { white-space: pre-wrap; word-break: break-word; font-size: 15px; }
 .chamado-resp { display: grid; gap: 4px; font-size: 14px; padding: 10px 12px; border-radius: 10px; background: #F2F2F0; }
 .chamado-resp-quem { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ok); }
@@ -2564,6 +2569,14 @@ function quandoCurto(ts) {
 }
 // Cartão do chamado (reorganizado em 22/10/2026, "muito bagunçado"): quem e quando no topo (com a tela onde estava),
 // texto e fotos, os dados técnicos do aparelho recolhidos numa linha só e as ações do Controle numa linha embaixo.
+// Veículo escolhido no Relatar problema (14/11/2026): mini placa e modelo; abre o veículo se ele ainda está no sistema.
+function veiculoDoChamado(x) {
+  const v = (x.contexto || {}).veiculo; if (!v || !v.placa) return null;
+  const at = DB.atendimentos.find(a => a.id === v.id);
+  const kids = [miniPlaca(v.placa), v.modelo ? el('span', { class: 'cv-mod', text: v.modelo }) : null, at && at.clienteNome ? el('span', { class: 'cv-cli', text: at.clienteNome }) : null];
+  return at ? el('a', { class: 'chamado-veic', href: `#/veiculo/${esc(at.id)}`, onclick: () => document.querySelectorAll('dialog.sheet').forEach(d => { if (d.open) d.close(); d.remove(); }) }, ...kids, icon('chev'))
+    : el('div', { class: 'chamado-veic' }, ...kids);
+}
 function cartaoChamado(x, { controle = false, autor = false, redraw } = {}) {
   const aberto = !x.resolvidoEm, ctx = x.contexto || {};
   const comNome = controle || autor;
@@ -2579,6 +2592,7 @@ function cartaoChamado(x, { controle = false, autor = false, redraw } = {}) {
         x.destino === 'todos' ? el('span', { class: 'tag', text: 'Para todos' }) : null,
         // No Controle a aba já diz se está aberto ou resolvido.
         controle ? null : el('span', { class: 'chamado-sit', text: aberto ? 'Aberto' : 'Resolvido' }))),
+    veiculoDoChamado(x),
     el('div', { class: 'chamado-txt', text: x.texto }),
     fotosDoChamado(x),
     !aberto ? el('div', { class: 'chamado-resp' },
@@ -2830,9 +2844,22 @@ function renderConvites() {
 // #/problema (Funcionário; o Controle também abre pelo endereço)
 function renderProblema() {
   const redraw = () => { const y = window.scrollY; renderProblema(); window.scrollTo(0, y); };
-  const f = S.problema = S.problema || { texto: '', fotos: [], destino: 'suporte' };
-  const rotuloEnviar = () => f.destino === 'todos' ? 'Enviar para todos' : 'Enviar para o suporte';
   const origem = telaDoChamado || { hash: '#/inicio', nome: 'Início' };
+  // Veículos que aparecem no Início (em serviço e concluídos). Vindo da tela de um deles, já vem escolhido.
+  const veics = [...ativos(), ...concluidosRecentes()];
+  if (!S.problema) {
+    const m = /^#\/veiculo\/([\w-]+)/.exec(origem.hash || '');
+    S.problema = { texto: '', fotos: [], destino: 'suporte', veiculo: m && veics.some(a => a.id === m[1]) ? m[1] : '' };
+  }
+  const f = S.problema;
+  if (f.veiculo && !veics.some(a => a.id === f.veiculo)) f.veiculo = '';
+  const rotuloEnviar = () => f.destino === 'todos' ? 'Enviar para todos' : 'Enviar para o suporte';
+  const opVeic = a => { const v = DB.veiculos[a.placa] || {};
+    return { v: a.id, t: `${v.descricao ? modeloCurto(v.descricao) + ' · ' : ''}${fmtPlaca(a.placa)}`, sub: [a.clienteNome, a.tipoNome].filter(Boolean).join(' · ') }; };
+  const emServ = ativos(), conc = concluidosRecentes();
+  const fVeic = veics.length ? campoEscolha({ titulo: 'Veículo', valor: f.veiculo, vazio: 'Nenhum',
+    opcoes: [{ v: '', t: 'Nenhum' }, ...(emServ.length ? [{ cab: 'Em serviço' }, ...emServ.map(opVeic)] : []), ...(conc.length ? [{ cab: 'Concluídos' }, ...conc.map(opVeic)] : [])],
+    aoEscolher: v => { f.veiculo = v; redraw(); } }) : null;
   const fTxt = el('textarea', { id: 'p-texto', rows: '5', maxlength: '1500', placeholder: 'Descreva o problema', oninput: e => { f.texto = e.target.value; } });
   fTxt.value = f.texto;
   const fotosBox = el('div', { class: 'chamado-fotos' }, f.fotos.map((x, i) => el('button', { type: 'button', class: 'rm', 'aria-label': `Tirar foto ${i + 1}`, title: 'Tirar esta foto', onclick: () => { URL.revokeObjectURL(x.url); f.fotos.splice(i, 1); redraw(); } },
@@ -2849,7 +2876,9 @@ function renderProblema() {
       const fotos = [];
       for (const x of f.fotos) { x.meta = x.meta || await enviarFoto(x.blob); fotos.push({ caminho: x.meta.caminho, miniatura: x.meta.miniatura }); }
       enviarBtn.textContent = 'Enviando…';
-      const contexto = { tela: origem.nome, endereco: origem.hash, aparelho: nomeAparelho(), navegador: navigator.userAgent, versao: etagInicial ? String(etagInicial).replace(/["W\/]/g, '').slice(0, 12) : '', online: navigator.onLine, erros: [...ERROS_RECENTES] };
+      const atV = veics.find(a => a.id === f.veiculo);
+      const veiculo = atV ? { id: atV.id, placa: atV.placa, modelo: modeloCurto((DB.veiculos[atV.placa] || {}).descricao) } : undefined;
+      const contexto = { veiculo, tela: origem.nome, endereco: origem.hash, aparelho: nomeAparelho(), navegador: navigator.userAgent, versao: etagInicial ? String(etagInicial).replace(/["W\/]/g, '').slice(0, 12) : '', online: navigator.onLine, erros: [...ERROS_RECENTES] };
       await apiJson('/api/dados', { method: 'POST', body: { ops: [{ col: 'chamados', acao: 'abrir', item: { id: uid(), texto, fotos, contexto, destino: f.destino } }] } });
       f.fotos.forEach(x => URL.revokeObjectURL(x.url)); S.problema = null;
       toast(f.destino === 'todos' ? 'Enviado para todos.' : 'Problema enviado.');
@@ -2868,6 +2897,7 @@ function renderProblema() {
   shell(el('div', { class: 'stack', style: 'max-width:640px' },
     el('h1', { text: 'Relatar problema' }),
     el('div', { class: 'card' },
+      fVeic ? el('div', { class: 'field' }, el('span', { class: 'label', text: 'Veículo (opcional)' }), fVeic) : null,
       el('div', { class: 'field' }, el('label', { for: 'p-texto', text: 'O que aconteceu?' }), fTxt),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Prints ou fotos (opcional)' }), fotosBox),
       el('div', { class: 'field' }, el('span', { class: 'label', text: 'Enviar para' }), segDestino),

@@ -120,7 +120,7 @@ async function carregar(c, eu) {
       })),
     },
     chamados: chamados.map(x => ({
-      id: x.id, texto: x.texto, fotos: Array.isArray(x.fotos) ? x.fotos : [], contexto: ctrl || x.por_id === eu.id ? x.contexto || {} : {}, porId: x.por_id, porNome: x.por_nome || '',
+      id: x.id, texto: x.texto, fotos: Array.isArray(x.fotos) ? x.fotos : [], contexto: ctrl || x.por_id === eu.id ? x.contexto || {} : x.contexto && x.contexto.veiculo ? { veiculo: x.contexto.veiculo } : {}, porId: x.por_id, porNome: x.por_nome || '',
       destino: x.destino === 'todos' ? 'todos' : 'suporte',
       criadoEm: ms(x.criado_em), resolvidoEm: ms(x.resolvido_em), resolvidoPor: x.resolvido_por || '', resposta: x.resposta || '',
     })),
@@ -593,12 +593,16 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const ctx = it.contexto && typeof it.contexto === 'object' ? it.contexto : {};
       const contexto = { tela: txt(ctx.tela, 80), endereco: txt(ctx.endereco, 120), aparelho: txt(ctx.aparelho, 60), navegador: txt(ctx.navegador, 250),
         versao: txt(ctx.versao, 80), online: ctx.online !== false, erros: (Array.isArray(ctx.erros) ? ctx.erros : []).slice(-5).map(e => txt(e, 300)) };
+      // Veículo do problema (opcional, 14/11/2026): atendimento, placa e modelo.
+      const v = ctx.veiculo && typeof ctx.veiculo === 'object' ? ctx.veiculo : null;
+      if (v && v.id && RE_ID.test(String(v.id))) contexto.veiculo = { id: String(v.id), placa: txt(v.placa, 10).toUpperCase(), modelo: txt(v.modelo, 40) };
+      const sobre = contexto.veiculo ? `${[contexto.veiculo.modelo, contexto.veiculo.placa].filter(Boolean).join(' ')}: ` : '';
       // Destino (16/10/2026): só o suporte (Controle) ou toda a equipe (aparece na aba Notificações de todos).
       const destino = it.destino === 'todos' ? 'todos' : 'suporte';
       const chamado = { id: id(it.id), texto, fotos, contexto, destino, por_id: eu.id, por_nome: quem, criado_em: agora(), atualizado_em: agora() };
       await inserirSeNovo(c, 'sd_chamados', chamado);
       depois.push((origem, cfg) => push.enviar(c, { para: destino === 'todos' ? 'todos' : 'controle', tipo: 'chamado', por: eu, origem, aparelhos: cfg.ativo, exceto: eu.id,
-        mensagem: { titulo: destino === 'todos' ? `Chamado de ${quem} (para todos)` : `Problema relatado: ${quem}`, texto: texto.slice(0, 300), url: `/#/chamados/${chamado.id}`, tag: `chamado-${chamado.id}` } }));
+        mensagem: { titulo: destino === 'todos' ? `Chamado de ${quem} (para todos)` : `Problema relatado: ${quem}`, texto: (sobre + texto).slice(0, 300), url: `/#/chamados/${chamado.id}`, tag: `chamado-${chamado.id}` } }));
       return;
     }
     // Controle marca como resolvido (com uma resposta opcional, que a pessoa vê) e quem relatou recebe o aviso.
