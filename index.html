@@ -5023,9 +5023,11 @@ function renderVehicle(id) {
   if (concluirBtn) concluirBtn.addEventListener('click', () => concluirComFoto(alvoGrande, concluirBtn));
 
   const fotosBox = el('div');
+  const podeAddFoto = !(at.concluido && !ctrl);
   fotosBox.append(photoGrid({
     items: at.fotos.filter(f => !eFotoDeServico(f)),
-    onAdd: at.concluido && !ctrl ? null : async (rotulo, origem) => {
+    esquema: podeAddFoto, // carro visto de cima direto na tela, igual à entrada (14/11/2026)
+    onAdd: !podeAddFoto ? null : async (rotulo, origem) => {
       const file = await pickPhoto(origem); if (!file) return;
       try {
         const blob = await compress(file);
