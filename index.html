@@ -857,6 +857,7 @@ input[type="time"] { width: 100%; border: 1px solid var(--line-2); background: v
   .proto-lado { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
   .proto-lado > .actions { order: -2; }
   .proto-lado > .proto-info { order: -1; }
+  .proto-tela.proto-ver { max-width: 860px; }
 }
 /* Resumo do dia (Relatórios > Dia, pedido de 09/11/2026; layout do celular revisto no mesmo dia): cabeçalho
    centralizado, números em 2 colunas, linha do tempo separada por hora, seções em lista (sem cartão dentro de cartão). */
@@ -6922,6 +6923,7 @@ function protoMigrarLocais() {
 // Galeria de protocolos (Mais > Protocolos): por mês da entrada (ou da execução, na OS), com busca. Tocar abre para ver,
 // baixar, copiar ou editar e gerar de novo.
 function renderProtocolos() {
+  S.protoEditar = null; // tocar num protocolo da galeria sempre abre para ver
   protoMigrarLocais();
   const busca = el('input', { type: 'search', placeholder: 'Buscar por cliente, placa ou serviço', 'aria-label': 'Buscar protocolo', value: S.protoBusca || '' });
   const lista = el('div', { class: 'stack' });
@@ -6993,8 +6995,12 @@ function renderProtocolo(pid) {
   // Estado: um protocolo salvo (#/protocolo/ID), vindo da Agenda ("Gerar protocolo"), o rascunho deste aparelho ou um novo.
   const salvoBanco = pid ? (DB.protocolos || []).find(p => p.id === pid) : null;
   if (pid && !salvoBanco) { toast('Protocolo não encontrado.', true); return go('#/protocolos'); }
+  // Protocolo salvo abre só para ver (14/11/2026: antes abria direto no formulário e a prévia ficava lá embaixo).
+  // "Editar" abre o formulário; Salvar ou Cancelar voltam para a visualização.
+  if (S.protoEditar && S.protoEditar !== pid) S.protoEditar = null;
+  const editando = !salvoBanco || S.protoEditar === pid;
   let e;
-  if (salvoBanco) e = S.proto && S.proto.id === pid ? S.proto : { ...JSON.parse(JSON.stringify(salvoBanco.estado)), id: pid };
+  if (salvoBanco) e = editando && S.proto && S.proto.id === pid ? S.proto : { ...JSON.parse(JSON.stringify(salvoBanco.estado)), id: pid };
   else {
     e = S.proto || lsLer(PROTO_RASC, null);
     if (!e || e.v !== 1 || (DB.protocolos || []).some(p => p.id === e.id)) e = protoNovo(); // o rascunho já virou protocolo salvo
@@ -7169,13 +7175,15 @@ function renderProtocolo(pid) {
     preencher(resumo, el('span', {}, 'Total ', el('b', { text: fmtBRL(c.total) })),
       c.entrada != null ? el('span', {}, 'Entrada ', el('b', { text: fmtBRL(c.entrada) })) : null,
       c.saldo != null ? el('span', {}, c.os ? 'A receber ' : 'Saldo ', el('b', { text: fmtBRL(c.saldo) })) : null);
+    const linkVeiculo = (() => { const x = (DB.protocolos || []).find(p => p.id === e.id), at = x && x.atendimentoId ? DB.atendimentos.find(a => a.id === x.atendimentoId) : null;
+      return at ? el('a', { class: 'link-btn', href: `#/veiculo/${esc(at.id)}` }, `Veículo ${at.concluido ? 'concluído' : 'em serviço'}: ${fmtPlaca(at.placa)} (abrir)`) : null; })();
+    if (!editando) { preencher(info, linkVeiculo); [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; }); return; }
     preencher(info,
       c.bloqueio ? el('p', { class: 'proto-bloqueio', text: c.bloqueio }) : null,
       c.avisos.length ? el('ul', { class: 'proto-avisos' }, c.avisos.map(t => el('li', { text: t }))) : null,
       el('p', { class: 'hint' }, `Arquivo: ${protoArquivo(e)} · `, el('b', { text: { novo: 'Ainda não salvo', salvo: 'Salvo no sistema', alterado: 'Alterações não salvas' }[protoSituacao(e)] }),
         protoSituacao(e) === 'salvo' ? null : ' (salva ao baixar, copiar, compartilhar ou em Salvar)'),
-      (() => { const x = (DB.protocolos || []).find(p => p.id === e.id), at = x && x.atendimentoId ? DB.atendimentos.find(a => a.id === x.atendimentoId) : null;
-        return at ? el('a', { class: 'link-btn', href: `#/veiculo/${esc(at.id)}` }, `Veículo ${at.concluido ? 'concluído' : 'em serviço'}: ${fmtPlaca(at.placa)} (abrir)`) : null; })());
+      linkVeiculo);
     [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; });
   }
 
@@ -7186,10 +7194,13 @@ function renderProtocolo(pid) {
     if (Date.now() - confirmaNovo > 3000 && e.cliente.nome.trim() && protoSituacao(e) !== 'salvo') { confirmaNovo = Date.now(); bNovo.lastChild.textContent = 'Descartar?'; setTimeout(() => { bNovo.lastChild.textContent = 'Novo'; }, 3000); return; }
     S.proto = protoNovo(); lsGravar(PROTO_RASC, S.proto); go('#/protocolo'); window.scrollTo(0, 0);
   });
-  const bSalvar = el('button', { class: 'btn btn--sm', type: 'button', onclick: () => {
+  const bSalvar = el('button', { class: 'btn btn--sm' + (salvoBanco ? ' btn--primary' : ''), type: 'button', onclick: () => {
     if (!e.cliente.nome.trim()) { toast('Coloque o nome do cliente.', true); return; }
-    protoSalvar(e); atualizar(); toast('Protocolo salvo.');
+    protoSalvar(e); toast('Protocolo salvo.');
+    if (salvoBanco) { S.protoEditar = null; S.proto = null; route(); } else atualizar();
   } }, icon('check'), 'Salvar');
+  const bEditar = el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.protoEditar = pid; S.proto = e; route(); } }, icon('edit'), 'Editar');
+  const bCancelar = el('button', { class: 'btn btn--sm', type: 'button', onclick: () => { S.protoEditar = null; S.proto = null; route(); } }, 'Cancelar');
   // Excluir (só marca no banco), com dois toques.
   let confirmaExcluir = 0;
   const bExcluir = salvoBanco ? el('button', { class: 'btn btn--sm btn--danger', type: 'button', onclick: () => {
@@ -7198,11 +7209,21 @@ function renderProtocolo(pid) {
     S.proto = null; lsGravar(PROTO_RASC, null); toast('Protocolo excluído.'); go('#/protocolos');
   } }, 'Excluir') : null;
 
+  if (!editando) {
+    shell(el('div', { class: 'stack proto-tela proto-ver' },
+      backLink('#/protocolos', 'Protocolos'),
+      el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: protoNome(e.cliente.nome) || 'Protocolo' }),
+        el('div', { class: 'proto-topo-acoes' }, bExcluir, bEditar)),
+      el('div', { class: 'actions' }, bBaixar, bCopiar), bComp, info, prev), { current: 'relatorios' });
+    atualizar();
+    protoFontes().then(escala).catch(() => {});
+    return;
+  }
   desenhar();
   shell(el('div', { class: 'stack proto-tela' },
     backLink('#/protocolos', 'Protocolos'),
-    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: salvoBanco ? 'Protocolo' : 'Novo protocolo' }),
-      el('div', { class: 'proto-topo-acoes' }, bExcluir, bSalvar, bNovo)),
+    el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: salvoBanco ? 'Editar protocolo' : 'Novo protocolo' }),
+      el('div', { class: 'proto-topo-acoes' }, ...(salvoBanco ? [bCancelar, bSalvar] : [bSalvar, bNovo]))),
     el('div', { class: 'proto-cols' }, form,
       el('div', { class: 'proto-lado' }, el('span', { class: 'label', text: 'Prévia' }), prev, info,
         el('div', { class: 'actions' }, bBaixar, bCopiar), bComp))), { current: 'relatorios' });
