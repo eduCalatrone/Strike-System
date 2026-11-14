@@ -1075,8 +1075,8 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, .45); }
 .cf-carro .cf-btn { position: absolute; left: 50%; transform: translate(-50%, -50%); white-space: nowrap; }
 .cf-interior { top: 56.5%; }
 .cf-carro .cf-btn:active { transform: translate(-50%, -50%) scale(.96); }
-.carro-fotos.is-tela .cf-btn.tem { border-color: var(--ink); color: var(--ink); }
-.carro-fotos.is-tela .cf-ok { color: #1F8A4C; }
+.fotos-esquema .cf-btn.tem, .fotos-esquema .sheet-tag.tem { background: var(--ink); border-color: var(--ink); color: #fff; } /* com foto: preto (14/11/2026) */
+.fotos-esquema .cf-ok, .fotos-esquema .sheet-tag.tem::before { display: none; }
 .sheet-tag svg { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; color: var(--muted); }
 .sheet-tag.tem svg { display: none; }
 .sheet-tag.tem::before { content: "✓"; margin-right: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
@@ -4326,7 +4326,7 @@ function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Ad
   if (esquema) {
     const tem = new Set(items.map(f => f.rotulo)), abrir = r => janelaFoto(r, onAdd, tem);
     const lados = ['Frente', 'Traseira', 'Lateral esquerda', 'Lateral direita', 'Interior'];
-    return el('div', { class: 'stack', style: 'gap:14px' },
+    return el('div', { class: 'stack fotos-esquema', style: 'gap:14px' },
       el('div', { class: 'carro-fotos is-tela' }, ...carroFotos(null, abrir, tem).childNodes),
       el('div', { class: 'sheet-tags', role: 'group', 'aria-label': 'Outras fotos' },
         [...ROTULOS, ...ROTULOS_EXTRA].filter(r => !lados.includes(r)).map(r => el('button', { class: 'sheet-tag' + (tem.has(r) ? ' tem' : ''), type: 'button', onclick: () => abrir(r) }, icon('camera'), r))),
