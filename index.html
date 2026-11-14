@@ -1075,6 +1075,10 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, .45); }
 .cf-carro .cf-btn { position: absolute; left: 50%; transform: translate(-50%, -50%); white-space: nowrap; }
 .cf-interior { top: 56.5%; }
 .cf-carro .cf-btn:active { transform: translate(-50%, -50%) scale(.96); }
+.carro-fotos.is-tela .cf-btn.tem { border-color: var(--ink); color: var(--ink); }
+.carro-fotos.is-tela .cf-ok { color: #1F8A4C; }
+.sheet-tag svg { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; color: var(--muted); }
+.sheet-tag.tem svg { display: none; }
 .sheet-tag.tem::before { content: "✓"; margin-right: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
 .sheet-tag[aria-pressed="true"].tem::before { color: rgba(255, 255, 255, .7); }
 .sheet-in .actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
@@ -4316,7 +4320,18 @@ async function runRead(frame, crop, mode) {
    ===================================================================== */
 // items: [{id?, rotulo, url?}] ; onAdd(rotulo, origem) ; onRemove(item) ; openable
 // carro: false usa a lista simples de tipos, sem o carro visto de cima (hoje ninguém usa).
-function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto', carro = true }) {
+// esquema: true (entrada do veículo, 14/11/2026): no lugar dos espaços, o carro visto de cima direto na tela e as
+// outras fotos em etiquetas; tocar num lado abre só Tirar foto e Galeria. As fotos tiradas ficam embaixo.
+function photoGrid({ items, slots = [], onAdd, onRemove, acoes, extraLabel = 'Adicionar foto', carro = true, esquema = false }) {
+  if (esquema) {
+    const tem = new Set(items.map(f => f.rotulo)), abrir = r => janelaFoto(r, onAdd, tem);
+    const lados = ['Frente', 'Traseira', 'Lateral esquerda', 'Lateral direita', 'Interior'];
+    return el('div', { class: 'stack', style: 'gap:14px' },
+      el('div', { class: 'carro-fotos is-tela' }, ...carroFotos(null, abrir, tem).childNodes),
+      el('div', { class: 'sheet-tags', role: 'group', 'aria-label': 'Outras fotos' },
+        [...ROTULOS, ...ROTULOS_EXTRA].filter(r => !lados.includes(r)).map(r => el('button', { class: 'sheet-tag' + (tem.has(r) ? ' tem' : ''), type: 'button', onclick: () => abrir(r) }, icon('camera'), r))),
+      items.length ? photoGrid({ items, onRemove, acoes }) : null);
+  }
   const ul = el('ul', { class: 'photos' });
   const tiles = [], qtd = {};
   for (const f of items) {
@@ -4569,7 +4584,7 @@ function renderNew(placaRaw) {
   const fotosBox = el('div');
   const novaFoto = (rotulo, blob, extra) => ({ id: uid(), rotulo, blob, url: URL.createObjectURL(blob), ...extra });
   const drawFotos = () => preencher(fotosBox, photoGrid({
-    items: fotos, slots: ROTULOS, // carro visto de cima também no cadastro (voltou a pedido em 14/11/2026)
+    items: fotos, esquema: true, // carro visto de cima no lugar dos espaços (pedido de 14/11/2026)
     onAdd: async (rotulo, origem) => {
       const file = await pickPhoto(origem); if (!file) return;
       try {
