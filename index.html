@@ -471,11 +471,13 @@ textarea { resize: vertical; min-height: 76px; }
 .r-side { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
 .r-plate { font: 700 18px var(--cond); letter-spacing: .08em; }
 /* Histórico de serviços agrupado por dia */
-.hist-dias { display: grid; gap: 18px; }
-.hist-dia { display: grid; gap: 8px; }
-.hist-dia-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px; }
+/* min-width 0 e o resumo do dia podendo quebrar (14/11/2026): no celular o resumo longo ("N serviços · R$ · R$ pendente")
+   alargava a tela inteira, que ficava solta e fora do centro, como se tivesse zoom. */
+.hist-dias { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; min-width: 0; }
+.hist-dia { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+.hist-dia-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; padding: 0 2px; min-width: 0; }
 .hist-dia-head h3 { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.hist-dia-head span { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hist-dia-head span { font-size: 12px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-left: auto; text-align: right; }
 
 .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .etapas li { display: flex; align-items: center; gap: 6px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 10px; }
