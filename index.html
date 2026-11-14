@@ -2087,13 +2087,16 @@ function escolherArquivo(id) {
     const inp = $(id);
     inp.value = '';
     inp.onchange = () => resolve(inp.files && inp.files[0] ? inp.files[0] : null);
+    inp.oncancel = () => resolve(null);
     inp.click();
   });
 }
 // "Tirar foto" usa a câmera própria do sistema (pede a traseira direto). No Android o app de câmera
 // às vezes abria na frontal. Se o navegador não liberar a câmera, cai no app de câmera do aparelho.
+// No iPhone usa sempre a câmera do aparelho: a do sistema pedia permissão a cada foto no app da tela
+// inicial (e uma vez por dia no Safari); a do aparelho não pede e já abre na traseira.
 async function pickPhoto(origem = 'camera') {
-  if (origem !== 'galeria' && canLive()) {
+  if (origem !== 'galeria' && !eIOS() && canLive()) {
     const r = await fotoPelaCamera();
     if (r !== undefined) return r; // Blob da foto, arquivo da galeria ou null (cancelou)
   }
