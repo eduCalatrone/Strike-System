@@ -771,7 +771,9 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 /* ---------- Mais (13/11/2026) e Gerador de protocolo ---------- */
 /* Mais: o botão Relatórios do menu virou "Mais", com os atalhos que ficavam no topo de Relatórios. */
 .mais-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } /* 2 colunas (pedido de 13/11/2026) */
-.mais-grade .mais-largo { grid-column: 1 / -1; }
+.mais-grade .is-problema { border-color: #F3C9C4; }
+.mais-grade .is-problema .rt-ico { background: var(--danger-bg); border-color: #F3C9C4; color: var(--danger); }
+.mais-grade .is-problema .rt-tit { color: var(--danger); }
 /* Fontes do protocolo (as mesmas do modelo; só baixam quando o protocolo aparece na tela) */
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-700.woff2') format('woff2'); font-weight: 700; font-display: block; }
 @font-face { font-family: 'SDProtoCond'; src: url('/modelo-protocolo/fontes/roboto-condensed-400.woff2') format('woff2'); font-weight: 400; font-display: block; }
@@ -798,6 +800,7 @@ input[type="date"], input[type="tel"], input[type="number"] { width: 100%; borde
 .escolha-op .ok { width: 20px; height: 20px; flex: none; color: var(--ink); }
 .escolha-op .ok svg { width: 20px; height: 20px; }
 .escolha-op[aria-checked="true"] { background: var(--soft); }
+.escolha-cab { padding: 12px 16px 6px; font: 700 12px var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--bg, #F4F4F3); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1; }
 /* Galeria de protocolos e cartão da conferência (13/11/2026) */
 .proto-mes { font-size: 15px; margin: 4px 0 0; color: var(--ink-2); }
 .proto-lista { padding: 0; gap: 0; overflow: hidden; }
@@ -6554,7 +6557,7 @@ function renderMais() {
       (() => { const a = el('a', { class: 'rel-tile', id: 'equipe-cta', href: '#/equipe' }); desenharCtaEquipe(a); return a; })(),
       tile('#/chamados', 'warn', 'Chamados', nCham ? `${nCham} ${nCham === 1 ? 'aberto' : 'abertos'}` : 'Nenhum aberto', { badge: nCham, aria: nCham ? `Chamados, ${nCham} abertos` : 'Chamados, nenhum aberto' }),
       tile('#/protocolos', 'protocolo', 'Protocolos', `${(DB.protocolos || []).length} ${(DB.protocolos || []).length === 1 ? 'salvo' : 'salvos'}`, { aria: 'Protocolos: gerar, ver e baixar' }),
-      (() => { const t = tile('#/problema', 'warn', 'Relatar problema', 'Enviar ao suporte ou à equipe', { claro: true, aria: 'Relatar problema' }); t.classList.add('mais-largo'); return t; })()),
+      (() => { const t = tile('#/problema', 'warn', 'Problema', 'Relatar ao suporte', { claro: true, aria: 'Relatar problema' }); t.classList.add('is-problema'); return t; })()),
     botaoConvites()), { current: 'relatorios' });
 }
 
@@ -6964,17 +6967,18 @@ function renderProtocolos() {
 // Botão com cara de campo que abre uma lista própria do sistema (janela de baixo), no lugar do <select> do aparelho.
 // opcoes: [{ v, t, sub, dir }] (sub = linha de baixo, dir = texto à direita, como o valor).
 function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo = null, aoEscolher }) {
-  const atual = opcoes.find(o => o.v === valor);
+  const atual = opcoes.find(o => !o.cab && o.v === valor);
   const b = el('button', { class: 'escolha-btn' + (atual && !fixo ? '' : ' vazio'), type: 'button', 'aria-haspopup': 'dialog', 'aria-label': titulo },
     el('span', { text: fixo || (atual ? atual.t : vazio) }), icon('down'));
   b.addEventListener('click', () => {
     const d = el('dialog', { class: 'sheet', 'aria-label': titulo });
-    const fechar = () => { d.close(); d.remove(); };
-    d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+    const fechar = () => { window.removeEventListener('hashchange', fechar); if (d.open) d.close(); d.remove(); };
+    window.addEventListener('hashchange', fechar); // trocou de tela com a lista aberta: fecha
+    d.addEventListener('cancel', () => setTimeout(fechar, 0));
     d.addEventListener('click', e => { if (e.target === d) fechar(); });
     d.append(el('div', { class: 'sheet-in' },
       el('div', { class: 'card-head' }, el('h2', { text: titulo }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
-      el('div', { class: 'escolha-lista', role: 'radiogroup' }, opcoes.map(o => el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
+      el('div', { class: 'escolha-lista', role: 'radiogroup' }, opcoes.map(o => o.cab ? el('div', { class: 'escolha-cab', text: o.cab }) : el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
         onclick: () => { fechar(); aoEscolher(o.v); } },
         el('b', {}, o.t, o.sub ? el('small', { text: o.sub }) : null),
         o.dir ? el('span', { class: 'v', text: o.dir }) : null,
@@ -7028,12 +7032,23 @@ function renderProtocolo(pid) {
 
   function desenhar() {
     const os = e.tipo === 'os';
-    // Agendamentos para puxar os dados (agendados de 7 dias atrás em diante, do mais perto ao mais longe).
-    const desde = somaDias(hojeISO(), -7);
-    const ags = agendaAtiva().filter(a => a.status === 'agendado' && a.data >= desde).sort((a, b) => a.data.localeCompare(b.data));
+    // Agendamentos para puxar os dados (13/11/2026: "muito misturado"): só os agendados de hoje em diante que ainda não
+    // têm protocolo salvo, do mais perto ao mais longe, separados por Hoje, Amanhã, Esta semana, Próxima semana e mês.
+    const hoje = hojeISO(), comProtocolo = new Set((DB.protocolos || []).map(p => p.estado && p.estado.agId).filter(Boolean));
+    const ags = agendaAtiva().filter(a => a.status === 'agendado' && a.data >= hoje && (!comProtocolo.has(a.id) || a.id === e.agId))
+      .sort((a, b) => a.data.localeCompare(b.data));
+    const fimSemana = somaDias(hoje, (7 - dataDe(hoje).getDay()) % 7); // domingo desta semana
+    const grupoAg = d => (d === hoje ? 'Hoje' : d === somaDias(hoje, 1) ? 'Amanhã' : d <= fimSemana ? 'Esta semana' : d <= somaDias(fimSemana, 7) ? 'Próxima semana'
+      : `${MESES[Number(d.slice(5, 7)) - 1]} de ${d.slice(0, 4)}`);
+    const opcoesAg = [];
+    for (const a of ags) {
+      const g = grupoAg(a.data);
+      if (!opcoesAg.length || opcoesAg[opcoesAg.length - 1].g !== g) opcoesAg.push({ cab: g, g });
+      opcoesAg.push({ g, v: a.id, t: protoNome(a.cliente), sub: [a.servico, a.marca].filter(Boolean).join(' · '), dir: `${DIA_CURTO[dataDe(a.data).getDay()].slice(0, 3)} ${brData(a.data).slice(0, 5)}` });
+    }
     const fAg = ags.length ? campoEscolha({ titulo: 'Puxar de um agendamento', valor: '',
       fixo: e.agId && ags.some(a => a.id === e.agId) ? 'Puxar de outro agendamento…' : 'Puxar os dados de um agendamento…',
-      opcoes: ags.map(a => ({ v: a.id, t: protoNome(a.cliente), sub: [a.servico, a.marca].filter(Boolean).join(' · '), dir: `${DIA_CURTO[dataDe(a.data).getDay()].slice(0, 3)} ${brData(a.data).slice(0, 5)}` })),
+      opcoes: opcoesAg,
       aoEscolher: id => { const a = ags.find(x => x.id === id); if (a) { protoDeAgenda(e, a); desenhar(); mudou(); toast(`Dados de ${protoNome(a.cliente)} preenchidos.`); } } }) : null;
 
     // Serviço: catálogo (valores mudam: o valor fica editável).
