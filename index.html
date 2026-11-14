@@ -5568,17 +5568,12 @@ function renderDia(diaRaw) {
    Tela: ajustes (Controle): tipos de serviço, equipe, backup
    ===================================================================== */
 // Abas de Ajustes: Geral (#/ajustes) e Notificações (#/ajustes/notificacoes).
-function abasAjustes(aba) {
-  return el('div', { class: 'seg', role: 'tablist', 'aria-label': 'Ajustes', style: 'display:flex;width:100%' },
-    [['geral', 'Geral', '#/ajustes'], ['notif', 'Notificações', '#/ajustes/notificacoes']].map(([k, t, h]) =>
-      el('button', { type: 'button', role: 'tab', style: 'flex:1;padding:11px 12px;font-size:14px', 'aria-selected': String(aba === k), 'aria-pressed': String(aba === k), onclick: () => go(h) },
-        k === 'notif' ? icon('bell') : null, t)));
-}
 function renderSettings() {
   const redraw = () => { const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
   if (parts()[1] === 'chamados') return go('#/chamados'); // endereço antigo (avisos já enviados)
   if (parts()[1] === 'notificacoes') {
-    shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, el('h1', { text: 'Ajustes' }), abasAjustes('notif'), secaoNotificacoes(redraw)), { current: 'ajustes' });
+    // Desde 14/11/2026 fica só em Mais (saiu das abas de Ajustes).
+    shell(el('div', { class: 'stack-lg', style: 'max-width:720px' }, backLink('#/mais', 'Mais'), el('h1', { text: 'Notificações' }), secaoNotificacoes(redraw)), { current: 'relatorios' });
     return;
   }
   const tipos = DB.tipos.map(t => {
@@ -5833,7 +5828,6 @@ function renderSettings() {
 
   const body = el('div', { class: 'stack-lg', style: 'max-width:720px' },
     el('h1', { text: 'Ajustes' }),
-    abasAjustes('geral'),
     el('section', { class: 'stack' },
       secHead('Tipos de serviço', DB.tipos.length, 'tipo', 'Novo'),
       S.addAberto === 'tipo' ? el('div', { class: 'card add-card' },
