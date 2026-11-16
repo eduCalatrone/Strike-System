@@ -1,0 +1,4 @@
+# Arquivos do repositório que não precisam ficar públicos no site
+/CLAUDE.md
+/modelo-protocolo/CLAUDE.md
+/modelo-protocolo/lancar.js
