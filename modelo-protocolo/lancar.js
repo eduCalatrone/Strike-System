@@ -48,7 +48,7 @@ const placaDe = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '').sli
     const linhas = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8').split('\n');
     const fim = linhas.findIndex((l, i) => i > 1000 && l === '})();');
     if (fim < 0) throw new Error('Não achei o fim do script principal do index.html.');
-    linhas[fim] = 'window.__proto = { protoNovo, protoPreset, protoCalc, protoPNG, protoArquivo, fmtQ, uid };\n' + linhas[fim];
+    linhas[fim] = 'window.__proto = { protoNovo, protoPreset, protoCalc, protoPNG, protoArquivo, protoDadosAgenda, fmtQ, uid };\n' + linhas[fim];
     await pg.route(`http://localhost:${PORTA}/`, r => r.fulfill({ status: 200, contentType: 'text/html', body: linhas.join('\n') }));
     await pg.goto(`http://localhost:${PORTA}/`);
     await pg.waitForFunction(() => window.__proto, null, { timeout: 15000 });
@@ -73,6 +73,11 @@ const placaDe = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '').sli
           entrada_dia: c.entTxt, entrega_dia: c.saiTxt, execucao: c.execTxt, os_dia: c.osTxt, tel: c.tel, cidade: c.cidade, veiculo: c.modelo, placa: c.placa,
           avisos: c.avisos, bloqueio: c.bloqueio };
         if (c.bloqueio) return { resumo, estado: e };
+        // Agenda (16/11/2026): os dados que o protocolo manda no agendamento ligado (ou no novo).
+        if (e.tipo === 'agendamento' && !e.datas.semData && e.datas.ent) {
+          resumo.agenda = P.protoDadosAgenda(e);
+          if (!e.agId && ped.criarAgenda !== false && e.datas.ent >= new Date(Date.now() - 7 * 864e5 - 4 * 3600e3).toISOString().slice(0, 10)) { e.agId = 'ag' + P.uid(); resumo.agendaNova = e.agId; }
+        }
         const blob = await P.protoPNG(e);
         return { resumo, estado: e, png: Array.from(new Uint8Array(await blob.arrayBuffer())) };
       }, ped);
@@ -93,6 +98,21 @@ const placaDe = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '').sli
         sql.push(`update sd_protocolos set dados = ${sq(cols.dados)}::jsonb, tipo = ${sq(cols.tipo)}, cliente = ${sq(cols.cliente)}, placa = ${sq(cols.placa)}, data = ${sq(cols.data)}${atId ? `, atendimento_id = ${sq(atId)}` : ''}, atualizado_em = now(), atualizado_por = 'Eduardo' where id = ${sq(estado.id)} and excluido_em is null;`);
       } else {
         sql.push(`insert into sd_protocolos (id, dados, tipo, cliente, placa, data, atendimento_id, criado_em, criado_por, atualizado_em, atualizado_por) values (${sq(estado.id)}, ${sq(cols.dados)}::jsonb, ${sq(cols.tipo)}, ${sq(cols.cliente)}, ${sq(cols.placa)}, ${sq(cols.data)}, ${sq(atId)}, now(), 'Eduardo', now(), 'Eduardo');`);
+      }
+      // Agenda sincronizada (16/11/2026): o protocolo manda nos dados do agendamento; a situação vem do veículo.
+      const ag = resumo.agenda;
+      if (ag && estado.agId) {
+        const campos = { cliente: ag.cliente, tel: ag.tel, servico: ag.servico, marca: ag.marca, data: ag.data, prazo: ag.prazo == null ? 0 : ag.prazo, valor: ag.valor, valor_entrada: ag.entrada };
+        const v = k => (campos[k] == null ? 'null' : typeof campos[k] === 'number' ? String(campos[k]) : sq(campos[k]));
+        if (resumo.agendaNova) {
+          sql.push(`insert into sd_agenda (id, cliente, tel, servico, marca, data, prazo, valor, valor_entrada, obs, status, origem, criado_em, atualizado_em) values (${sq(estado.agId)}, ${v('cliente')}, ${v('tel')}, ${v('servico')}, ${v('marca')}, ${v('data')}, ${v('prazo')}, ${v('valor')}, ${v('valor_entrada')}, '', 'agendado', 'protocolo', now(), now());`);
+        } else {
+          sql.push(`update sd_agenda set ${Object.keys(campos).filter(k => campos[k] != null && campos[k] !== '').map(k => `${k} = ${v(k)}`).join(', ')}, atualizado_em = now() where id = ${sq(estado.agId)} and excluido_em is null;`);
+        }
+      }
+      if (atId && estado.agId) {
+        sql.push(`update sd_atendimentos set agenda_id = ${sq(estado.agId)} where id = ${sq(atId)} and excluido_em is null;`);
+        sql.push(`update sd_agenda a set status = case when t.concluido then 'concluido' else 'em_servico' end, atualizado_em = now() from sd_atendimentos t where t.agenda_id = a.id and t.excluido_em is null and a.id = ${sq(estado.agId)};`);
       }
       // Veículo já em serviço: liga o protocolo nele também (versao + 1 para outro aparelho não gravar por cima).
       if (atId) sql.push(`update sd_atendimentos set protocolo_id = ${sq(estado.id)}, versao = versao + 1, atualizado_em = now() where id = ${sq(atId)} and excluido_em is null and (protocolo_id is null or protocolo_id = ${sq(estado.id)});`);

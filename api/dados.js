@@ -230,6 +230,60 @@ async function acharProtocolo(c, placa, agendaId) {
   return lista.find(p => p.placa && p.placa === placa) || (agendaId && lista.find(p => p.dados && p.dados.agId === agendaId)) || null;
 }
 
+/* ---------- Agenda sincronizada com os veículos e os protocolos (16/11/2026) ---------- */
+// Pedido: a agenda ficava sempre em "agendado" porque ninguém mudava à mão. Agora a situação do agendamento vem do
+// veículo ligado a ele (sd_atendimentos.agenda_id): em serviço ou concluído. Veículo que entra sem agendamento acha o
+// dele (pelo agendamento escolhido, pelo protocolo ou pelo nome do cliente) ou ganha um novo (origem 'entrada').
+const novoId = () => Date.now().toString(36) + require('crypto').randomBytes(4).toString('hex').slice(0, 6);
+const nomesDe = s => semAcento(s).split(' ').filter(w => w && !/^(de|da|do|das|dos|e)$/.test(w));
+// Mesmo cliente: primeiro nome igual e, se os dois têm sobrenome, o segundo também.
+function mesmoCliente(a, b) {
+  const x = nomesDe(a), y = nomesDe(b);
+  if (!x.length || !y.length || x[0] !== y[0]) return false;
+  return x.length < 2 || y.length < 2 || x[1] === y[1];
+}
+// A situação do agendamento segue o veículo ligado a ele. Devolve false se não tem veículo.
+async function statusAgendaPeloVeiculo(c, agId) {
+  if (!agId) return false;
+  const [at] = await rest(c, `sd_atendimentos?select=concluido&agenda_id=eq.${q(agId)}&excluido_em=is.null&order=criado_em.desc&limit=1`) || [];
+  if (!at) return false;
+  const st = at.concluido ? 'concluido' : 'em_servico';
+  await marcar(c, 'sd_agenda', `id=eq.${q(agId)}&excluido_em=is.null&status=neq.${st}`, { status: st, atualizado_em: agora() });
+  return true;
+}
+// Agendamento para um veículo que acabou de entrar: o escolhido, o do protocolo ou um "agendado" do mesmo cliente
+// por perto da data de hoje (15 dias antes a 7 depois) que ainda não tem veículo.
+async function agendaParaEntrada(c, { agendaId, prot, cliente }) {
+  if (agendaId) return agendaId;
+  const agProt = prot && prot.dados && prot.dados.agId;
+  if (agProt && RE_ID.test(String(agProt))) {
+    const [a] = await rest(c, `sd_agenda?select=id&id=eq.${q(agProt)}&excluido_em=is.null`) || [];
+    if (a) return a.id;
+  }
+  if (!cliente) return null;
+  const hoje = diaLoja(), de = diaLoja(Date.now() - 15 * 864e5), ate = diaLoja(Date.now() + 7 * 864e5);
+  const lista = (await rest(c, `sd_agenda?select=id,cliente,data&excluido_em=is.null&status=eq.agendado&data=gte.${de}&data=lte.${ate}`) || [])
+    .filter(a => mesmoCliente(a.cliente, cliente));
+  if (!lista.length) return null;
+  const usados = new Set((await rest(c, `sd_atendimentos?select=agenda_id&excluido_em=is.null&agenda_id=in.(${lista.map(a => q(a.id)).join(',')})`) || []).map(x => x.agenda_id));
+  const livres = lista.filter(a => !usados.has(a.id)).sort((a, b) => Math.abs(Date.parse(a.data) - Date.parse(hoje)) - Math.abs(Date.parse(b.data) - Date.parse(hoje)));
+  return livres.length ? livres[0].id : null;
+}
+// Veículo sem agendamento: cria um, com a data de hoje, já "em serviço".
+async function criarAgendaDaEntrada(c, { placa, linha, prot }) {
+  const [veic] = await rest(c, `sd_veiculos?select=descricao&placa=eq.${q(placa)}`) || [];
+  const d = (prot && prot.dados) || {}, dt = d.datas || {};
+  const prazo = RE_DATA.test(String(dt.ent || '')) && RE_DATA.test(String(dt.sai || '')) ? Math.max(0, Math.min(90, Math.round((Date.parse(dt.sai) - Date.parse(dt.ent)) / 864e5))) : 0;
+  const placaFmt = /^[A-Z]{3}[0-9]{4}$/.test(placa) ? `${placa.slice(0, 3)}-${placa.slice(3)}` : placa;
+  const agId = novoId();
+  await rest(c, 'sd_agenda', { method: 'POST', prefer: 'return=minimal', body: {
+    id: agId, cliente: txt(linha.cliente_nome || nomeProprio(d.cliente && d.cliente.nome) || placaFmt, 80), tel: txt(d.cliente && d.cliente.tel, 30),
+    servico: txt(linha.tipo_nome, 120), data: diaLoja(), marca: txt(veic && veic.descricao, 40), prazo,
+    valor: linha.valor == null ? null : linha.valor, valor_entrada: linha.valor_entrada == null ? null : linha.valor_entrada,
+    obs: '', status: 'em_servico', origem: 'entrada', criado_em: agora(), atualizado_em: agora() } });
+  return agId;
+}
+
 /* ---------- Gravação ---------- */
 const agora = () => new Date().toISOString();
 // Dia e mês no horário da loja (Jaru/RO, UTC-4, sem horário de verão).
@@ -390,9 +444,10 @@ async function aplicar(c, op, eu, versoes, depois = []) {
           if (it.protocoloId) extra.protocolo_id = id(it.protocoloId, 'protocoloId');
           if (it.conferidoEm) Object.assign(extra, { conferido_em: agora(), conferido_por: eu.nome });
         }
-        const prot = ctrl ? null : await acharProtocolo(c, placa, agendaId);
+        const prot = ctrl ? (extra.protocolo_id ? (await rest(c, `sd_protocolos?select=id,dados&id=eq.${q(extra.protocolo_id)}`) || [])[0] || null : null)
+          : await acharProtocolo(c, placa, agendaId);
         let novosOpc = [];
-        if (prot) {
+        if (prot && !ctrl) {
           extra.protocolo_id = prot.id;
           const nome = nomeProprio(prot.dados && prot.dados.cliente && prot.dados.cliente.nome).slice(0, 80);
           if (!linha.cliente_nome && nome) linha.cliente_nome = nome;
@@ -402,13 +457,23 @@ async function aplicar(c, op, eu, versoes, depois = []) {
           if (novosOpc.length) linha.opcionais = listaOpcionais([...atuais, ...novosOpc]);
           linha.historico = historico([...linha.historico, { texto: `Protocolo vinculado: ${nome || 'sem nome'}${novosOpc.length ? ` (opcionais: ${novosOpc.join(', ')})` : ''}`, em: Date.now(), porNome: 'Sistema' }]);
         }
+        // Agenda (16/11/2026): o escolhido, o do protocolo ou o do mesmo cliente; sem nenhum, cria depois de gravar o veículo.
+        let agUsada = null;
+        try { agUsada = await agendaParaEntrada(c, { agendaId, prot, cliente: linha.cliente_nome }); } catch (e) { console.error('agenda da entrada', e); }
         await rest(c, 'sd_atendimentos', {
           method: 'POST', prefer: 'return=minimal',
           body: { id: atId, placa, criado_em: quando(it.criadoEm, 'criadoEm') || agora(), criado_por_nome: txt(it.criadoPorNome, 80), versao: 1,
-          agenda_id: agendaId, ...linha, ...extra },
+          agenda_id: agUsada, ...linha, ...extra },
         }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
         versoes[atId] = 1;
         if (prot) await marcar(c, 'sd_protocolos', `id=eq.${q(prot.id)}&atendimento_id=is.null`, { atendimento_id: atId, atualizado_em: agora() });
+        try {
+          if (!agUsada) {
+            agUsada = await criarAgendaDaEntrada(c, { placa, linha, prot });
+            await marcar(c, 'sd_atendimentos', `id=eq.${q(atId)}&agenda_id=is.null`, { agenda_id: agUsada });
+          }
+          await statusAgendaPeloVeiculo(c, agUsada);
+        } catch (e) { console.error('agenda da entrada', e); } // falha na agenda nunca impede a entrada do veículo
         // Entrada feita pelo Funcionário: o Controle recebe o aviso para conferir.
         if (!ctrl) depois.push(async (origem, cfg) => {
           const [veic] = await rest(c, `sd_veiculos?select=descricao&placa=eq.${q(placa)}`) || [];
@@ -469,10 +534,8 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
       if (!r || !r.length) throw erro(409, 'conflito', atId);
       versoes[atId] = r[0].versao;
-      // Serviço que veio da agenda terminou: o agendamento "em serviço" vira "concluído".
-      if (r[0].concluido && r[0].agenda_id) {
-        await marcar(c, 'sd_agenda', `id=eq.${q(r[0].agenda_id)}&status=eq.em_servico`, { status: 'concluido', atualizado_em: agora() });
-      }
+      // A situação do agendamento acompanha o veículo (concluído, ou em serviço de novo se reabriu).
+      if (r[0].agenda_id) await statusAgendaPeloVeiculo(c, r[0].agenda_id).catch(e => console.error('agenda', e));
       // Acabou de ser concluído (16/10/2026): aviso no celular e na aba Notificações (Ajustes > Notificações decide para quem;
       // quem concluiu também recebe).
       if (r[0].concluido && !atual.concluido) depois.push(async (origem, cfg) => {
@@ -487,17 +550,30 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       });
       return;
     }
-    case 'atendimentos:remover':
-      return marcar(c, 'sd_atendimentos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
+    case 'atendimentos:remover': {
+      const r = await rest(c, `sd_atendimentos?id=eq.${q(id(op.id))}&excluido_em=is.null&select=agenda_id`, {
+        method: 'PATCH', body: { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() }, prefer: 'return=representation' });
+      const agId = r && r[0] && r[0].agenda_id;
+      // Sem veículo, o agendamento criado sozinho pela entrada sai junto; o que veio da agenda volta a "agendado".
+      if (agId && !(await statusAgendaPeloVeiculo(c, agId))) {
+        await marcar(c, 'sd_agenda', `id=eq.${q(agId)}&excluido_em=is.null&origem=eq.entrada`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
+        await marcar(c, 'sd_agenda', `id=eq.${q(agId)}&excluido_em=is.null&status=in.(em_servico,concluido)`, { status: 'agendado', atualizado_em: agora() });
+      }
+      return;
+    }
     // Lixeira: volta o atendimento excluído há menos de 48 h. Se a placa já tem outro serviço em andamento, não volta.
     case 'atendimentos:restaurar': {
       const atId = id(op.id);
       const desde = new Date(Date.now() - LIXEIRA_MS).toISOString();
-      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&excluido_em=gte.${q(desde)}&select=id,versao`, {
+      const r = await rest(c, `sd_atendimentos?id=eq.${q(atId)}&excluido_em=gte.${q(desde)}&select=id,versao,agenda_id`, {
         method: 'PATCH', body: { excluido_em: null, excluido_por: null, atualizado_em: agora() }, prefer: 'return=representation',
       }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
       if (!r || !r.length) throw erro(409, 'lixeira_vencida', atId);
       versoes[atId] = r[0].versao;
+      if (r[0].agenda_id) {
+        await marcar(c, 'sd_agenda', `id=eq.${q(r[0].agenda_id)}&origem=eq.entrada&excluido_em=gte.${q(desde)}`, { excluido_em: null, excluido_por: null, atualizado_em: agora() });
+        await statusAgendaPeloVeiculo(c, r[0].agenda_id);
+      }
       return;
     }
 
@@ -539,12 +615,15 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const data = String(it.data || ''); if (!RE_DATA.test(data) || isNaN(Date.parse(data))) throw invalido('data');
       const prazo = Number(it.prazo || 0); if (!Number.isInteger(prazo) || prazo < 0 || prazo > 90) throw invalido('prazo');
       const status = ['agendado', 'em_servico', 'concluido', 'cancelado'].includes(it.status) ? it.status : null; if (!status) throw invalido('status');
-      return upsert(c, 'sd_agenda', {
+      await upsert(c, 'sd_agenda', {
         id: id(it.id), cliente, tel: txt(it.tel, 30), servico: txt(it.servico, 120), data, marca: txt(it.marca, 40), prazo,
         valor: it.valor == null || it.valor === '' ? null : num(it.valor, 'valor'), obs: txt(it.obs, 600), status, atualizado_em: agora(),
         // Entrada paga: só quando veio (site antigo não manda e não apaga). A pagar = valor - entrada.
         ...(it.entrada !== undefined ? { valor_entrada: it.entrada == null || it.entrada === '' ? null : num(it.entrada, 'entrada') } : {}),
+        ...(it.origem === 'protocolo' ? { origem: 'protocolo' } : {}),
       });
+      // Com veículo ligado, a situação é a dele (o aparelho pode estar com a situação antiga).
+      return statusAgendaPeloVeiculo(c, id(it.id));
     }
     // Evento da agenda (Controle, pedido de 04/11/2026): dias que não são de cliente (ex.: reforma, loja fechada).
     case 'eventos:salvar': {
@@ -630,9 +709,24 @@ async function aplicar(c, op, eu, versoes, depois = []) {
       const linha = { dados, tipo, cliente: nomeProprio(dados.cliente && dados.cliente.nome).slice(0, 80), placa: placaDe(dados.veiculo && dados.veiculo.placa),
         data: RE_DATA.test(dia) && !isNaN(Date.parse(dia)) ? dia : null, atualizado_em: agora(), atualizado_por: quem };
       if (it.atendimentoId !== undefined) linha.atendimento_id = idOuNulo(it.atendimentoId, 'atendimentoId');
-      const r = await rest(c, `sd_protocolos?id=eq.${q(pid)}&select=id`, { method: 'PATCH', body: linha, prefer: 'return=representation' });
-      if (r && r.length) return;
-      return inserirSeNovo(c, 'sd_protocolos', { id: pid, ...linha, criado_em: agora(), criado_por: quem });
+      const r = await rest(c, `sd_protocolos?id=eq.${q(pid)}&select=id,atendimento_id`, { method: 'PATCH', body: linha, prefer: 'return=representation' });
+      if (!r || !r.length) await inserirSeNovo(c, 'sd_protocolos', { id: pid, ...linha, criado_em: agora(), criado_por: quem });
+      // Agenda (16/11/2026): protocolo ligado a um agendamento e a um veículo liga os dois e acerta a situação.
+      const agId = dados.agId && RE_ID.test(String(dados.agId)) ? String(dados.agId) : null;
+      const atId = (r && r[0] && r[0].atendimento_id) || linha.atendimento_id || null;
+      if (agId && atId) {
+        const [at] = await rest(c, `sd_atendimentos?select=agenda_id&id=eq.${q(atId)}&excluido_em=is.null`) || [];
+        if (at && at.agenda_id !== agId) {
+          // O agendamento que tinha sido criado sozinho na entrada fica sem uso: sai da agenda.
+          await marcar(c, 'sd_atendimentos', `id=eq.${q(atId)}`, { agenda_id: agId });
+          if (at.agenda_id && !(await statusAgendaPeloVeiculo(c, at.agenda_id))) {
+            await marcar(c, 'sd_agenda', `id=eq.${q(at.agenda_id)}&origem=eq.entrada&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });
+            await marcar(c, 'sd_agenda', `id=eq.${q(at.agenda_id)}&excluido_em=is.null&status=in.(em_servico,concluido)`, { status: 'agendado', atualizado_em: agora() });
+          }
+        }
+        await statusAgendaPeloVeiculo(c, agId);
+      }
+      return;
     }
     case 'protocolos:remover':
       return marcar(c, 'sd_protocolos', `id=eq.${q(id(op.id))}&excluido_em=is.null`, { excluido_em: agora(), excluido_por: quem, atualizado_em: agora() });

@@ -20,7 +20,8 @@ A imagem sai do **mesmo gerador do sistema** (`index.html`: `protoCalc`, `protoD
    select 'pr' k, id, cliente, placa, data::text, atendimento_id from sd_protocolos
     where excluido_em is null and (cliente ilike '%PRIMEIRO_NOME%' or placa = 'PLACA');
    ```
-   - Achou o agendamento: põe o `id` dele em `agId`.
+   - Achou o agendamento: põe o `id` dele em `agId` (o protocolo passa a mandar no cliente, telefone, serviço, veículo, datas e valores dele).
+   - Não achou: o script cria o agendamento ("agendado", data de entrada do protocolo), a não ser que o pedido tenha `"criarAgenda": false` (ou a entrada seja de mais de 7 dias atrás).
    - Achou o veículo em serviço: põe o `id` em `atendimentoId`.
    - Já existe protocolo desse cliente para essa data: usar o `id` dele (atualiza em vez de criar outro).
    - Valor ou entrada do agendamento diferente do protocolo: avisar o Eduardo na resposta (não corrigir a agenda sem ele pedir).
@@ -29,7 +30,7 @@ A imagem sai do **mesmo gerador do sistema** (`index.html`: `protoCalc`, `protoD
    - Mostra o resumo de cada um (total, entrada, saldo, dias da semana, avisos) e cria `<Nome do Cliente>.png` e `lancar.sql`.
    - Saiu com `✗` (bloqueio): corrigir o pedido e gerar de novo.
    - **Conferir o resumo** com o que o Eduardo mandou (valores, datas, dia da semana) e **abrir o PNG** para olhar antes de lançar.
-6. **Lançar**: rodar o conteúdo de `lancar.sql` no Supabase (`execute_sql`). Ele só faz `insert`/`update` em `sd_protocolos` e, com `atendimentoId`, liga o veículo (`sd_atendimentos.protocolo_id`). O sistema atualiza sozinho nos aparelhos.
+6. **Lançar**: rodar o conteúdo de `lancar.sql` no Supabase (`execute_sql`). Ele só faz `insert`/`update`: o protocolo em `sd_protocolos`, o agendamento em `sd_agenda` (sincronizado com o protocolo) e, com `atendimentoId`, liga o veículo ao protocolo e ao agendamento (a situação do agendamento vira "em serviço" ou "concluído" pelo veículo). O sistema atualiza sozinho nos aparelhos.
 7. **Entregar**: mandar o PNG para o Eduardo (SendUserFile) e responder curto: o que foi lançado, ligado a qual agendamento ou veículo, e as diferenças encontradas.
 
 ## Formato do pedido

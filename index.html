@@ -6364,6 +6364,44 @@ function renderAgenda() {
     : el('div', { class: 'stack', style: 'max-width:720px' }, topo, nav, ...calendario, dia), { current: 'agenda' });
 }
 
+// O que está ligado ao agendamento (16/11/2026): o veículo (a situação vem dele) e o protocolo. O Controle liga um
+// protocolo que já existe ("Ligar protocolo"): o protocolo passa a mandar nos dados do agendamento.
+function ligadosAgenda(a, ctrl) {
+  const at = DB.atendimentos.find(x => x.agendaId === a.id);
+  const prots = ctrl ? protocolosDaAgenda(a.id) : [];
+  const linhaV = at ? el('a', { class: 'conf-linha', href: `#/veiculo/${esc(at.id)}`, style: 'color:inherit;text-decoration:none' },
+    el('span', { class: 'conf-ico', 'aria-hidden': 'true', html: ICON.car }),
+    el('span', { class: 'conf-txt' }, el('b', { text: at.concluido ? 'Veículo concluído' : 'Veículo em serviço' }),
+      el('span', { text: [fmtPlaca(at.placa), at.tipoNome].filter(Boolean).join(' · ') })), icon('chev')) : null;
+  const linhasP = prots.map(p => el('a', { class: 'conf-linha', href: `#/protocolo/${esc(p.id)}`, style: 'color:inherit;text-decoration:none' },
+    el('span', { class: 'conf-ico', 'aria-hidden': 'true', html: ICON.protocolo }),
+    el('span', { class: 'conf-txt' }, el('b', { text: `Protocolo de ${protoNome(p.estado.cliente && p.estado.cliente.nome) || 'cliente'}` }),
+      el('span', { text: [protoCurto(p.estado.serv && p.estado.serv.titulo), p.estado.datas && p.estado.datas.ent ? brData(p.estado.datas.ent) : ''].filter(Boolean).join(' · ') })), icon('chev')));
+  let ligar = null;
+  if (ctrl && !prots.length) {
+    const livres = (DB.protocolos || []).filter(p => p.estado && p.estado.tipo !== 'os' && !p.estado.agId);
+    if (livres.length) {
+      const ref = a.data, dist = p => Math.abs(dataDe((p.estado.datas && p.estado.datas.ent) || ref) - dataDe(ref));
+      const ord = livres.map(p => ({ p, mesmo: mesmoClienteNome(p.estado.cliente && p.estado.cliente.nome, a.cliente), d: dist(p) }))
+        .sort((x, y) => (y.mesmo - x.mesmo) || x.d - y.d).slice(0, 40);
+      const op = x => ({ v: x.p.id, t: protoNome(x.p.estado.cliente && x.p.estado.cliente.nome) || 'Sem nome',
+        sub: [protoCurto(x.p.estado.serv && x.p.estado.serv.titulo), x.p.estado.datas && x.p.estado.datas.ent ? brData(x.p.estado.datas.ent) : 'sem data'].join(' · ') });
+      const mesmos = ord.filter(x => x.mesmo), outros = ord.filter(x => !x.mesmo);
+      ligar = el('div', { class: 'field' }, el('span', { class: 'label', text: 'Protocolo' }),
+        campoEscolha({ titulo: 'Ligar protocolo', vazio: 'Ligar protocolo',
+          opcoes: [...(mesmos.length ? [{ cab: 'Mesmo cliente' }, ...mesmos.map(op)] : []), ...(outros.length ? [{ cab: 'Outros' }, ...outros.map(op)] : [])],
+          aoEscolher: pid => {
+            const p = (DB.protocolos || []).find(x => x.id === pid); if (!p) return;
+            const e = JSON.parse(JSON.stringify(p.estado)); e.id = p.id; e.agId = a.id;
+            protoSalvar(e); // o protocolo atualiza o agendamento (datas, valores, serviço)
+            toast('Protocolo ligado. Agenda sincronizada.'); route();
+          } }));
+    }
+  }
+  if (!linhaV && !linhasP.length && !ligar) return null;
+  return el('div', { class: 'card conf-card is-ok stack', style: 'gap:10px' }, linhaV, ...linhasP, ligar);
+}
+
 // Agendamento: primeiro a prévia, igual para todos (pedido de 16/10/2026); o Controle tem "Editar"
 // (#/agenda/ID/editar) e cria com "novo". Valor dividido em Entrada e A pagar, com o total embaixo.
 function renderAgendaItem(idRaw) {
@@ -6387,7 +6425,8 @@ function renderAgendaItem(idRaw) {
         el('div', { class: 'veh-head' }, el('h1', { text: a.cliente }), el('span', { class: 'veh-sub', text: STATUS_AG[a.status] })),
         ctrl ? el('a', { class: 'btn btn--sm', href: `#/agenda/${esc(a.id)}/editar`, style: 'flex:none' }, icon('edit'), 'Editar') : null),
       entradaBtn,
-      ctrl ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.protoAg = a.id; go('#/protocolo'); } }, icon('protocolo'), 'Gerar protocolo') : null,
+      ligadosAgenda(a, ctrl),
+      ctrl && !protocolosDaAgenda(a.id).length ? el('button', { class: 'btn btn--block', type: 'button', onclick: () => { S.protoAg = a.id; go('#/protocolo'); } }, icon('protocolo'), 'Gerar protocolo') : null,
       el('div', { class: 'card' }, el('dl', { class: 'kv' },
         linha('Serviço', a.servico), linha('Veículo', a.marca), linha('Entrada', brData(a.data)),
         linha('Entrega prevista', a.prazo ? `${brData(entregaDe(a))} (${a.prazo} ${a.prazo === 1 ? 'dia' : 'dias'})` : 'No mesmo dia'),
@@ -7063,15 +7102,104 @@ function protoSituacao(e) {
 }
 function protoSalvar(e) {
   if (!DB.protocolos) DB.protocolos = [];
-  const x = DB.protocolos.find(p => p.id === e.id), estado = JSON.parse(JSON.stringify(e));
-  if (x && JSON.stringify(x.estado) === JSON.stringify(estado)) return true;
+  const x = DB.protocolos.find(p => p.id === e.id);
   commit(() => {
-    if (x) { x.estado = estado; x.atualizadoEm = Date.now(); }
+    protoSincronizarAgenda(e); // pode ligar o protocolo a um agendamento (e.agId) antes de gravar
+    const estado = JSON.parse(JSON.stringify(e));
+    if (x) { if (JSON.stringify(x.estado) !== JSON.stringify(estado)) { x.estado = estado; x.atualizadoEm = Date.now(); } }
     else DB.protocolos.unshift({ id: e.id, estado, atendimentoId: null, criadoEm: Date.now(), criadoPor: me().nome, atualizadoEm: Date.now() });
   });
   if (parts()[0] === 'protocolo' && parts()[1] !== e.id) history.replaceState(null, '', `#/protocolo/${e.id}`);
   return true;
 }
+// Agenda sincronizada com o protocolo (pedido de 16/11/2026): o protocolo manda no cliente, telefone, serviço, veículo,
+// datas e valores do agendamento ligado a ele (e.agId). Sem agendamento ligado, acha o do mesmo cliente perto da data de
+// entrada ou cria um ("agendado"). A situação (agendado, em serviço, concluído) vem do veículo, no servidor.
+const nomesCliente = s => semAcento(s).trim().split(/\s+/).filter(w => w && !/^(de|da|do|das|dos|e)$/.test(w));
+function mesmoClienteNome(a, b) {
+  const x = nomesCliente(a), y = nomesCliente(b);
+  if (!x.length || !y.length || x[0] !== y[0]) return false;
+  return x.length < 2 || y.length < 2 || x[1] === y[1];
+}
+const protoServicoTexto = e => [protoCurto(e.serv.titulo) || e.serv.titulo,
+  ...e.extras.filter(x => (x.tipo === 'valor' || x.tipo === 'brinde') && String(x.n || '').trim()).map(x => x.n.trim())].filter(Boolean).join(' + ').slice(0, 120);
+function protoDadosAgenda(e) {
+  const c = protoCalc(e), d = e.datas;
+  const prazo = d.ent && d.sai && d.sai >= d.ent ? Math.max(0, Math.min(90, Math.round((dataDe(d.sai) - dataDe(d.ent)) / 864e5))) : null;
+  return { cliente: c.nome, tel: c.tel, servico: protoServicoTexto(e), marca: (c.modelo || '').slice(0, 40), data: d.ent, prazo,
+    valor: c.total || null, entrada: c.total && c.entrada != null ? c.entrada : null };
+}
+const agendaDoProtocolo = e => (e.agId ? agendaAtiva().find(a => a.id === e.agId) || null : null);
+const protocolosDaAgenda = agId => (DB.protocolos || []).filter(p => p.estado && p.estado.agId === agId);
+// Agendamentos para ligar a um protocolo: mesmo cliente primeiro, depois os mais perto da data de entrada.
+function agendasParaProtocolo(e) {
+  const ref = e.datas.ent || hojeISO(), nome = protoNome(e.cliente.nome);
+  const dist = a => Math.abs(dataDe(a.data) - dataDe(ref));
+  return agendaAtiva().filter(a => a.status !== 'cancelado')
+    .map(a => ({ a, mesmo: mesmoClienteNome(a.cliente, nome), d: dist(a) }))
+    .sort((x, y) => (y.mesmo - x.mesmo) || x.d - y.d);
+}
+function protoSincronizarAgenda(e) {
+  if (e.tipo !== 'agendamento' || e.datas.semData || !e.datas.ent || !e.cliente.nome.trim() || (e.datas.sai && e.datas.sai < e.datas.ent)) return;
+  let a = agendaDoProtocolo(e);
+  if (!a && !e.agId) {
+    const usados = new Set((DB.protocolos || []).filter(p => p.id !== e.id && p.estado && p.estado.agId).map(p => p.estado.agId));
+    const par = agendasParaProtocolo(e).find(x => x.mesmo && x.d <= 7 * 864e5 && !usados.has(x.a.id));
+    if (par) { a = par.a; e.agId = a.id; }
+  }
+  const novos = protoDadosAgenda(e);
+  if (a) {
+    const b = { ...a, ...novos, prazo: novos.prazo == null ? a.prazo : novos.prazo, tel: novos.tel || a.tel, marca: novos.marca || a.marca };
+    if (JSON.stringify(b) !== JSON.stringify(a)) DB.agenda = agendaAtiva().map(x => (x.id === a.id ? b : x));
+    return;
+  }
+  if (e.agId || e.datas.ent < somaDias(hojeISO(), -7)) return; // agendamento ligado foi excluído, ou protocolo antigo
+  const reg = { id: uid(), ...novos, prazo: novos.prazo || 0, obs: '', status: 'agendado', criadoEm: Date.now(), origem: 'protocolo' };
+  DB.agenda = [...agendaAtiva(), reg];
+  e.agId = reg.id;
+}
+// Campo "Agenda" do protocolo salvo: liga a um agendamento que já existe (o protocolo atualiza o agendamento),
+// cria um novo ou desliga.
+function campoAgendaProtocolo(e, depois) {
+  const lista = agendasParaProtocolo(e).slice(0, 40);
+  const sub = a => [brData(a.data), a.servico, STATUS_AG[a.status]].filter(Boolean).join(' · ');
+  const mesmos = lista.filter(x => x.mesmo), outros = lista.filter(x => !x.mesmo);
+  const opcoes = [
+    ...(e.agId ? [{ v: '', t: 'Sem agendamento' }] : []),
+    ...(!agendaDoProtocolo(e) ? [{ v: '__novo', t: 'Criar na agenda', sub: e.datas.ent ? brData(e.datas.ent) : '' }] : []),
+    ...(mesmos.length ? [{ cab: 'Mesmo cliente' }, ...mesmos.map(x => ({ v: x.a.id, t: x.a.cliente, sub: sub(x.a) }))] : []),
+    ...(outros.length ? [{ cab: 'Outros' }, ...outros.map(x => ({ v: x.a.id, t: x.a.cliente, sub: sub(x.a) }))] : []),
+  ];
+  const a = agendaDoProtocolo(e);
+  const campo = campoEscolha({ titulo: 'Agendamento', opcoes, valor: a ? a.id : '', vazio: 'Sem agendamento',
+      fixo: a ? `${brData(a.data)} · ${STATUS_AG[a.status]}` : null,
+      aoEscolher: v => {
+        if (v === '__novo') { if (e.tipo !== 'agendamento' || !e.datas.ent) { toast('O protocolo precisa ter a data de entrada.', true); return; } e.agId = null; }
+        else e.agId = v || null;
+        if (v === '') {
+          // Desligar: grava só o protocolo (o agendamento fica como está).
+          const x = (DB.protocolos || []).find(p => p.id === e.id);
+          if (x) commit(() => { x.estado = JSON.parse(JSON.stringify(e)); x.atualizadoEm = Date.now(); });
+        } else {
+          protoSalvarNovaAgenda(e, v === '__novo');
+        }
+        toast(v === '' ? 'Protocolo sem agendamento.' : 'Agenda sincronizada com o protocolo.');
+        depois();
+      } });
+  if (a) campo.classList.remove('vazio'); // ligado: texto normal, não apagado
+  return el('div', { class: 'field' }, el('span', { class: 'label', text: 'Agenda' }), campo);
+}
+// Liga (ou cria) e grava: com criar, não procura o do mesmo cliente.
+function protoSalvarNovaAgenda(e, criar) {
+  if (criar) {
+    const novos = protoDadosAgenda(e);
+    const reg = { id: uid(), ...novos, prazo: novos.prazo || 0, obs: '', status: 'agendado', criadoEm: Date.now(), origem: 'protocolo' };
+    commit(() => { DB.agenda = [...agendaAtiva(), reg]; });
+    e.agId = reg.id;
+  }
+  protoSalvar(e);
+}
+
 // Os gerados antes neste aparelho (lista local "Últimos gerados") sobem uma vez para o banco.
 function protoMigrarLocais() {
   const locais = lsLer(PROTO_REC, []);
@@ -7342,7 +7470,10 @@ function renderProtocolo(pid) {
       c.saldo != null ? el('span', {}, c.os ? 'A receber ' : 'Saldo ', el('b', { text: fmtBRL(c.saldo) })) : null);
     const linkVeiculo = (() => { const x = (DB.protocolos || []).find(p => p.id === e.id), at = x && x.atendimentoId ? DB.atendimentos.find(a => a.id === x.atendimentoId) : null;
       return at ? el('a', { class: 'link-btn', href: `#/veiculo/${esc(at.id)}` }, `Veículo ${at.concluido ? 'concluído' : 'em serviço'}: ${fmtPlaca(at.placa)} (abrir)`) : null; })();
-    if (!editando) { preencher(info, linkVeiculo); [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; }); return; }
+    if (!editando) {
+      preencher(info, e.tipo === 'agendamento' ? campoAgendaProtocolo(e, () => route()) : null, linkVeiculo);
+      [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; }); return;
+    }
     preencher(info,
       c.bloqueio ? el('p', { class: 'proto-bloqueio', text: c.bloqueio }) : null,
       c.avisos.length ? el('ul', { class: 'proto-avisos' }, c.avisos.map(t => el('li', { text: t }))) : null,
