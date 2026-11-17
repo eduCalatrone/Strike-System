@@ -137,7 +137,8 @@ async function carregar(c, eu) {
     })) } : {}),
     // Resumo do protocolo para a entrada do Funcionário: cliente, veículo, serviço, agendamento e nomes dos itens extras. Sem valores.
     ...(!ctrl ? { protocolosEntrada: (protocolos || []).map(x => { const d = x.dados || {}; return { id: x.id, atendimentoId: null, criadoEm: ms(x.criado_em), estado: {
-      agId: d.agId || null, cliente: { nome: String((d.cliente && d.cliente.nome) || '') }, serv: { titulo: String((d.serv && d.serv.titulo) || '') },
+      agId: d.agId || null, tipo: d.tipo === 'os' ? 'os' : 'agendamento', datas: { ent: String((d.datas && d.datas.ent) || '') }, os: { data: String((d.os && d.os.data) || '') },
+      cliente: { nome: String((d.cliente && d.cliente.nome) || '') }, serv: { titulo: String((d.serv && d.serv.titulo) || '') },
       veiculo: { modelo: String((d.veiculo && d.veiculo.modelo) || ''), placa: String((d.veiculo && d.veiculo.placa) || '') },
       extras: (Array.isArray(d.extras) ? d.extras : []).filter(e => e && (e.tipo === 'valor' || e.tipo === 'brinde')).map(e => ({ n: String(e.n || ''), tipo: e.tipo })),
     } }; }) } : {}),
@@ -444,8 +445,11 @@ async function aplicar(c, op, eu, versoes, depois = []) {
           if (it.protocoloId) extra.protocolo_id = id(it.protocoloId, 'protocoloId');
           if (it.conferidoEm) Object.assign(extra, { conferido_em: agora(), conferido_por: eu.nome });
         }
-        const prot = ctrl ? (extra.protocolo_id ? (await rest(c, `sd_protocolos?select=id,dados&id=eq.${q(extra.protocolo_id)}`) || [])[0] || null : null)
-          : await acharProtocolo(c, placa, agendaId);
+        // Funcionário (17/11/2026): protocolo sem placa é escolhido à mão na entrada (protocoloId); "Sem protocolo" manda
+        // semProtocolo e o servidor não procura. Sem escolha, acha pela placa ou pelo agendamento.
+        const protEscolhido = !ctrl && it.protocoloId ? (await rest(c, `sd_protocolos?select=id,dados,placa&id=eq.${q(id(it.protocoloId, 'protocoloId'))}&excluido_em=is.null&atendimento_id=is.null`) || [])[0] || null : null;
+        const prot = ctrl ? (extra.protocolo_id ? (await rest(c, `sd_protocolos?select=id,dados,placa&id=eq.${q(extra.protocolo_id)}`) || [])[0] || null : null)
+          : protEscolhido || (it.semProtocolo ? null : await acharProtocolo(c, placa, agendaId));
         let novosOpc = [];
         if (prot && !ctrl) {
           extra.protocolo_id = prot.id;
@@ -466,7 +470,12 @@ async function aplicar(c, op, eu, versoes, depois = []) {
           agenda_id: agUsada, ...linha, ...extra },
         }).catch(e => { throw e.code === 'duplicado' ? erro(409, 'placa_em_andamento', e.detail) : e; });
         versoes[atId] = 1;
-        if (prot) await marcar(c, 'sd_protocolos', `id=eq.${q(prot.id)}&atendimento_id=is.null`, { atendimento_id: atId, atualizado_em: agora() });
+        if (prot && !ctrl) {
+          // Protocolo sem placa ganha a placa do veículo (no Controle quem faz isso é o site).
+          const semPlaca = !prot.placa && prot.dados && typeof prot.dados === 'object';
+          await marcar(c, 'sd_protocolos', `id=eq.${q(prot.id)}&atendimento_id=is.null`, { atendimento_id: atId, atualizado_em: agora(),
+            ...(semPlaca ? { placa, dados: { ...prot.dados, veiculo: { ...(prot.dados.veiculo || {}), placa } } } : {}) });
+        } else if (prot) await marcar(c, 'sd_protocolos', `id=eq.${q(prot.id)}&atendimento_id=is.null`, { atendimento_id: atId, atualizado_em: agora() });
         try {
           if (!agUsada) {
             agUsada = await criarAgendaDaEntrada(c, { placa, linha, prot });

@@ -4520,7 +4520,11 @@ function renderNew(placaRaw) {
   S.pending = null;
   // Protocolo desta placa (14/11/2026: antes só era ligado depois de iniciar o serviço): cliente, veículo, serviço,
   // opcionais e valor já vêm no formulário. Protocolo de um agendamento, sem agendamento escolhido: usa esse agendamento.
-  const prot0 = protocoloParaEntrada(placa, S.entradaAg), pe = prot0 ? prot0.estado : null;
+  // Protocolo sem placa (17/11/2026): não é achado sozinho, a pessoa escolhe na lista "Protocolo" do formulário.
+  // O rascunho lembra a escolha (protocoloId; '' = "Sem protocolo").
+  const listaProt = ((isCtrl() ? DB.protocolos : DB.protocolosEntrada) || []).filter(p => !p.atendimentoId && p.estado);
+  const temEscolhaRasc = !!rasc && rasc.protocoloId !== undefined;
+  const prot0 = temEscolhaRasc ? listaProt.find(p => p.id === rasc.protocoloId) || null : protocoloParaEntrada(placa, S.entradaAg), pe = prot0 ? prot0.estado : null;
   if (pe && !S.entradaAg && pe.agId && agendaAtiva().some(a => a.id === pe.agId && a.status === 'agendado')) S.entradaAg = pe.agId;
   // Entrada vinda da agenda: cliente, serviço, veículo e valor já vêm do agendamento.
   const agAberto = agendaEmEntrada(), ag0 = agAberto;
@@ -4575,6 +4579,7 @@ function renderNew(placaRaw) {
       placa, porId: u.id, em: Date.now(), agendaId: ag ? ag.id : null,
       cliente: fCliente.value, desc: fDesc.value, tipoId: fTipo.value, danos: fDanos.value, objetos: fObj.value,
       entrada: fEntrada.value, receber: fReceber.value, entradaMes: campoMes.valor(), opcionais: [...opcSel],
+      protocoloId: protSel ? protSel.id : protEscolhido ? '' : undefined,
       fotos: fotos.map(f => ({ id: f.id, rotulo: f.rotulo, meta: f.meta || null })),
     });
   };
@@ -4626,7 +4631,58 @@ function renderNew(placaRaw) {
 
   // "Não usar": tira o aviso e segue a entrada sem ligar ao agendamento (o que já foi digitado fica).
   let ag = agAberto; // vira null se tocar em "Não usar"
-  const avisoAg = ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; avisoAg.remove(); toast('A entrada segue sem o agendamento.'); if (mexeu) guardar(); }) : null;
+  const agBox = el('div');
+  const drawAg = () => preencher(agBox, ag ? avisoAgendamento(ag, () => { ag = null; S.entradaAg = null; drawAg(); toast('A entrada segue sem o agendamento.'); if (mexeu) guardar(); }) : null);
+  drawAg();
+
+  // Campo "Protocolo": o achado pela placa ou pelo agendamento já vem escolhido; protocolo sem placa se escolhe aqui.
+  // Escolher preenche cliente, veículo (modelo), tipo de serviço, opcionais e, para o Controle, os valores.
+  let protSel = prot0, protEscolhido = temEscolhaRasc;
+  let opcDoProt = pe && !rasc ? opcionaisDoProtocolo(pe) : [];
+  const protBox = el('div');
+  const placaDoProt = p => protoPlaca(p.estado.veiculo && p.estado.veiculo.placa);
+  const opcoesProt = () => {
+    const nome = fCliente.value.trim(), hoje = Date.now();
+    const dist = p => { const d = dataDoProtocolo(p.estado); return d ? Math.abs(dataDe(d).getTime() - hoje) : 9e15; };
+    const peso = p => (placaDoProt(p) === placa ? 0 : nome && mesmoClienteNome(nome, p.estado.cliente && p.estado.cliente.nome) ? 1 : !placaDoProt(p) ? 2 : 3);
+    const ord = [...listaProt].sort((a, b) => peso(a) - peso(b) || dist(a) - dist(b)).slice(0, 60);
+    return [...ord.map(p => { const d = dataDoProtocolo(p.estado); return { v: p.id, t: protoNome(p.estado.cliente && p.estado.cliente.nome) || 'Sem nome',
+      sub: [protoCurto(p.estado.serv && p.estado.serv.titulo), p.estado.veiculo && p.estado.veiculo.modelo, placaDoProt(p) ? fmtPlaca(placaDoProt(p)) : 'sem placa'].filter(Boolean).join(' · '),
+      dir: d ? brData(d).slice(0, 5) : '' }; }),
+      { v: '', t: 'Sem protocolo' }];
+  };
+  const aplicarProt = p => {
+    protSel = p; protEscolhido = true;
+    opcDoProt.forEach(n => { const i = opcSel.indexOf(n); if (i >= 0) opcSel.splice(i, 1); }); // os do protocolo anterior saem
+    opcDoProt = [];
+    const e = p && p.estado;
+    if (e) {
+      const nome = protoNome(e.cliente && e.cliente.nome); if (nome) fCliente.value = nome;
+      const modelo = e.veiculo && e.veiculo.modelo ? protoVeiculo(e.veiculo.modelo) : ''; if (modelo) fDesc.value = modelo;
+      const t = e.serv ? tipoPorTexto(protoCurto(e.serv.titulo)) : null; if (t) fTipo.value = t.id;
+      opcDoProt = opcionaisDoProtocolo(e).filter(n => !opcSel.includes(n)); opcSel.push(...opcDoProt);
+      let c = null; try { c = isCtrl() ? protoCalc(e) : null; } catch {}
+      if (c && c.total > 0) {
+        fEntrada.value = c.entrada ? fmtQ(c.entrada) : ''; fReceber.value = fmtQ(c.saldo != null ? c.saldo : c.total);
+        [fEntrada, fReceber].forEach(f => f.dispatchEvent(new Event('input')));
+      }
+      const a = !ag && e.agId ? agendaAtiva().find(x => x.id === e.agId && x.status === 'agendado') : null;
+      if (a) { ag = a; S.entradaAg = a.id; drawAg(); }
+    }
+    drawOpc(); drawProt(); guardar();
+  };
+  const drawProt = () => {
+    if (!listaProt.length && !protSel) return preencher(protBox, null);
+    const e = protSel && protSel.estado;
+    preencher(protBox, el('div', { class: 'field' },
+      el('span', { class: 'label', text: 'Protocolo' }),
+      el('div', { class: 'row', style: 'gap:8px' },
+        campoEscolha({ titulo: 'Protocolo deste veículo', valor: protSel ? protSel.id : protEscolhido ? '' : '-', vazio: protEscolhido ? 'Sem protocolo' : 'Escolher o protocolo…',
+          opcoes: opcoesProt(), aoEscolher: v => aplicarProt(v ? listaProt.find(p => p.id === v) || null : null) }),
+        protSel && isCtrl() ? el('a', { class: 'btn btn--sm', style: 'flex:none', href: `#/protocolo/${esc(protSel.id)}` }, 'Ver') : null),
+      e ? el('span', { class: 'hint', text: [protoCurto(e.serv && e.serv.titulo), e.veiculo && e.veiculo.modelo ? protoVeiculo(e.veiculo.modelo) : '', ...opcionaisDoProtocolo(e).map(n => `+ ${n}`)].filter(Boolean).join(' · ') }) : null));
+  };
+  drawProt();
 
   const salvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button' }, 'Iniciar serviço');
   salvar.addEventListener('click', async () => {
@@ -4663,7 +4719,8 @@ function renderNew(placaRaw) {
     // Protocolo (13/11/2026): o Controle acha o protocolo aqui (pela placa ou pelo agendamento), traz o nome e os
     // opcionais e a entrada já fica conferida. Na entrada do Funcionário quem faz isso é o servidor.
     at.protocoloId = null; at.conferidoEm = null;
-    const prot = isCtrl() ? protocoloParaEntrada(placa, at.agendaId) : null;
+    const prot = isCtrl() ? protSel : null;
+    if (!isCtrl()) { if (protSel) at.protocoloId = protSel.id; else if (protEscolhido) at.semProtocolo = true; }
     if (prot) {
       const nome = protoNome(prot.estado.cliente && prot.estado.cliente.nome);
       if (!at.clienteNome && nome) at.clienteNome = nome;
@@ -4675,7 +4732,11 @@ function renderNew(placaRaw) {
     const ok = await commitAgora(() => {
       DB.veiculos[placa] = { ...(DB.veiculos[placa] || { criadoEm: Date.now() }), placa, descricao: fDesc.value.trim() };
       DB.atendimentos.push(at);
-      if (prot) prot.atendimentoId = at.id;
+      if (prot) {
+        prot.atendimentoId = at.id;
+        // Protocolo sem placa ganha a placa do veículo.
+        if (!protoPlaca(prot.estado.veiculo && prot.estado.veiculo.placa)) prot.estado.veiculo = { ...(prot.estado.veiculo || {}), placa: fmtPlaca(placa) };
+      }
     });
     if (!ok) {
       voltar();
@@ -4701,17 +4762,13 @@ function renderNew(placaRaw) {
 
   const body = el('div', { class: 'stack', style: 'max-width:640px' },
     backLink('#/placa', 'Ler outra placa'),
-    avisoAg,
-    pe ? el('div', { class: 'card conf-card is-ok' }, el('div', { class: 'conf-linha' },
-      el('span', { class: 'conf-ico', 'aria-hidden': 'true', html: ICON.protocolo }),
-      el('span', { class: 'conf-txt' }, el('b', { text: `Protocolo de ${protNome || 'cliente sem nome'}` }),
-        el('span', { text: [protoCurto(pe.serv && pe.serv.titulo), protModelo, ...opcionaisDoProtocolo(pe).map(n => `+ ${n}`)].filter(Boolean).join(' · ') })),
-      isCtrl() ? el('a', { class: 'btn btn--sm', href: `#/protocolo/${esc(prot0.id)}` }, 'Ver') : null)) : null,
+    agBox,
     el('div', { class: 'veh-head' },
       el('span', { class: 'veh-plate', text: fmtPlaca(placa) }),
       el('span', { class: 'veh-sub', text: anteriores.n ? `Veículo já atendido ${anteriores.n} ${anteriores.n === 1 ? 'vez' : 'vezes'}. Último serviço em ${fmtData(anteriores.ultimoEm)}.` : 'Novo veículo. Registre a entrada.' })),
     el('div', { class: 'card' },
       el('h2', { text: 'Serviço' }),
+      protBox,
       el('div', { class: 'field' }, el('label', { for: 'f-cliente', text: 'Nome do cliente (opcional)' }), fCliente),
       el('div', { class: 'field' }, el('label', { for: 'f-tipo', text: 'Tipo de serviço' }),
         tiposOk.length ? fTipo : el('p', { class: 'hint', text: 'Nenhum tipo de serviço com etapas. O Controle cadastra em Ajustes.' })),
@@ -7573,7 +7630,13 @@ function cardConferencia(at, redraw) {
       if (antigo && (!escolhido || antigo.id !== escolhido.id)) antigo.atendimentoId = null;
       const novos = escolhido ? opcionaisDoProtocolo(escolhido.estado).filter(n => !opcionaisDe(atual).includes(n)) : [];
       if (novos.length) atual.opcionais = [...opcionaisDe(atual), ...novos];
-      if (escolhido) { escolhido.atendimentoId = atual.id; if (!atual.clienteNome) atual.clienteNome = protoNome(escolhido.estado.cliente.nome); }
+      if (escolhido) {
+        escolhido.atendimentoId = atual.id; if (!atual.clienteNome) atual.clienteNome = protoNome(escolhido.estado.cliente.nome);
+        // Modelo do veículo vem do protocolo quando o veículo está sem (17/11/2026); protocolo sem placa ganha a placa.
+        const ve = escolhido.estado.veiculo || {}, veic = DB.veiculos[atual.placa];
+        if (ve.modelo && !(veic && veic.descricao)) DB.veiculos[atual.placa] = { ...(veic || { criadoEm: Date.now() }), placa: atual.placa, descricao: protoVeiculo(ve.modelo) };
+        if (!protoPlaca(ve.placa)) escolhido.estado.veiculo = { ...ve, placa: fmtPlaca(atual.placa) };
+      }
       atual.protocoloId = escolhido ? escolhido.id : null;
       atual.conferidoEm = Date.now(); atual.conferidoPor = me().nome;
       registrar(atual, escolhido ? `Conferência feita: protocolo de ${protoNome(escolhido.estado.cliente.nome)}${novos.length ? ` (opcionais: ${novos.join(', ')})` : ''}` : 'Conferência feita sem protocolo');
