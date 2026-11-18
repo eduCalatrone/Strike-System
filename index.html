@@ -1539,6 +1539,8 @@ html.gerador main { max-width: 1480px; }
   html.gerador .proto-form > .proto-puxar, html.gerador .proto-form > .seg { column-span: all; }
   html.gerador .proto-form > .card { display: grid; }
 }
+.escolha-busca { margin-top: -4px; }
+.escolha-nada { padding: 18px 16px; }
 </style>
 </head>
 <body>
@@ -2298,6 +2300,31 @@ function botaoAddOpcional(at, redraw) {
     const fechar = () => { d.close(); d.remove(); };
     d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
     d.addEventListener('click', e => { if (e.target === d) fechar(); });
+    // Lista com busca (18/11/2026, Puxar do cadastro): filtra pelo nome e pela linha de baixo, sem acento; esconde o grupo vazio.
+    const itens = opcoes.map(o => o.cab ? el('div', { class: 'escolha-cab', text: o.cab }) : el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
+        onclick: () => { fechar(); aoEscolher(o.v); } },
+        o.ico ? o.ico() : null,
+        el('b', {}, o.t, o.sub ? el('small', { text: o.sub }) : null),
+        o.dir ? el('span', { class: 'v', text: o.dir }) : null,
+        el('span', { class: 'ok', 'aria-hidden': 'true', html: o.v === valor ? ICON.check : '' })));
+    const nada = el('p', { class: 'hint escolha-nada', text: 'Nada encontrado.', hidden: true });
+    const lista = el('div', { class: 'escolha-lista', role: 'radiogroup' }, itens, nada);
+    const campoBusca = busca ? el('input', { type: 'search', class: 'escolha-busca', placeholder: 'Buscar nome, telefone, placa ou cidade', 'aria-label': 'Buscar', autocomplete: 'off', enterkeyhint: 'search' }) : null;
+    if (campoBusca) {
+      campoBusca.addEventListener('input', () => {
+        const termos = semAcento(campoBusca.value).trim().split(/\s+/).filter(Boolean);
+        let cab = null, cabTem = false, algum = false;
+        opcoes.forEach((o, i) => {
+          if (o.cab) { if (cab) cab.hidden = !cabTem; cab = itens[i]; cabTem = false; return; }
+          const alvo = semAcento(`${o.t} ${o.sub || ''} ${(o.sub || '').replace(/[^a-z0-9]/gi, '')} ${o.k || ''}`);
+          const ok = termos.every(t => alvo.includes(t) || alvo.includes(t.replace(/[^a-z0-9]/g, '')));
+          itens[i].hidden = !ok; if (ok) { cabTem = true; algum = true; }
+        });
+        if (cab) cab.hidden = !cabTem;
+        nada.hidden = algum;
+      });
+      campoBusca.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); const b = itens.find(x => !x.hidden && x.classList.contains('escolha-op')); if (b) b.click(); } });
+    }
     d.append(el('div', { class: 'sheet-in' },
       el('div', { class: 'card-head' }, el('h2', { text: 'Adicionar opcional' }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
       el('div', { class: 'sheet-tags' }, livres.map(n => el('button', { class: 'sheet-tag', type: 'button', onclick: () => {
@@ -7113,11 +7140,11 @@ async function escolherCadastro(e, aoPuxar, botao) {
     if (!opcoes.length || opcoes[opcoes.length - 1].g !== g) opcoes.push({ cab: g, g });
     const tem = comProto.has(l.id) || nomesProto.has(semAcento(protoNome(l.nome) || ''));
     const hora = new Date(l.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    opcoes.push({ g, v: l.id, t: protoNome(l.nome) || 'Sem nome',
+    opcoes.push({ g, v: l.id, t: protoNome(l.nome) || 'Sem nome', k: `${String(l.whatsapp || '').replace(/\D/g, '')} ${l.email || ''}`,
       sub: [l.veiculo, protoPlaca(l.placa), l.cidade && `${l.cidade}${l.uf ? ' - ' + l.uf : ''}`, tem ? 'já tem protocolo' : ''].filter(Boolean).join(' · '),
       dir: d === hoje || d === ontem ? hora : brData(d).slice(0, 5) });
   }
-  campoEscolha({ titulo: 'Puxar do cadastro', valor: e.cadastroId || '', opcoes,
+  campoEscolha({ titulo: 'Puxar do cadastro', valor: e.cadastroId || '', opcoes, busca: true,
     aoEscolher: id => { const l = lista.find(x => x.id === id); if (l) { protoDeCadastro(e, l); aoPuxar(); toast(`Dados de ${protoNome(l.nome)} preenchidos.`); } } }).click();
 }
 
@@ -7509,7 +7536,7 @@ function renderProtocolos() {
 
 // Botão com cara de campo que abre uma lista própria do sistema (janela de baixo), no lugar do <select> do aparelho.
 // opcoes: [{ v, t, sub, dir }] (sub = linha de baixo, dir = texto à direita, como o valor).
-function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo = null, aoEscolher }) {
+function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo = null, aoEscolher, busca = false }) {
   const atual = opcoes.find(o => !o.cab && o.v === valor);
   const b = el('button', { class: 'escolha-btn' + (atual && !fixo ? '' : ' vazio'), type: 'button', 'aria-haspopup': 'dialog', 'aria-label': titulo },
     atual && atual.ico && !fixo ? atual.ico() : null, el('span', { text: fixo || (atual ? atual.t : vazio) }), icon('down'));
@@ -7519,16 +7546,38 @@ function campoEscolha({ titulo, opcoes, valor = '', vazio = 'Escolher…', fixo 
     window.addEventListener('hashchange', fechar); // trocou de tela com a lista aberta: fecha
     d.addEventListener('cancel', () => setTimeout(fechar, 0));
     d.addEventListener('click', e => { if (e.target === d) fechar(); });
-    d.append(el('div', { class: 'sheet-in' },
-      el('div', { class: 'card-head' }, el('h2', { text: titulo }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
-      el('div', { class: 'escolha-lista', role: 'radiogroup' }, opcoes.map(o => o.cab ? el('div', { class: 'escolha-cab', text: o.cab }) : el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
+    // Lista com busca (18/11/2026, Puxar do cadastro): filtra pelo nome e pela linha de baixo, sem acento; esconde o grupo vazio.
+    const itens = opcoes.map(o => o.cab ? el('div', { class: 'escolha-cab', text: o.cab }) : el('button', { class: 'escolha-op', type: 'button', role: 'radio', 'aria-checked': String(o.v === valor),
         onclick: () => { fechar(); aoEscolher(o.v); } },
         o.ico ? o.ico() : null,
         el('b', {}, o.t, o.sub ? el('small', { text: o.sub }) : null),
         o.dir ? el('span', { class: 'v', text: o.dir }) : null,
-        el('span', { class: 'ok', 'aria-hidden': 'true', html: o.v === valor ? ICON.check : '' }))))));
+        el('span', { class: 'ok', 'aria-hidden': 'true', html: o.v === valor ? ICON.check : '' })));
+    const nada = el('p', { class: 'hint escolha-nada', text: 'Nada encontrado.', hidden: true });
+    const lista = el('div', { class: 'escolha-lista', role: 'radiogroup' }, itens, nada);
+    const campoBusca = busca ? el('input', { type: 'search', class: 'escolha-busca', placeholder: 'Buscar nome, telefone, placa ou cidade', 'aria-label': 'Buscar', autocomplete: 'off', enterkeyhint: 'search' }) : null;
+    if (campoBusca) {
+      campoBusca.addEventListener('input', () => {
+        const termos = semAcento(campoBusca.value).trim().split(/\s+/).filter(Boolean);
+        let cab = null, cabTem = false, algum = false;
+        opcoes.forEach((o, i) => {
+          if (o.cab) { if (cab) cab.hidden = !cabTem; cab = itens[i]; cabTem = false; return; }
+          const alvo = semAcento(`${o.t} ${o.sub || ''} ${(o.sub || '').replace(/[^a-z0-9]/gi, '')} ${o.k || ''}`);
+          const ok = termos.every(t => alvo.includes(t) || alvo.includes(t.replace(/[^a-z0-9]/g, '')));
+          itens[i].hidden = !ok; if (ok) { cabTem = true; algum = true; }
+        });
+        if (cab) cab.hidden = !cabTem;
+        nada.hidden = algum;
+      });
+      campoBusca.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); const b = itens.find(x => !x.hidden && x.classList.contains('escolha-op')); if (b) b.click(); } });
+    }
+    d.append(el('div', { class: 'sheet-in' },
+      el('div', { class: 'card-head' }, el('h2', { text: titulo }), el('button', { class: 'link-btn', type: 'button', onclick: fechar }, 'Cancelar')),
+      campoBusca,
+      lista));
     document.body.append(d);
     if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    if (campoBusca && matchMedia('(pointer: fine)').matches) campoBusca.focus(); // no celular não abre o teclado sozinho
   });
   return b;
 }
