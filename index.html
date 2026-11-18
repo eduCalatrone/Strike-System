@@ -1541,6 +1541,44 @@ html.gerador main { max-width: 1480px; }
 }
 .escolha-busca { margin-top: -4px; }
 .escolha-nada { padding: 18px 16px; }
+
+/* Gerador no PC (18/11/2026, "muito embaralhado"): cinza mais claro, fibra bem mais apagada, campos mais baixos e
+   mais largura útil (3 colunas de cartões em tela grande). */
+html.gerador { --bg: #1b1b1e; --surface: #2a2a2e; --soft: #2f2f34; --line: rgba(255,255,255,.1); --line-2: rgba(255,255,255,.14); }
+html.gerador .card { background-color: #242428; border-color: rgba(255,255,255,.08);
+  background-image: linear-gradient(rgba(36,36,40,.9), rgba(36,36,40,.9)), var(--weave); background-size: auto, var(--tile) var(--tile); }
+html.gerador .card::before { background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); }
+html.gerador input[type="text"], html.gerador input[type="search"], html.gerador input[type="password"], html.gerador input[type="date"],
+html.gerador input[type="time"], html.gerador input[type="tel"], html.gerador input[type="number"], html.gerador textarea, html.gerador .escolha-btn {
+  background: #2e2e33; border-color: rgba(255,255,255,.09); }
+html.gerador .seg button { background: #2e2e33; }
+html.gerador .escolha-cab { background: #222226; }
+html.gerador dialog.sheet { background: #26262a; }
+html.gerador ::placeholder, html.gerador .escolha-btn.vazio { color: #77797e; }
+@media (min-width: 1024px) {
+  html.gerador main { max-width: 1840px; padding-top: 14px; }
+  .ger-top-in { max-width: 1840px; }
+  html.gerador .proto-tela { max-width: 1840px; gap: 12px; }
+  html.gerador .proto-tela h1 { font-size: 22px; }
+  html.gerador .proto-form .card { padding: 14px; gap: 10px; }
+  html.gerador .proto-form .field { gap: 4px; }
+  html.gerador .proto-form input[type="text"], html.gerador .proto-form input[type="date"], html.gerador .proto-form input[type="time"],
+  html.gerador .proto-form input[type="tel"], html.gerador .proto-form .escolha-btn { min-height: 40px; padding: 8px 11px; font-size: 14px; }
+  html.gerador .proto-form textarea { min-height: 58px; padding: 8px 11px; font-size: 14px; }
+  html.gerador .proto-form .seg button { padding: 7px 10px; }
+  html.gerador .proto-form .card h3 { margin-bottom: 2px; }
+  html.gerador .proto-lado { gap: 10px; }
+  html.gerador .proto-lado .btn--lg { min-height: 48px; }
+}
+@media (min-width: 1360px) {
+  html.gerador .proto-cols { grid-template-columns: minmax(0, 1fr) minmax(400px, 500px); gap: 20px; }
+  html.gerador .proto-form { column-gap: 12px; }
+  html.gerador .proto-form > * { margin-bottom: 12px; }
+}
+@media (min-width: 1680px) {
+  html.gerador .proto-cols { grid-template-columns: minmax(0, 1fr) minmax(460px, 540px); }
+  html.gerador .proto-form { columns: 3; }
+}
 </style>
 </head>
 <body>
