@@ -6,7 +6,9 @@
   ],
   "rewrites": [
     { "source": "/cliente", "destination": "/index.html" },
-    { "source": "/cliente/", "destination": "/index.html" }
+    { "source": "/cliente/", "destination": "/index.html" },
+    { "source": "/protocolo", "destination": "/index.html" },
+    { "source": "/protocolo/", "destination": "/index.html" }
   ],
   "headers": [
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },

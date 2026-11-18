@@ -45,6 +45,10 @@ Sistema interno da **Strike Details Estética Automotiva** (matriz em Jaru/RO) p
 
 Variáveis na Vercel: `PLATE_RECOGNIZER_TOKEN` (secreta), `SUPABASE_URL`, `SUPABASE_KEY` (chave publicável), `SD_CHAVE_BANCO` (secreta), `CRON_SECRET` (secreta, usada pela limpeza) e `ACCESS_CODE` (opcional, só do leitor de placa).
 
+## Gerador de protocolo (`/protocolo`, 18/11/2026)
+
+Link só para gerar protocolo no balcão (quando o cliente acabou de se cadastrar no `/cadastro`). É o mesmo `index.html` com `MODO_GERADOR` (rewrite no `vercel.json` e no `dev-server.js`): mesmo login, só Controle, só as telas `renderProtocolo`/`renderProtocolos` dentro de `shellGerador` (topo com Novo protocolo, Protocolos, Abrir o sistema e Sair). Salva no mesmo `sd_protocolos`, então já aparece na galeria do sistema. Visual escuro do `/cadastro` (bloco CSS `html.gerador`, fibra de carbono, Chakra Petch e Sora); no computador o formulário vai em duas colunas de cartões com a prévia ao lado. Ctrl+S salva. **Puxar do cadastro** (também no gerador do sistema): `GET /api/dados?cadastros=1` (só Controle) chama a função `public.sd_cadastros_recentes` (`supabase/2026-11-18-cadastros-recentes.sql`, só leitura da tabela `leads`, liberada pela `x-sd-chave`; a tabela e as políticas dela não mudam); `protoDeCadastro` preenche cliente, telefone, cidade, endereço, e-mail, veículo, placa e km, e o serviço de interesse só escolhe o serviço quando o protocolo está em branco. O protocolo guarda `cadastroId`.
+
 ## Perfis de acesso
 
 Duas páginas separadas:

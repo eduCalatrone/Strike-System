@@ -53,7 +53,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   let rel = decodeURIComponent(url.pathname);
-  if (/^\/cliente\/?$/.test(rel)) rel = '/index.html'; // página do cliente (igual ao vercel.json)
+  if (/^\/(cliente|protocolo)\/?$/.test(rel)) rel = '/index.html'; // página do cliente (igual ao vercel.json)
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.normalize(path.join(ROOT, rel));
   if (!file.startsWith(ROOT + path.sep) || path.basename(file).startsWith('.')) { res.writeHead(403).end(); return; }

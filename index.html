@@ -13,7 +13,15 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <script>
   // App instalável só no acesso interno (a página do cliente, /cliente, fica como site comum).
-  if (!/^\/cliente\/?$/.test(location.pathname)) {
+  // Gerador de protocolo (/protocolo, 18/11/2026): página só do gerador, no visual escuro do /cadastro, para o balcão.
+  if (/^\/protocolo\/?$/.test(location.pathname)) {
+    document.documentElement.classList.add('gerador');
+    document.title = 'Protocolo | Strike Details';
+    document.querySelector('meta[name="theme-color"]').content = '#121214';
+    var gf = document.createElement('link'); gf.rel = 'stylesheet';
+    gf.href = 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Sora:wght@400;500;600&display=swap';
+    document.head.appendChild(gf);
+  } else if (!/^\/cliente\/?$/.test(location.pathname)) {
     var mf = document.createElement('link'); mf.rel = 'manifest'; mf.href = '/manifest.webmanifest';
     document.head.appendChild(mf);
   } else {
@@ -1432,6 +1440,105 @@ img.chegando { animation: aparecer .3s ease-out; }
   .carregar-barra::after { animation-duration: 2.4s; }
   .btn, .car, .r, .top-ico, .nav a .ico, .nav a .pill, .link-btn, .hv-filtros button, .sheet-tag { transition: none; }
 }
+
+/* ---------- Gerador de protocolo (/protocolo, 18/11/2026): visual escuro do /cadastro, pensado para o computador ---------- */
+html.gerador {
+  --bg: #121214; --surface: #161618; --soft: #1b1b1e; --ink: #f4f4f2; --ink-2: #cfd1d4; --muted: #9a9da2;
+  --line: rgba(255,255,255,.11); --line-2: rgba(255,255,255,.16);
+  --primary-grad: linear-gradient(180deg, #fbfbfa 0%, #dfe0e2 55%, #c4c6c9 100%); --primary-ink: #050505;
+  --warn: #f0c27a; --warn-bg: rgba(240,194,122,.1); --danger: #f0a9a9; --danger-bg: rgba(224,82,82,.12); --ok: #8fd4a8;
+  --weave: url("data:image/webp;base64,UklGRhwEAABXRUJQVlA4IBAEAABQJACdASpzAHMAPj0aikQiIaEWSFaMIAPEtJ99gGgL7dgCyEf9cF9XWb8edQ+B7qvNCLpPy/qmafWYO+NbmuzVa1R2fsj32gDfs0jX7ap8T1/5QbLP0Gu2K5UTrhJZ9N8uipjGQ3CqgUaGFd0FXM6tEJWl4mHjj5SdPt8pzHxjoDuDCxTkkdtO3NNWFOdsM8YMHpx76wSlUQSutElrAiJa3+I+gbnOHYm3PLcY1MTz6Zfv5NVFLZA5rIGP0VJpFJg7HXu7sr9LdOb0yGfmu9Vy9p/OahTc8V/9/SKGHORMwdU7GpOvNoBSpsSm6rP5aQYqBAteINCyDS9cGFpIxS9UqOuBqyw4NULhWAL06Z2JTEVfLgVOfsjeAa1Y5BN6hZlrueuncPUTNSEuAAD+/YDapbC+KiWcA+QPqLxNaa7W/vWrHbD/5DLmKidxKR4FIZzRwcNGCRyD3XLgpSagIjlCTg7RLdVfs5INWAd/coukoKiWIgQX/yX/9hBdR/7tahqZMrEFs8Yfd4Wi0u8JyqFh4DkDJ4IUQd67Y/2TITDEylusXwViSNu5QxV0O8eaAAI+86B1cUy+Txvq2plj3kGj0ovFg+oq7ZLhuT/Nqq9b38wjeK4LTRj2ZWV3JBcS/287sTU+wPtZu97lE7bZJMc6WcuLyYu8CJpUxdreH7aOFN5AN5ABxm/B+6+mgoZnMyej2l5pmUFApJwRJx7YDpBPMiE+zLEpvzsefDRHv5rTaJxIogth5I9KdD31jKNZyJijq9ktWrJtqpZin+inyUpmztMOw54XYzZ3C5JnRImQU47Jge3OcE4MzYwY+FxLjvox5v+gn9xpcX8hFWXUE0hFUWB+DDg+Sz9e+B4qxuoPzlC37XaTAwrTESXgW0I0a9TybOskQAxW5ax9YVHjseOZ6ssqVDDLvXPeHe+7eUjEEWLlWgBIJjBe+aHrdoYcLR1yCIhDK1ZmLxdFjHr6XZ+5LS7GVpguv+QSAfJhdCw5P7+8SyM+Ue3guarcSuqyyor+Fxc0lLoZ6likeNg4EvB2k9zBIFrAmnIk/e7mHbutX3pWlKgSrQG/HTrJP3dm6nbAbsjAxu5FbSB3AkxB7aPBvN8sKZ/Ba9bhlRVdewGtdDjnanUk2ZGhKJsrzRD5Luog3SA6idEf+1eSNewKlSmvLNFgrqw0qYYJdCjqtBhBjDPBv2r8OVDtocLiE/j3Rj/gcZLELsEvqyvcXAM7YKjALqOBZGd88awdHFbNbyNVphnhP3phCpZ1S0aWiy1LKLtzmWR+NAt1RuRZvuG5BYWxEC3XX7HYmyE9yGoth5ZqGr1IYZpPDVp3fCm/wspNLKPRN6dpw/cfo5n+iNRkNyRajZAMjUG1ON6sD7AJnCgAAA=="); --tile: 77px;
+  --ger-title: 'Chakra Petch', 'Barlow Condensed', sans-serif;
+  --body: 'Sora', 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
+}
+html.gerador, html.gerador body { background: radial-gradient(ellipse at 20% 0%, rgba(255,255,255,.05), transparent 60%) no-repeat fixed, var(--bg); }
+html.gerador body { font-size: 14.5px; }
+html.gerador .login-brand .wordmark-txt, html.gerador .carregar .wordmark-txt, html.gerador .ger-logo img { filter: invert(1) brightness(1.1); }
+html.gerador h1 { font-family: var(--ger-title); text-transform: uppercase; font-weight: 700; letter-spacing: .02em; font-size: 28px; }
+html.gerador h2 { font-family: var(--ger-title); text-transform: uppercase; letter-spacing: .02em; }
+html.gerador .card h3 { font: 800 13px/1.1 var(--cond); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+html.gerador .card {
+  position: relative; border-radius: 16px; background-color: #0f0f11;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), transparent 45%), var(--weave); background-size: auto, var(--tile) var(--tile);
+}
+html.gerador .card::before { content: ""; position: absolute; left: 12%; right: 12%; top: -1px; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); }
+html.gerador label, html.gerador .label { font: 700 11.5px/1.2 var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+html.gerador input[type="text"], html.gerador input[type="search"], html.gerador input[type="password"], html.gerador input[type="date"],
+html.gerador input[type="time"], html.gerador input[type="tel"], html.gerador input[type="number"], html.gerador textarea, html.gerador .escolha-btn {
+  background: #161618; border-color: var(--line); border-radius: 12px; color: var(--ink);
+}
+html.gerador input, html.gerador textarea, html.gerador .escolha-btn { font: 400 15px/1.4 var(--body); }
+html.gerador input:focus, html.gerador textarea:focus { border-color: #cfd1d4; box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
+html.gerador ::placeholder, html.gerador .escolha-btn.vazio { color: #5c5e62; }
+html.gerador .escolha-btn:hover { border-color: rgba(255,255,255,.24); }
+html.gerador input[type="date"]::-webkit-calendar-picker-indicator, html.gerador input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .6; }
+html.gerador .btn { background: transparent; border-color: var(--line); color: var(--ink); border-radius: 12px; }
+html.gerador .btn:hover { border-color: rgba(255,255,255,.3); }
+html.gerador .btn--primary { background: var(--primary-grad); color: #050505; border-color: transparent; box-shadow: inset 0 1px 0 #fff, 0 12px 28px -16px rgba(255,255,255,.4);
+  font-family: var(--cond); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+html.gerador .btn--primary.btn--lg { font-size: 16.5px; }
+html.gerador .btn--primary:hover { filter: brightness(1.07); }
+html.gerador .btn--danger { color: var(--danger); border-color: rgba(224,82,82,.35); }
+html.gerador .seg { border-color: var(--line-2); }
+html.gerador .seg button { background: #161618; color: var(--muted); }
+html.gerador .seg button + button { border-color: var(--line-2); }
+html.gerador .seg button[aria-pressed="true"] { background: #e8e9ea; color: #050505; }
+html.gerador .proto-extra { background: rgba(255,255,255,.03); }
+html.gerador .proto-marcar input { accent-color: #fff; }
+html.gerador .proto-prev { border-color: var(--line); box-shadow: 0 30px 60px -30px rgba(0,0,0,.8); }
+html.gerador .tag { background: rgba(255,255,255,.06); }
+html.gerador .tag--ok { background: rgba(143,212,168,.1); border-color: rgba(143,212,168,.3); }
+html.gerador .tag--warn { border-color: rgba(240,194,122,.3); }
+html.gerador .proto-item:hover { background: rgba(255,255,255,.03); }
+html.gerador .escolha-cab { background: #0f0f11; }
+html.gerador .escolha-op[aria-checked="true"] { background: rgba(255,255,255,.05); }
+html.gerador .escolha-op:hover { background: rgba(255,255,255,.04); }
+html.gerador dialog.sheet { background: #161618; border: 1px solid var(--line); }
+html.gerador .toast { background: #f4f4f2; color: #050505; }
+html.gerador .toast.is-err { background: #e05252; color: #fff; }
+html.gerador .top-ico { color: var(--ink-2); border: 0; background: none; }
+html.gerador .top-ico:hover { background: rgba(255,255,255,.06); }
+html.gerador .carregar-barra { background: rgba(255,255,255,.1); }
+html.gerador .back { display: none; }
+html.gerador .link-btn { color: var(--ink); }
+.ger-top { position: sticky; top: 0; z-index: 20; background: rgba(18,18,20,.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.065);
+  padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
+.ger-top-in { max-width: 1480px; margin: 0 auto; height: 60px; display: flex; align-items: center; gap: 18px; }
+.ger-logo img { height: 16px; width: auto; }
+.ger-tabs { display: flex; gap: 4px; flex: 1; justify-content: center; }
+.ger-tab { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; color: var(--muted); text-decoration: none;
+  font: 700 14px var(--cond); letter-spacing: .08em; text-transform: uppercase; }
+.ger-tab svg { width: 17px; height: 17px; }
+.ger-tab:hover { color: var(--ink); background: rgba(255,255,255,.04); }
+.ger-tab[aria-current="page"] { color: var(--ink); background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.ger-who { display: flex; align-items: center; gap: 4px; }
+.ger-nome { font-size: 13px; color: var(--muted); margin-right: 6px; white-space: nowrap; }
+.ger-aviso { max-width: 420px; margin-top: 10vh !important; }
+.proto-puxar { display: grid; gap: 8px; }
+html.gerador .proto-cadastro { border-color: rgba(255,255,255,.24); background: rgba(255,255,255,.035); color: var(--ink); }
+.proto-cadastro > span:first-child, .proto-cadastro > span:first-child svg { flex: none; width: 18px; height: 18px; }
+.proto-cadastro .cad-txt { flex: 1; }
+html.gerador main { max-width: 1480px; }
+@media (max-width: 640px) {
+  .ger-tab span { display: none; }
+  .ger-nome { display: none; }
+  .ger-tabs { justify-content: flex-end; }
+}
+/* Computador: formulário em duas colunas de cartões e a prévia grande ao lado. */
+@media (min-width: 1024px) {
+  html.gerador .proto-tela { max-width: 1480px; }
+  html.gerador .proto-tela.proto-ver { max-width: 900px; }
+  html.gerador .proto-lado { top: 76px; max-height: calc(100vh - 92px); }
+  html.gerador .proto-puxar { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1360px) {
+  html.gerador .proto-cols { grid-template-columns: minmax(0, 1fr) minmax(420px, 520px); gap: 28px; }
+  html.gerador .proto-form { display: block; columns: 2; column-gap: 14px; }
+  html.gerador .proto-form > * { break-inside: avoid; margin-bottom: 14px; }
+  html.gerador .proto-form > .proto-puxar, html.gerador .proto-form > .seg { column-span: all; }
+  html.gerador .proto-form > .card { display: grid; }
+}
 </style>
 </head>
 <body>
@@ -2473,6 +2580,8 @@ function movimentar(itemId, tipo, delta, obs) {
    A página do cliente é separada: /cliente (sem login).
    ===================================================================== */
 const MODO_CLIENTE = /^\/cliente\/?$/.test(location.pathname);
+// Gerador de protocolo (/protocolo, 18/11/2026): mesmo login e mesmos dados, só as telas de protocolo (Controle).
+const MODO_GERADOR = /^\/protocolo\/?$/.test(location.pathname);
 const SKEY = 'sd:sessao:v2';
 function getSession() { try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch { return null; } }
 function setSession(s) { try { if (s) localStorage.setItem(SKEY, JSON.stringify(s)); else localStorage.removeItem(SKEY); } catch {} }
@@ -2480,7 +2589,7 @@ function setSession(s) { try { if (s) localStorage.setItem(SKEY, JSON.stringify(
 // Funcionário, para testes e apresentações. Fica neste aparelho (sd:modo) até voltar ou sair. Os pedidos ao api/dados
 // vão com o cabeçalho X-SD-Modo e o servidor aplica as regras do Funcionário (sem valores, só os recentes).
 const MKEY = 'sd:modo';
-const modoFuncionario = () => { try { return localStorage.getItem(MKEY) === 'funcionario'; } catch { return false; } };
+const modoFuncionario = () => { if (MODO_GERADOR) return false; try { return localStorage.getItem(MKEY) === 'funcionario'; } catch { return false; } };
 function me() {
   const s = getSession(); if (!s || !s.token) return null;
   const f = DB && funcById(s.id); if (!f) return null;
@@ -3492,6 +3601,7 @@ function route(opts) {
   if (s && s.token && !DB) return abrirComDados();
   const u = me();
   if (!u) { if (s) setSession(null); return renderLogin(); }
+  if (MODO_GERADOR) return rotaGerador(r, a);
   if (r !== 'novo' && S.rascAgora) { S.rascAgora(); S.rascAgora = null; } // saiu do cadastro: rascunho gravado na hora
   if (r !== 'placa' && r !== 'novo') S.entradaAg = null; // saiu do "Adicionar": esquece o agendamento escolhido
   if (r !== 'veiculo' || a !== S.entradaEdit) S.entradaEdit = null; // edição aberta não fica presa ao sair do veículo
@@ -3623,9 +3733,45 @@ async function recarregar(e) {
   location.reload();
 }
 
+/* Gerador de protocolo (/protocolo, pedido de 18/11/2026): link só para gerar protocolo no balcão, no visual do
+   /cadastro e pensado para o computador. Mesmo login, mesmos dados: o que salva aqui já está na galeria do sistema. */
+function rotaGerador(r, a) {
+  atualizarSeVelho();
+  setTimeout(() => avisarPresenca(), 0);
+  if (me().real !== 'controle') return shellGerador(el('div', { class: 'card ger-aviso' }, el('h2', { text: 'Só para o Controle' }),
+    el('a', { class: 'btn btn--primary btn--lg btn--block', href: '/' }, 'Abrir o sistema')));
+  if (r === 'protocolos') return renderProtocolos();
+  if (r === 'protocolo' && a) return renderProtocolo(a);
+  return renderProtocolo();
+}
+function shellGerador(body) {
+  const u = me(), [r, a] = parts();
+  const aba = r === 'protocolos' || (r === 'protocolo' && a) ? 'galeria' : 'novo';
+  const tab = (k, href, txt, ico) => el('a', { class: 'ger-tab', href, 'aria-current': aba === k ? 'page' : null }, icon(ico), el('span', { text: txt }));
+  const top = el('header', { class: 'ger-top' }, el('div', { class: 'ger-top-in' },
+    el('a', { href: '#/', class: 'ger-logo', 'aria-label': 'Novo protocolo' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details' })),
+    el('nav', { class: 'ger-tabs', 'aria-label': 'Telas' },
+      tab('novo', '#/', 'Novo protocolo', 'plus'), tab('galeria', '#/protocolos', 'Protocolos', 'protocolo')),
+    el('div', { class: 'ger-who' },
+      el('span', { class: 'ger-nome', text: u ? u.nome : '' }),
+      el('a', { class: 'top-ico', href: '/', target: '_blank', title: 'Abrir o sistema', 'aria-label': 'Abrir o sistema' }, icon('home')),
+      el('button', { class: 'top-ico', type: 'button', title: 'Sair', 'aria-label': 'Sair', onclick: sair }, icon('logout')))));
+  const tela = location.hash || '#/', trocou = tela !== ultimaTela; ultimaTela = tela;
+  document.body.classList.add('no-nav'); document.body.classList.remove('com-lateral');
+  preencher($('app'), top, el('main', { class: 'no-nav' + (trocou ? ' entra' : '') }, body));
+}
+// Ctrl+S salva o protocolo aberto no formulário.
+if (MODO_GERADOR) addEventListener('keydown', ev => {
+  if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 's') {
+    const b = document.querySelector('.proto-salvar');
+    if (b) { ev.preventDefault(); if (document.activeElement) document.activeElement.blur(); setTimeout(() => b.click(), 160); }
+  }
+});
+
 // Monta a tela: barra do topo, conteúdo e (para a equipe) navegação inferior.
 let ultimaTela = null;
 function shell(body, { nav = true, current = '' } = {}) {
+  if (MODO_GERADOR) return shellGerador(body);
   const u = me();
   const top = el('header', { class: 'topbar' }, el('div', { class: 'topbar-in' },
     el('a', { href: u ? '#/inicio' : '#/', class: 'wordmark', style: 'color:inherit;text-decoration:none' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
@@ -3825,7 +3971,7 @@ function renderLogin() {
       const r = await apiJson('/api/login', { method: 'POST', body: { usuario: u, senha: senha.value } });
       setSession({ token: r.token, id: r.pessoa.id, nome: r.pessoa.nome });
       esquecerDados();
-      go('#/inicio');
+      if (MODO_GERADOR) { location.hash = ''; route(); } else go('#/inicio');
     } catch (err) {
       btn.disabled = false; btn.textContent = 'Entrar';
       toast({
@@ -3840,10 +3986,10 @@ function renderLogin() {
   preencher($('app'), el('div', { class: 'login' }, el('div', { class: 'login-box' },
     el('div', { class: 'login-brand' },
       el('span', { class: 'wordmark' }, el('img', { src: '/logo-letras.png', alt: 'Strike Details', class: 'wordmark-txt' })),
-      el('p', { text: 'Controle de serviços. Entre com seu usuário e senha.' })),
+      el('p', { text: MODO_GERADOR ? 'Gerador de protocolo' : 'Controle de serviços. Entre com seu usuário e senha.' })),
     form,
     el('p', { class: 'login-note', text: 'Esqueceu a senha? Peça para o Controle criar uma nova.' }),
-    cartaoInstalar())));
+    MODO_GERADOR ? null : cartaoInstalar())));
   usuario.focus();
 }
 
@@ -6929,6 +7075,52 @@ function protoDeAgenda(e, a) {
   }
 }
 
+// Puxar do cadastro (/cadastro do site, tabela leads; pedido de 18/11/2026): cliente, telefone, cidade, endereço,
+// e-mail, veículo, placa e km. O serviço de interesse só escolhe o serviço do catálogo se o protocolo ainda está em branco.
+function protoDeCadastro(e, l) {
+  const novo = !e.cliente.nome.trim();
+  let tel = String(l.whatsapp || '').replace(/\D/g, '');
+  if (/^55\d{10,11}$/.test(tel)) tel = tel.slice(2);
+  e.cadastroId = l.id;
+  e.cliente.nome = protoNome(l.nome) || e.cliente.nome;
+  e.cliente.tel = tel || e.cliente.tel;
+  if (l.cidade) e.cliente.cidade = l.uf ? `${l.cidade} - ${l.uf}` : l.cidade;
+  if (l.endereco) e.cliente.end = l.endereco;
+  if (l.email) e.cliente.email = l.email;
+  if (l.veiculo) e.veiculo.modelo = l.veiculo;
+  if (l.placa) e.veiculo.placa = protoPlaca(l.placa);
+  if (l.quilometragem != null) e.veiculo.km = String(l.quilometragem);
+  const k = novo && l.servico_interesse ? protoPresetPorNome(l.servico_interesse, l.veiculo) : null;
+  if (k) protoPreset(e, k);
+}
+// Abre a lista dos cadastros recentes (busca na hora: o cliente acabou de se cadastrar no balcão).
+async function escolherCadastro(e, aoPuxar, botao) {
+  const txt = botao && botao.querySelector('.cad-txt'), antes = txt ? txt.textContent : '';
+  if (botao) { botao.disabled = true; if (txt) txt.textContent = 'Buscando cadastros…'; }
+  let lista;
+  try { lista = (await apiJson('/api/dados?cadastros=1')).cadastros || []; }
+  catch (err) { toast(err && err.code === 'network' ? 'Sem internet. Tente de novo.' : 'Não deu para buscar os cadastros agora.', true); return; }
+  finally { if (botao) { botao.disabled = false; if (txt) txt.textContent = antes; } }
+  if (!lista.length) { toast('Nenhum cadastro nos últimos 60 dias.'); return; }
+  const comProto = new Set((DB.protocolos || []).map(p => p.estado && p.estado.cadastroId).filter(Boolean));
+  const nomesProto = new Set((DB.protocolos || []).map(p => semAcento(protoNome(p.estado && p.estado.cliente && p.estado.cliente.nome) || '')).filter(Boolean));
+  const hoje = hojeISO(), ontem = somaDias(hoje, -1), semana = somaDias(hoje, -6);
+  const dia = l => { const d = new Date(l.created_at); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+  const grupo = d => d === hoje ? 'Hoje' : d === ontem ? 'Ontem' : d >= semana ? 'Esta semana' : 'Mais antigos';
+  const opcoes = [];
+  for (const l of lista) {
+    const d = dia(l), g = grupo(d);
+    if (!opcoes.length || opcoes[opcoes.length - 1].g !== g) opcoes.push({ cab: g, g });
+    const tem = comProto.has(l.id) || nomesProto.has(semAcento(protoNome(l.nome) || ''));
+    const hora = new Date(l.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    opcoes.push({ g, v: l.id, t: protoNome(l.nome) || 'Sem nome',
+      sub: [l.veiculo, protoPlaca(l.placa), l.cidade && `${l.cidade}${l.uf ? ' - ' + l.uf : ''}`, tem ? 'já tem protocolo' : ''].filter(Boolean).join(' · '),
+      dir: d === hoje || d === ontem ? hora : brData(d).slice(0, 5) });
+  }
+  campoEscolha({ titulo: 'Puxar do cadastro', valor: e.cadastroId || '', opcoes,
+    aoEscolher: id => { const l = lista.find(x => x.id === id); if (l) { protoDeCadastro(e, l); aoPuxar(); toast(`Dados de ${protoNome(l.nome)} preenchidos.`); } } }).click();
+}
+
 // Contas, textos e conferências do protocolo. bloqueio = motivo para não gerar (ex.: sem data).
 function protoCalc(e) {
   const num = v => { const t = String(v == null ? '' : v).trim(); if (!t) return null; const n = parseNum(t); return isNaN(n) ? NaN : n; };
@@ -7309,7 +7501,7 @@ function renderProtocolos() {
   busca.addEventListener('input', () => { S.protoBusca = busca.value; desenharLista(); });
   desenharLista();
   shell(el('div', { class: 'stack', style: 'max-width:820px' },
-    backLink('#/mais', 'Mais'),
+    MODO_GERADOR ? null : backLink('#/mais', 'Mais'),
     el('div', { class: 'page-head', style: 'align-items:center' }, el('h1', { text: 'Protocolos' }),
       el('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => { S.proto = protoNovo(); lsGravar(PROTO_RASC, S.proto); go('#/protocolo'); } }, icon('plus'), 'Novo protocolo')),
     busca, lista), { current: 'relatorios' });
@@ -7446,8 +7638,12 @@ function renderProtocolo(pid) {
     const modoAtual = os ? (e.pag.modo === 'valor' ? 'valor' : 'none') : e.pag.modo;
     const fLeg = inp(e, 'leg', { maxlength: '140' }); legInput.el = fLeg;
 
+    const fCad = el('button', { class: 'escolha-btn proto-cadastro', type: 'button', 'aria-label': 'Puxar do cadastro' },
+      icon('user'), el('span', { class: 'cad-txt', text: e.cadastroId ? 'Puxar de outro cadastro…' : 'Puxar os dados do cadastro…' }), icon('down'));
+    fCad.addEventListener('click', () => escolherCadastro(e, () => { desenhar(); mudou(); }, fCad));
+
     preencher(form,
-      fAg,
+      el('div', { class: 'proto-puxar' }, fCad, fAg),
       seg([['agendamento', 'Agendamento'], ['os', 'Ordem de serviço']], e.tipo, k => { e.tipo = k; }, 'Tipo do documento'),
       secao('Cliente',
         fld('Nome completo', inp(e.cliente, 'nome', { maxlength: '80', autocapitalize: 'words', placeholder: 'Como vai no protocolo e no nome do arquivo' })),
@@ -7526,7 +7722,7 @@ function renderProtocolo(pid) {
       c.entrada != null ? el('span', {}, 'Entrada ', el('b', { text: fmtBRL(c.entrada) })) : null,
       c.saldo != null ? el('span', {}, c.os ? 'A receber ' : 'Saldo ', el('b', { text: fmtBRL(c.saldo) })) : null);
     const linkVeiculo = (() => { const x = (DB.protocolos || []).find(p => p.id === e.id), at = x && x.atendimentoId ? DB.atendimentos.find(a => a.id === x.atendimentoId) : null;
-      return at ? el('a', { class: 'link-btn', href: `#/veiculo/${esc(at.id)}` }, `Veículo ${at.concluido ? 'concluído' : 'em serviço'}: ${fmtPlaca(at.placa)} (abrir)`) : null; })();
+      return at ? el('a', { class: 'link-btn', href: `${MODO_GERADOR ? '/' : ''}#/veiculo/${esc(at.id)}`, target: MODO_GERADOR ? '_blank' : null }, `Veículo ${at.concluido ? 'concluído' : 'em serviço'}: ${fmtPlaca(at.placa)} (abrir)`) : null; })();
     if (!editando) {
       preencher(info, e.tipo === 'agendamento' ? campoAgendaProtocolo(e, () => route()) : null, linkVeiculo);
       [bBaixar, bCopiar, bComp].forEach(b => { if (b) b.disabled = !!c.bloqueio; }); return;
@@ -7549,7 +7745,7 @@ function renderProtocolo(pid) {
   });
   // Salvar fica junto de Baixar e Copiar (14/11/2026: separado no topo, dava para sair achando que já estava salvo)
   // e, salvo, volta para a visualização do protocolo.
-  const bSalvar = el('button', { class: 'btn btn--primary btn--lg btn--block', type: 'button', onclick: () => {
+  const bSalvar = el('button', { class: 'btn btn--primary btn--lg btn--block proto-salvar', type: 'button', onclick: () => {
     if (!e.cliente.nome.trim()) { toast('Coloque o nome do cliente.', true); return; }
     protoSalvar(e); toast('Protocolo salvo.');
     if (!salvoBanco) lsGravar(PROTO_RASC, null);

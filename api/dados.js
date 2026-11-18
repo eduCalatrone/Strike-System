@@ -790,6 +790,11 @@ module.exports = async (req, res) => {
 
   try {
     const eu = verComo(await usuarioDaSessao(c, req), req); // Controle em modo funcionário vale como Funcionário
+    // Gerador de protocolo (/protocolo, 18/11/2026): cadastros recentes do /cadastro para puxar os dados. Só leitura, só Controle.
+    if (req.method === 'GET' && /[?&]cadastros=1(&|$)/.test(req.url || '')) {
+      if (eu.nivel !== 'controle') return send(res, 403, { error: 'sem_permissao' });
+      return send(res, 200, { cadastros: await rest(c, 'rpc/sd_cadastros_recentes', { method: 'POST', body: { dias: 60 } }) || [] });
+    }
     if (req.method === 'GET') return send(res, 200, await carregar(c, eu));
     if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
 
