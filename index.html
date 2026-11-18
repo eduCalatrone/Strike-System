@@ -17,6 +17,11 @@
   if (/^\/protocolo\/?$/.test(location.pathname)) {
     document.documentElement.classList.add('gerador');
     document.title = 'Protocolo | Strike Details';
+    // Ícone próprio do gerador (folha com as setas), para não confundir com a aba do sistema (18/11/2026).
+    document.querySelector('link[rel="icon"]').href = '/icons/protocolo-32.png';
+    document.querySelector('link[rel="apple-touch-icon"]').href = '/icons/protocolo-apple.png';
+    var gi = document.createElement('link'); gi.rel = 'icon'; gi.type = 'image/svg+xml'; gi.href = '/icons/protocolo.svg';
+    document.head.appendChild(gi);
     document.querySelector('meta[name="theme-color"]').content = '#121214';
     var gf = document.createElement('link'); gf.rel = 'stylesheet';
     gf.href = 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Sora:wght@400;500;600&display=swap';
