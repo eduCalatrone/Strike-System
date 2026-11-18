@@ -7665,7 +7665,7 @@ function renderProtocolo(pid) {
       seg([['valor', 'Valor'], ['brinde', 'Brinde'], ['desconto', 'Desconto']], x.tipo, k => { x.tipo = k; if (k === 'desconto' && !x.n) x.n = 'Desconto'; }, 'Tipo do item')));
     const fAdd = campoEscolha({ titulo: 'Adicionar item extra', valor: '', fixo: '+ Adicionar item extra…',
       opcoes: [...PROTO_CATALOGO.filter(p => p.extra).map(p => ({ v: p.k, t: p.nome, dir: p.valor != null ? fmtBRL(p.valor) : '' })),
-        { v: 'outro', t: 'Outro item', sub: 'Nome, descrição e valor escritos na hora' }, { v: 'brinde', t: 'Brinde', sub: 'Sai em verde, não soma no total' }, { v: 'desconto', t: 'Desconto', sub: 'Tira do total' }],
+        { v: 'outro', t: 'Outro item', sub: 'Nome, descrição e valor escritos na hora' }], // brinde e desconto: na escolha do próprio item (18/11/2026)
       aoEscolher: k => {
         const p = PROTO_CATALOGO.find(x => x.k === k);
         e.extras.push(p ? { n: p.nome, d: p.desc, v: p.valor != null ? fmtQ(p.valor) : '', tipo: 'valor' }
